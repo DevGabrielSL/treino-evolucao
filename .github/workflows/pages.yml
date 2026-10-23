@@ -156,6 +156,31 @@ jobs:
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Publicar diário corporal v0.8 e executar regressões
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat release-staging/v08/part01.b64 release-staging/v08/part02.b64 release-staging/v08/part03.b64 release-staging/v08/part04.b64 release-staging/v08/part05.b64 release-staging/v08/part06.b64 | base64 --decode > /tmp/treino-v08-upgrade.tar.xz
+          echo "89300333d05778569e23d2e78c323743bac61889ce29bc2e05443401155084a8  /tmp/treino-v08-upgrade.tar.xz" | sha256sum --check
+          mkdir -p /tmp/treino-v08-upgrade
+          tar -xJf /tmp/treino-v08-upgrade.tar.xz -C /tmp/treino-v08-upgrade
+          python3 /tmp/treino-v08-upgrade/apply_v08.py dist /tmp/treino-v08-upgrade
+          mkdir -p dist/tests
+          for testname in body_v08 history_v07 insights_v06; do
+            sed 's@../public/@../@g' /tmp/treino-v08-upgrade/$testname.mjs > dist/tests/$testname.mjs
+            node --experimental-default-type=module dist/tests/$testname.mjs | tee /tmp/treino-$testname.log
+          done
+          grep -qx 'TOTAL_BODY_TESTS=68' /tmp/treino-body_v08.log
+          grep -qx 'TOTAL_HISTORY_TESTS=55' /tmp/treino-history_v07.log
+          grep -qx 'TOTAL_INSIGHTS_TESTS=35' /tmp/treino-insights_v06.log
+          rm -rf dist/tests
+          for module in app store body history insights metrics backup edit_ops template_ops sw; do node --check dist/$module.js; done
+          grep -q 'shell-v08' dist/sw.js
+          grep -q "'./body.js'" dist/sw.js
+          grep -q 'v0.8' dist/index.html
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
