@@ -337,6 +337,32 @@ jobs:
           JS
           test -f dist/icons/icon-192.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Validar leitura tipada Google Sheets v1.0.2 antes de publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "ad44b61018284d99d224db82b85583e682aecf28"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "b61d7b8b9240738aff9f27613e41bfa882de682a"
+          cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
+          grep -q 'shell-v101-sheets-rir' dist/sw.js
+          grep -q 'shell-v101-sheets-rir' dist/integrity.js
+          grep -q 'v1.0.1 beta Sheets' dist/index.html
+          sed -i 's/shell-v101-sheets-rir/shell-v102-sheets-typed-numbers/g' dist/sw.js dist/integrity.js
+          sed -i 's/v1\.0\.1 beta Sheets/v1.0.2 beta Sheets/g' dist/index.html
+          node --check dist/sheet_sync_browser.js
+          node --check dist/sheet_sync_core.js
+          node --check dist/app.js
+          node --experimental-default-type=module integration/tests/sheets_browser.mjs | tee /tmp/treino-browser-v102.log
+          grep -qx 'BROWSER_TRANSPORT_TESTS=10' /tmp/treino-browser-v102.log
+          node --experimental-default-type=module integration/tests/sheets_numeric_formats.mjs | tee /tmp/treino-typed-v102.log
+          grep -qx 'SHEETS_TYPED_NUMBERS_TESTS=19' /tmp/treino-typed-v102.log
+          grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
+          grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
+          grep -q 'v1.0.2 beta Sheets' dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
