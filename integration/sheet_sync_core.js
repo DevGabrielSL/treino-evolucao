@@ -9,6 +9,21 @@ const number=(value,{positive=false}={})=>{
   if(!Number.isFinite(v)||v<0||(positive&&v<=0))throw new Error('Valor numérico inválido: '+String(value));
   return v;
 };
+/** RIR pode ser uma faixa na planilha (por exemplo, 1-2).
+ * O valor original fica preservado e o ponto médio é somente uma estimativa numérica. */
+export function parseReportedRir(value){
+ const raw=str(value);
+ if(!raw)return {value:null,reported:null,estimated:false};
+ const m=raw.match(/^(\d+(?:[.,]\d+)?)\s*(?:-|–|—|a)\s*(\d+(?:[.,]\d+)?)$/i);
+ if(m){
+  const low=Number(m[1].replace(',','.')),high=Number(m[2].replace(',','.'));
+  if(low<0||high>30||high<low)throw new Error('Intervalo de RIR inválido: '+raw);
+  return {value:Number(((low+high)/2).toFixed(4)),reported:raw,estimated:true};
+ }
+ const single=number(value);
+ if(single===null||single>30)throw new Error('RIR inválido: '+raw);
+ return {value:single,reported:raw,estimated:false};
+}
 function date(s){const v=str(s);if(!/^\d{4}-\d\d-\d\d$/.test(v)||Number.isNaN(Date.parse(v+'T12:00:00Z'))||new Date(v+'T12:00:00Z').toISOString().slice(0,10)!==v)throw new Error('Data inválida na planilha: '+v);return v;}
 const kind=x=>({'efetiva':'effective','aquecimento':'warmup','core':'core','drop set':'drop_set','back off':'back_off','rampa':'ramp_up','extra':'extra','estendida':'extended'}[norm(x)]||'other');
 const status=x=>({'concluido':'completed','em andamento':'in_progress','planejado':'planned','cancelado':'cancelled'}[norm(x)]||null);
@@ -93,7 +108,8 @@ export function stageInbound(doc,raw){
   const exName=str(r[2]);if(!exName)throw new Error('Exercício ausente na linha '+row);
   let exercise=exercises.get(norm(exName));if(!exercise){exercise={id:'sheet_exercise_'+row,name:exName,muscle_group:null,classification_verified:false,notes:null};next.overlay.exercises.push(exercise);exercises.set(norm(exName),exercise);add.exercises++;}
   const key=variantKey(exName,str(r[3]),str(r[7]));let variant=variants.get(key);if(!variant){variant={id:'sheet_variant_'+row,exercise_id:exercise.id,equipment_or_variation:str(r[3])||'Variação não informada',unit:str(r[7])||'reps',unit_confirmed:Boolean(str(r[7])),comparison_policy:'match_same_variant_only'};next.overlay.exercise_variants.push(variant);variants.set(key,variant);add.exercise_variants++;}
-  const set={id:str(r[14])||'sheet_set_'+row,date:date(r[0]),session_id:sess.id,exercise_id:exercise.id,variant_id:variant.id,set_type:kind(r[4]),set_number:number(r[5]),load_value:number(r[6]),repetitions:number(r[8]),rir:number(r[9]),rpe:number(r[10]),legacy_volume_index:number(r[11]),discomfort:str(r[12])||null,notes:str(r[13]),provenance:{sheet:'Series',row}};
+  const reportedRir=parseReportedRir(r[9]);
+  const set={id:str(r[14])||'sheet_set_'+row,date:date(r[0]),session_id:sess.id,exercise_id:exercise.id,variant_id:variant.id,set_type:kind(r[4]),set_number:number(r[5]),load_value:number(r[6]),repetitions:number(r[8]),rir:reportedRir.value,rpe:number(r[10]),legacy_volume_index:number(r[11]),discomfort:str(r[12])||null,notes:str(r[13]),provenance:{sheet:'Series',row,...(reportedRir.estimated?{rir_reported_text:reportedRir.reported,rir_estimated_midpoint:true}:{})}};
   if(set.repetitions!==null&&!Number.isInteger(set.repetitions))throw new Error('Repetições decimais na linha '+row);
   next.overlay.sets.push(set);add.sets++;
  }
