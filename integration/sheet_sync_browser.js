@@ -36,12 +36,42 @@ async function request(url,{method='GET',body,fetchImpl=fetch}={}){
  if(!r.ok)throw new Error(r.status===401?'A sessão Google expirou. Conecte novamente.':r.status===403?'Sem permissão para esta planilha ou Google Sheets API não ativada.':`Google Sheets recusou a operação (${r.status}). ${String(json?.error?.message||'').slice(0,150)}`);
  return json;
 }
+/** Read displayed ISO dates and the underlying numeric values separately.
+ * Google Sheets may render numeric RIR 1.5 as "31.12" when the cell has a
+ * date number format. Using only FORMATTED_VALUE corrupts RIR and RPE.
+ * Using only UNFORMATTED_VALUE converts true dates into serial integers.
+ */
 export async function fetchTables(sheetId,{fetchImpl=fetch}={}){
- const id=parseSheetId(sheetId);const ranges=["'Treinos'!A:J","'Series'!A:O","'Peso'!A:G"];
- const u=new URL(`${SHEETS_ORIGIN}/v4/spreadsheets/${encodeURIComponent(id)}/values:batchGet`);
- u.searchParams.set('valueRenderOption','FORMATTED_VALUE');for(const v of ranges)u.searchParams.append('ranges',v);
- const raw=await request(u.toString(),{fetchImpl});if(!Array.isArray(raw.valueRanges)||raw.valueRanges.length!==3)throw new Error('A planilha não possui as abas Treinos, Series e Peso com o esquema esperado.');
- return Object.fromEntries(['Treinos','Series','Peso'].map((n,i)=>[n,raw.valueRanges[i].values||[]]));
+ const id=parseSheetId(sheetId),names=['Treinos','Series','Peso'];
+ const ranges=["'Treinos'!A:J","'Series'!A:O","'Peso'!A:G"];
+ const read=async option=>{
+  const url=new URL(SHEETS_ORIGIN+'/v4/spreadsheets/'+encodeURIComponent(id)+'/values:batchGet');
+  url.searchParams.set('valueRenderOption',option);
+  for(const range of ranges)url.searchParams.append('ranges',range);
+  const response=await request(url.toString(),{fetchImpl});
+  if(!Array.isArray(response.valueRanges)||response.valueRanges.length!==3)throw new Error('A planilha não possui as abas Treinos, Series e Peso com o esquema esperado.');
+  return response.valueRanges.map(v=>v.values||[]);
+ };
+ // Mandatory two-read protocol. Do not fall back to ambiguous display text if
+ // the second read fails: it could turn a valid 1.5 RIR into date text 31.12.
+ const [displayed,underlying]=await Promise.all([read('FORMATTED_VALUE'),read('UNFORMATTED_VALUE')]);
+ const numericColumns={Treinos:[4,5,6,7],Series:[5,6,8,9,10,11],Peso:[1,2,3,4]};
+ const result={};
+ names.forEach((name,i)=>{
+  const a=displayed[i],b=underlying[i];
+  if(a.length!==b.length)throw new Error('A planilha mudou durante a leitura; confira novamente antes de sincronizar: '+name);
+  result[name]=a.map((row,j)=>{
+   if(j===0)return [...row];
+   const original=[...row],raw=b[j]||[];
+   if(String(row[0]??'')&&!String(raw[0]??''))throw new Error('Linha sem data na segunda leitura: '+name+' '+(j+1));
+   // Date and text columns always come from the formatted response.
+   for(const column of numericColumns[name]){
+    if(raw[column]!==undefined&&raw[column]!==null)original[column]=raw[column];
+   }
+   return original;
+  });
+ });
+ return result;
 }
 export async function inspectSpreadsheet(sheetId,doc,options={}){
  const rows=await fetchTables(sheetId,options);const preview=previewRemote(doc,rows);const outbound=planOutbound(doc,rows);
