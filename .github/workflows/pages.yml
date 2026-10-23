@@ -6,6 +6,7 @@ on:
       - 'payload/**'
       - 'patches/**'
       - 'tests/**'
+      - 'release-staging/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
@@ -107,6 +108,27 @@ jobs:
           grep -q 'v0.5.1' dist/index.html
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Atualizar análises v0.6 e testar evolução
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat release-staging/v06/part01.b64 release-staging/v06/part02.b64 release-staging/v06/part03.b64 | base64 --decode > /tmp/treino-v06-upgrade.tar.xz
+          echo "0b689ecd150057b4b1eb5efe8a9637ab7ac39099904f5268f083553ef4ec211c  /tmp/treino-v06-upgrade.tar.xz" | sha256sum --check
+          mkdir -p /tmp/treino-v06-upgrade
+          tar -xJf /tmp/treino-v06-upgrade.tar.xz -C /tmp/treino-v06-upgrade
+          python3 /tmp/treino-v06-upgrade/apply_v06.py dist /tmp/treino-v06-upgrade
+          mkdir -p dist/tests
+          sed 's@../public/@../@g' /tmp/treino-v06-upgrade/tests/insights_v06.mjs > dist/tests/insights_v06.mjs
+          node --experimental-default-type=module dist/tests/insights_v06.mjs | tee /tmp/treino-v06-tests.log
+          grep -qx 'TOTAL_INSIGHTS_TESTS=35' /tmp/treino-v06-tests.log
+          rm -rf dist/tests
+          node --check dist/app.js
+          node --check dist/insights.js
+          node --check dist/sw.js
+          grep -q 'shell-v06' dist/sw.js
+          grep -q 'v0.6' dist/index.html
+          grep -q "'./insights.js'" dist/sw.js
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
