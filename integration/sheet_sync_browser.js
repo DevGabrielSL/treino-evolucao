@@ -1,5 +1,5 @@
 /* Browser-only Google Sheets transport. No token is persisted, logged, or embedded. */
-import {previewRemote,stageInbound,planOutbound} from './sheet_sync_core.js';
+import {previewRemote,stageInbound,planOutbound,detectOutboundDrift} from './sheet_sync_core.js';
 export const SHEETS_SCOPE='https://www.googleapis.com/auth/spreadsheets';
 const SHEETS_ORIGIN='https://sheets.googleapis.com';
 let accessToken=null,expiresAt=0;
@@ -8,7 +8,7 @@ export function parseSheetId(input){
  if(!/^[A-Za-z0-9_-]{20,}$/.test(id))throw new Error('Informe o link ou ID válido da planilha do Google Sheets.');return id;
 }
 export function validateClientId(value){const s=String(value||'').trim();if(!/^\d{8,}-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(s))throw new Error('Client ID OAuth de aplicativo Web inválido.');return s;}
-async function loadGoogleIdentity(){
+export async function loadGoogleIdentity(){
  if(globalThis.google?.accounts?.oauth2)return;
  if(!globalThis.document)throw new Error('A autorização Google exige navegador.');
  await new Promise((resolve,reject)=>{
@@ -56,7 +56,9 @@ export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
  let written={Treinos:0,Series:0,Peso:0};
  for(const tab of ['Treinos','Series','Peso']){
   // Re-read the sheet before every append: a lost HTTP response must never create a duplicate on retry.
-  let rows=await fetchTables(id,{fetchImpl}),outbound=planOutbound(doc,rows)[tab];
+  let rows=await fetchTables(id,{fetchImpl});
+  const drift=detectOutboundDrift(doc,rows);if(drift.length)throw new Error('Alterações em registros já enviados precisam de revisão antes de sincronizar: '+drift.map(x=>x.tab+' '+x.id).join(', ').slice(0,180));
+  let outbound=planOutbound(doc,rows)[tab];
   if(!outbound.length)continue;
   const existingHeader=rows[tab][0]?.[{Treinos:9,Series:14,Peso:6}[tab]];
   if(existingHeader&&existingHeader!==headerNames[tab])throw new Error('Coluna reservada para identificação já está em uso na aba '+tab+'. Não alteramos a planilha.');
@@ -65,6 +67,7 @@ export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
   }
   for(const item of outbound){
    rows=await fetchTables(id,{fetchImpl});
+   const changed=detectOutboundDrift(doc,rows);if(changed.length)throw new Error('Encontradas alterações em linhas já sincronizadas. Envio interrompido.');
    outbound=planOutbound(doc,rows)[tab];
    if(!outbound.some(v=>v.id===item.id))continue;
    const url=`${SHEETS_ORIGIN}/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(endpoints[tab])}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
