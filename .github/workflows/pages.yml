@@ -7,6 +7,7 @@ on:
       - 'patches/**'
       - 'tests/**'
       - 'release-staging/**'
+      - 'integration/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
@@ -238,6 +239,56 @@ jobs:
           JS
           test ! -f dist/tests/qa_v09.mjs
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Integrar OAuth Google Sheets v1.0-beta e bloquear regressões
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat patches/v10-ui-part01.b64 patches/v10-ui-part02.b64 | base64 --decode > /tmp/v10-ui-patch.xz
+          echo "06c7deb65d5df0e51acd4ea24f809a03de80a7bbd51a08bc4c235cda7aa2fcc8  /tmp/v10-ui-patch.xz" | sha256sum --check
+          python3 - <<'PY'
+          import json,lzma,hashlib
+          from pathlib import Path
+          patch=json.loads(lzma.decompress(Path('/tmp/v10-ui-patch.xz').read_bytes()))
+          for name,entry in patch.items():
+              if name not in ('app.js','index.html','integrity.js','sw.js'):
+                  raise ValueError('Arquivo inesperado no patch: '+name)
+              file=Path('dist')/name
+              original=file.read_text(encoding='utf-8')
+              assert hashlib.sha256(original.encode()).hexdigest()==entry['before'], 'Base incompatível: '+name
+              updated=original
+              for a,b,t in reversed(entry['ops']):
+                  updated=updated[:a]+t+updated[b:]
+              assert hashlib.sha256(updated.encode()).hexdigest()==entry['after'], 'Conteúdo incorreto: '+name
+              file.write_text(updated,encoding='utf-8')
+          print('V10_UI_PATCH=4_HASH_VERIFIED')
+          PY
+          for module in sheet_sync_core sheet_sync_browser sheets_config; do
+            test -f integration/$module.js
+            cp integration/$module.js dist/$module.js
+          done
+          mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration /tmp/sheets-qa/tests
+          cp -R dist/. /tmp/sheets-qa/public/
+          cp dist/sheet_sync_*.js /tmp/sheets-qa/integration/
+          cp integration/tests/*.mjs /tmp/sheets-qa/tests/
+          node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
+          node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_browser.mjs | tee /tmp/sheets-browser-results.log
+          node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_additional.mjs | tee /tmp/sheets-guard-results.log
+          grep -qx 'SHEETS_SYNC_TESTS=13' /tmp/sheets-core-results.log
+          grep -qx 'BROWSER_TRANSPORT_TESTS=10' /tmp/sheets-browser-results.log
+          grep -qx 'TOTAL_SHEETS_GUARD_TESTS=11' /tmp/sheets-guard-results.log
+          for mod in app store body history insights metrics backup edit_ops template_ops integrity sheet_sync_core sheet_sync_browser sheets_config sw; do
+            node --check dist/$mod.js
+          done
+          grep -q 'shell-v10-sheets' dist/sw.js
+          grep -q 'shell-v10-sheets' dist/integrity.js
+          grep -q 'v1.0 beta Sheets' dist/index.html
+          grep -q 'accounts.google.com' dist/index.html
+          grep -q 'sheets.googleapis.com' dist/index.html
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test -f dist/manifest.webmanifest
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'TOTAL_SHEETS_TESTS=34; NO_PRIVATE_HISTORY=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
