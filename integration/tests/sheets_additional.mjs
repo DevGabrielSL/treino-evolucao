@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {emptyDocument,validateDocument} from '../public/store.js';
+import {planOutbound,detectOutboundDrift,previewRemote} from '../integration/sheet_sync_core.js';
+let total=0;function ok(label,fn){fn();total++;console.log('PASS '+label);}
+const doc=emptyDocument();
+doc.overlay.exercises.push({id:'ex',name:'Supino'});
+doc.overlay.exercise_variants.push({id:'v',exercise_id:'ex',unit:'kg',equipment_or_variation:'Barra',unit_confirmed:true});
+doc.overlay.sessions.push({id:'s',name:'Superior A',date:'2026-10-23',status:'completed',notes:'ok',provenance:{source:'android_local'}});
+doc.overlay.sets.push({id:'z',date:'2026-10-23',session_id:'s',exercise_id:'ex',variant_id:'v',set_type:'effective',set_number:1,load_value:50,repetitions:10,rir:2,provenance:{source:'android_local'}});
+doc.overlay.weigh_ins.push({id:'w',date:'2026-10-23',weight_kg:85,provenance:{source:'android_local'}});
+const raw={Treinos:[['Data']],Series:[['Data']],Peso:[['Data'],['2026-08-24','88','79,9']]};
+const plan=planOutbound(doc,raw);
+ok('Local source sessions uploadable',()=>assert.equal(plan.Treinos.length,1));
+ok('Local source sets uploadable',()=>assert.equal(plan.Series.length,1));
+ok('Local source weigh-ins uploadable',()=>assert.equal(plan.Peso.length,1));
+ok('Computed volume index',()=>assert.equal(plan.Series[0].values[11],500));
+ok('Computed day',()=>assert.equal(plan.Treinos[0].values[1],'Sexta'));
+ok('Weight difference preserves goal',()=>assert.deepEqual(plan.Peso[0].values.slice(3,5),[-3,5.1]));
+for(const tab of ['Treinos','Series','Peso'])raw[tab].push(plan[tab][0].values);
+ok('Reupload has no pending rows',()=>assert.deepEqual(Object.fromEntries(Object.entries(planOutbound(doc,raw)).map(([k,v])=>[k,v.length])),{Treinos:0,Series:0,Peso:0}));
+ok('Matching remote ID has no drift',()=>assert.equal(detectOutboundDrift(doc,raw).length,0));
+doc.overlay.sets[0].load_value=55;
+ok('Edited previously-uploaded load causes conflict',()=>assert.equal(detectOutboundDrift(doc,raw)[0].tab,'Series'));
+doc.overlay.sets[0].load_value=50;
+raw.Treinos.push(plan.Treinos[0].values);
+ok('Duplicate remote IDs rejected',()=>assert.throws(()=>previewRemote(doc,raw),/duplicado/));
+ok('Model remains valid',()=>assert.equal(validateDocument(doc),true));
+console.log('TOTAL_SHEETS_GUARD_TESTS='+total);
