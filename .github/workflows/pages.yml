@@ -266,12 +266,13 @@ jobs:
             test -f integration/$module.js
             cp integration/$module.js dist/$module.js
           done
-          mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration /tmp/sheets-qa/tests
+          mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration/tests /tmp/sheets-qa/tests
           cp -R dist/. /tmp/sheets-qa/public/
           cp dist/sheet_sync_*.js /tmp/sheets-qa/integration/
-          cp integration/tests/*.mjs /tmp/sheets-qa/tests/
-          node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
-          node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_browser.mjs | tee /tmp/sheets-browser-results.log
+          cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
+          cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
+          node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
+          node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_browser.mjs | tee /tmp/sheets-browser-results.log
           node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_additional.mjs | tee /tmp/sheets-guard-results.log
           grep -qx 'SHEETS_SYNC_TESTS=13' /tmp/sheets-core-results.log
           grep -qx 'BROWSER_TRANSPORT_TESTS=10' /tmp/sheets-browser-results.log
