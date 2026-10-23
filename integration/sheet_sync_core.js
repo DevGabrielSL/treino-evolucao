@@ -17,6 +17,7 @@ export function variantKey(name,equipment,unit){return [norm(name),norm(equipmen
 export function readRowSets(raw){
   const obj={};for(const t of ['Treinos','Series','Peso']){const values=Array.isArray(raw[t])?raw[t]:raw[t]?.values;if(!Array.isArray(values))throw new Error('Aba obrigatória ausente: '+t);obj[t]=values;}
   for(const [t,header] of [['Treinos','Data'],['Series','Data'],['Peso','Data']])if(norm(obj[t][0]?.[0])!==norm(header))throw new Error('Cabeçalho incorreto: '+t);
+  for(const t of ['Treinos','Series','Peso']){const seen=new Set();for(const r of obj[t].slice(1)){const id=str(r?.[COLUMN_IDS[t]]);if(!id)continue;if(seen.has(id))throw new Error('ID de aplicativo duplicado no Google Sheets ('+t+'): '+id);seen.add(id);}}
   return obj;
 }
 /** A projection does not edit the Google Sheet and does not overwrite historical rows. */
@@ -42,18 +43,19 @@ export function previewRemote(doc,raw){
 export function sessionValues(s){
  if(!s?.id||!s.name||!s.date)throw new Error('Sessão local incompleta');
  const labels={completed:'Concluído',planned:'Planejado',in_progress:'Em andamento',cancelled:'Cancelado'};
- return [date(s.date),s.weekday_reported||'',s.name,labels[s.status]||'Planejado',s.duration_minutes??'',s.body_weight_kg??'',s.lower_back_pain_before??'',s.lower_back_pain_after??'',s.notes||'',s.id];
+ const dow=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][new Date(s.date+'T12:00:00Z').getUTCDay()];
+ return [date(s.date),s.weekday_reported||dow,s.name,labels[s.status]||'Planejado',s.duration_minutes??'',s.body_weight_kg??'',s.lower_back_pain_before??'',s.lower_back_pain_after??'',s.notes||'',s.id];
 }
 export function setValues(s,entities){
  if(!s?.id||!s.session_id)throw new Error('Série incompleta');
  const session=entities.sessions.find(x=>x.id===s.session_id),ex=entities.exercises.find(x=>x.id===s.exercise_id),v=entities.exercise_variants.find(x=>x.id===s.variant_id);
  if(!session||!ex||!v)throw new Error('Série com ligação inexistente');
  const labels={effective:'Efetiva',warmup:'Aquecimento',core:'Core',drop_set:'Drop set',back_off:'Back off',ramp_up:'Rampa',extra:'Extra',extended:'Estendida',other:'Outra'};
- return [date(s.date),session.name,ex.name,v.equipment_or_variation||'',labels[s.set_type]||'Outra',s.set_number??'',s.load_value??'',v.unit||'',s.repetitions??'',s.rir??'',s.rpe??'',s.legacy_volume_index??'',s.discomfort??'',s.notes||'',s.id];
+ return [date(s.date),session.name,ex.name,v.equipment_or_variation||'',labels[s.set_type]||'Outra',s.set_number??'',s.load_value??'',v.unit||'',s.repetitions??'',s.rir??'',s.rpe??'',s.legacy_volume_index??(Number.isFinite(s.load_value)&&Number.isFinite(s.repetitions)?Number((s.load_value*s.repetitions).toFixed(3)):''),s.discomfort??'',s.notes||'',s.id];
 }
-export function weightValues(w){
+export function weightValues(w,{initial=null,goal=null}={}){
  if(!w?.id)throw new Error('Pesagem sem identificador');
- return [date(w.date),number(w.weight_kg,{positive:true}),w.goal_weight_kg_reported??'','','',w.notes||'',w.id];
+ const current=number(w.weight_kg,{positive:true}),target=w.goal_weight_kg_reported??goal;return [date(w.date),current,target??'',initial===null?'':Number((current-initial).toFixed(3)),target==null?'':Number((current-target).toFixed(3)),w.notes||'',w.id];
 }
 /** Only local overlay records are candidates. An imported row is NEVER uploaded back. */
 export function planOutbound(doc,raw){
@@ -61,16 +63,17 @@ export function planOutbound(doc,raw){
  for(const t of ['Treinos','Series','Peso'])for(const r of rows[t].slice(1)){const id=str(r?.[COLUMN_IDS[t]]);if(id)remote.add(t+':'+id);}
  const seenSessions=new Set(rows.Treinos.slice(1).filter(r=>str(r?.[0])).map(r=>sessionKey(r[0],r[2])));
  const sessions=[...(doc.base?.entities?.sessions||[]),...doc.overlay.sessions];
- const localSessions=doc.overlay.sessions.filter(s=>!s.provenance&&s.status==='completed');
+ const localSessions=doc.overlay.sessions.filter(s=>!s.provenance?.sheet&&s.status==='completed');
  for(const s of localSessions){if(remote.has('Treinos:'+s.id))continue;if(seenSessions.has(sessionKey(s.date,s.name)))throw new Error('Conflito: sessão com mesma data e nome já existe no Sheets. Revise antes de sincronizar: '+s.date+' '+s.name);plan.Treinos.push({id:s.id,values:sessionValues(s)});}
  const entities={sessions,sets:[...(doc.base?.entities?.sets||[]),...doc.overlay.sets],exercises:[...(doc.base?.entities?.exercises||[]),...doc.overlay.exercises],exercise_variants:[...(doc.base?.entities?.exercise_variants||[]),...doc.overlay.exercise_variants]};
  const done=new Set(sessions.filter(s=>s.status==='completed').map(s=>s.id));
- for(const s of doc.overlay.sets.filter(s=>!s.provenance&&done.has(s.session_id))){if(!remote.has('Series:'+s.id))plan.Series.push({id:s.id,values:setValues(s,entities)});}
+ for(const s of doc.overlay.sets.filter(s=>!s.provenance?.sheet&&done.has(s.session_id))){if(!remote.has('Series:'+s.id))plan.Series.push({id:s.id,values:setValues(s,entities)});}
  const weights=rows.Peso.slice(1).filter(r=>str(r?.[0]));
- for(const w of doc.overlay.weigh_ins.filter(w=>!w.provenance)){
+ const initial=weights.length?number(weights[0][1],{positive:true}):null,goal=weights.length?number(weights[0][2]):null;
+ for(const w of doc.overlay.weigh_ins.filter(w=>!w.provenance?.sheet)){
   if(remote.has('Peso:'+w.id))continue;
   if(weights.some(r=>r[0]===w.date&&number(r[1],{positive:true})===w.weight_kg))throw new Error('Conflito: pesagem idêntica já existe no Sheets.');
-  plan.Peso.push({id:w.id,values:weightValues(w)});
+  plan.Peso.push({id:w.id,values:weightValues(w,{initial,goal})});
  }
  return plan;
 }
@@ -96,4 +99,25 @@ export function stageInbound(doc,raw){
  }
  for(const {row,record:r} of view.newRows.Peso){const w={id:str(r[6])||'sheet_weight_'+row,date:date(r[0]),weight_kg:number(r[1],{positive:true}),goal_weight_kg_reported:number(r[2]),notes:str(r[5]),provenance:{sheet:'Peso',row}};next.overlay.weigh_ins.push(w);add.weigh_ins++;}
  return {next,add,remoteCounts:view.remoteCounts};
+}
+/** Detect local edits after an app-generated record has already been uploaded. */
+export function detectOutboundDrift(doc,raw){
+ const rows=readRowSets(raw),entities={sessions:[...(doc.base?.entities?.sessions||[]),...doc.overlay.sessions],
+  exercises:[...(doc.base?.entities?.exercises||[]),...doc.overlay.exercises],
+  exercise_variants:[...(doc.base?.entities?.exercise_variants||[]),...doc.overlay.exercise_variants]};
+ const specs={Treinos:{list:doc.overlay.sessions,serialize:x=>sessionValues(x),check:[0,2,3,4,5,6,7,8]},
+  Series:{list:doc.overlay.sets,serialize:x=>setValues(x,entities),check:[0,1,2,3,4,5,6,7,8,9,10,12,13]},
+  Peso:{list:doc.overlay.weigh_ins,serialize:x=>weightValues(x),check:[0,1,2,5]}};
+ const normalized=x=>{const t=String(x??'').trim();if(!t)return '';if(/^[-+]?\d+(?:[.,]\d+)?$/.test(t))return String(Number(t.replace(',','.')));return t;};
+ const conflicts=[];
+ for(const [tab,{list,serialize,check}] of Object.entries(specs)){
+  const remote=new Map(rows[tab].slice(1).filter(r=>str(r?.[COLUMN_IDS[tab]])).map(r=>[str(r[COLUMN_IDS[tab]]),r]));
+  const initialWeight=rows.Peso.length>1?number(rows.Peso[1][1],{positive:true}):null;
+  const goalWeight=rows.Peso.length>1?number(rows.Peso[1][2]):null;
+  for(const local of list.filter(x=>!x.provenance?.sheet)){const r=remote.get(local.id);if(!r)continue;
+   const expected=tab==='Peso'?weightValues(local,{initial:initialWeight,goal:goalWeight}):serialize(local);
+   if(check.some(i=>normalized(expected[i])!==normalized(r[i])))conflicts.push({tab,id:local.id});
+  }
+ }
+ return conflicts;
 }
