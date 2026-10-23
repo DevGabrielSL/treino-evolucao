@@ -130,6 +130,32 @@ jobs:
           grep -q 'v0.6' dist/index.html
           grep -q "'./insights.js'" dist/sw.js
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Atualizar histórico consultável v0.7 e executar 55 regressões
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat release-staging/v07/part01.b64 release-staging/v07/part02.b64 release-staging/v07/part03.b64 release-staging/v07/part04.b64 | base64 --decode > /tmp/treino-v07-upgrade.tar.xz
+          echo "139e48d01b95f1518d5c69a3a791428d427d231fd419cb1cf83e4089348ad03f  /tmp/treino-v07-upgrade.tar.xz" | sha256sum --check
+          mkdir -p /tmp/treino-v07-upgrade
+          tar -xJf /tmp/treino-v07-upgrade.tar.xz -C /tmp/treino-v07-upgrade
+          python3 /tmp/treino-v07-upgrade/apply_v07.py dist /tmp/treino-v07-upgrade
+          mkdir -p dist/tests
+          sed 's@../public/@../@g' /tmp/treino-v07-upgrade/history_v07.mjs > dist/tests/history_v07.mjs
+          node --experimental-default-type=module dist/tests/history_v07.mjs | tee /tmp/treino-v07-tests.log
+          grep -qx 'TOTAL_HISTORY_TESTS=55' /tmp/treino-v07-tests.log
+          rm -rf dist/tests
+          node --check dist/app.js
+          node --check dist/history.js
+          node --check dist/insights.js
+          node --check dist/store.js
+          node --check dist/metrics.js
+          node --check dist/backup.js
+          grep -q 'shell-v07' dist/sw.js
+          grep -q 'v0.7' dist/index.html
+          grep -q "'./history.js'" dist/sw.js
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
