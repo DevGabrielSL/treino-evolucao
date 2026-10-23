@@ -5,6 +5,7 @@ on:
     paths:
       - 'payload/**'
       - 'patches/**'
+      - 'tests/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
@@ -84,6 +85,26 @@ jobs:
           node --check dist/metrics.js
           node --check dist/backup.js
           node --check dist/edit_ops.js
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Aplicar correções auditadas v0.5.1 e executar regressões
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 patches/v051_apply.py dist
+          mkdir -p dist/tests
+          cp tests/v051_regression.mjs dist/tests/regression.mjs
+          node --experimental-default-type=module dist/tests/regression.mjs
+          rm -rf dist/tests
+          node --check dist/app.js
+          node --check dist/store.js
+          node --check dist/metrics.js
+          node --check dist/edit_ops.js
+          node --check dist/template_ops.js
+          node --check dist/backup.js
+          grep -q 'shell-v051' dist/sw.js
+          grep -q 'v0.5.1' dist/index.html
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
