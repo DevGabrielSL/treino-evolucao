@@ -38,6 +38,35 @@ jobs:
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           ! find dist -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' | grep -q .
+      - name: Aplicar atualização de edição e repetição de treinos (v0.4)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, lzma, json, hashlib
+          from pathlib import Path
+          raw=base64.b64decode(Path('patches/v04-update.xz.b64').read_text().strip(),validate=True)
+          expected='11102740f955ab3964bb92e7860ba6891c5e259b1bfaf48f88190c37cc5de583'
+          assert hashlib.sha256(raw).hexdigest()==expected, 'SHA-256 do pacote v0.4 diferente do esperado'
+          delta=json.loads(lzma.decompress(raw))
+          for name in ('app.js','sw.js','index.html'):
+              entry=delta[name]; path=Path('dist')/name
+              original=path.read_text(encoding='utf-8')
+              assert hashlib.sha256(original.encode()).hexdigest()==entry['sha'], 'Versão base incompatível: '+name
+              new=original
+              for start,end,text in reversed(entry['ops']):
+                  new=new[:start]+text+new[end:]
+              path.write_text(new,encoding='utf-8')
+          (Path('dist')/'edit_ops.js').write_text(delta['edit_ops.js'],encoding='utf-8')
+          assert "shell-v4" in Path('dist/sw.js').read_text()
+          assert "edit_ops.js" in Path('dist/sw.js').read_text()
+          print('Upgrade v0.4 aplicado e conferido sem dados pessoais')
+          PY
+          node --check dist/app.js
+          node --check dist/edit_ops.js
+          test -f dist/icons/icon-192.png
+          test -f dist/manifest.webmanifest
+          ! find dist -iname '*historico*' -o -iname '*privado*' | grep -q .
       - name: Atualizar o app público para v0.5 e verificar integridade
         shell: bash
         run: |
