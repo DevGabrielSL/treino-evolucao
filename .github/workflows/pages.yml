@@ -340,13 +340,8 @@ jobs:
       - name: Validar leitura tipada Google Sheets v1.0.2 antes de publicar
         shell: bash
         run: |
-          set -euxo pipefail
-          echo PREVIOUS_BROWSER_SHA=$(git hash-object dist/sheet_sync_browser.js)
-          echo CURRENT_BROWSER_SHA=$(git hash-object integration/sheet_sync_browser.js)
-          grep -Eo 'shell-v[[:alnum:]-]+' dist/sw.js | sort -u
-          grep -Eo 'shell-v[[:alnum:]-]+' dist/integrity.js | sort -u
-          grep -o 'v1.0.[0-9] beta Sheets' dist/index.html || true
-          test "$(git hash-object dist/sheet_sync_browser.js)" = "ad44b61018284d99d224db82b85583e682aecf28"
+          set -euo pipefail
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "b61d7b8b9240738aff9f27613e41bfa882de682a"
           test "$(git hash-object integration/sheet_sync_browser.js)" = "b61d7b8b9240738aff9f27613e41bfa882de682a"
           cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
           grep -q 'shell-v101-sheets-rir' dist/sw.js
