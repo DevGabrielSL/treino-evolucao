@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'public-site.tar.xz'
+      - 'payload/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
@@ -20,21 +20,29 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Obter código público
         uses: actions/checkout@v4
-      - name: Extrair apenas os arquivos públicos
+      - name: Restaurar a distribuição e validar integridade
+        shell: bash
         run: |
+          set -euo pipefail
+          cat payload/part01.b64 payload/part02.b64 payload/part03a.b64 payload/part03b.b64 payload/part04.b64 payload/part05.b64 payload/part06.b64 payload/part07.b64 | base64 --decode > /tmp/public-site.tar.xz
+          echo "2a8836fc6cb58e9485d555149e3557cf676be3353630445f44052c32db444aee  /tmp/public-site.tar.xz" | sha256sum --check
           mkdir -p dist
-          tar -xJf public-site.tar.xz -C dist
+          tar -xJf /tmp/public-site.tar.xz -C dist
           test -f dist/index.html
+          test -f dist/app.js
           test -f dist/sw.js
           test -f dist/manifest.webmanifest
-      - name: Configurar Pages
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' | grep -q .
+      - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Preparar pacote Pages
+      - name: Enviar artefato de publicação
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-      - name: Publicar
+      - name: Publicar aplicativo
         id: deployment
         uses: actions/deploy-pages@v4
