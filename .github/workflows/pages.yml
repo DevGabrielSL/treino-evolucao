@@ -181,6 +181,63 @@ jobs:
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Estabilizar backups e cache v0.9
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, lzma
+          from pathlib import Path
+          compressed=base64.b64decode(Path('release-staging/v09/qa-patch.xz.b64').read_text().strip(),validate=True)
+          expected='7d8bbf6ea1c95bc0a9174ee6379293d5ea718c1b6ea611e5bc33727376c18ff6'
+          assert hashlib.sha256(compressed).hexdigest()==expected, 'Hash SHA-256 da atualização v0.9 incompatível'
+          delta=json.loads(lzma.decompress(compressed))
+          assert delta['version']=='0.9.0'
+          for name, change in delta['files'].items():
+              p=Path('dist')/name
+              previous=p.read_text(encoding='utf-8')
+              assert hashlib.sha256(previous.encode()).hexdigest()==change['old_sha'], 'Base inesperada: '+name
+              updated=previous
+              for start,end,replacement in reversed(change['ops']):
+                  updated=updated[:start]+replacement+updated[end:]
+              assert hashlib.sha256(updated.encode()).hexdigest()==change['new_sha'], 'Arquivo alterado fora do esperado: '+name
+              p.write_text(updated,encoding='utf-8')
+          for name,content in delta['adds'].items():
+              assert name in ('integrity.js',), 'Arquivo inesperado'
+              assert hashlib.sha256(content.encode()).hexdigest()==delta['new_sha'][name]
+              (Path('dist')/name).write_text(content,encoding='utf-8')
+          print('V0.9 PATCH_HASH_OK; arquivo pessoal: NENHUM')
+          PY
+          for module in app store body history insights metrics backup edit_ops template_ops integrity sw; do node --check dist/$module.js; done
+          grep -q 'shell-v09' dist/sw.js
+          grep -q "'./integrity.js'" dist/sw.js
+          grep -q 'v0.9' dist/index.html
+          node --experimental-default-type=module --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {emptyDocument,commit} from './dist/store.js';
+          import {encryptBackup} from './dist/backup.js';
+          import {fingerprintDocument,verifyExportedBackup,inspectOfflineCache,OFFLINE_ASSETS,CACHE_NAME} from './dist/integrity.js';
+          const doc=emptyDocument(),hash=await fingerprintDocument(doc);
+          assert.equal(hash.length,64);
+          assert.equal((await verifyExportedBackup(JSON.stringify(doc),'',{revision:0,fingerprint:hash})).valid,true);
+          await assert.rejects(verifyExportedBackup(JSON.stringify(doc),'',{revision:1,fingerprint:hash}),/revisão/);
+          await assert.rejects(verifyExportedBackup(JSON.stringify(commit(doc,d=>d.settings.weekly_goal=5)),'',{revision:0,fingerprint:hash}),/revisão/);
+          const different=structuredClone(doc);different.settings.weekly_goal=5;
+          await assert.rejects(verifyExportedBackup(JSON.stringify(different),'',{revision:0,fingerprint:hash}),/exatamente/);
+          const encrypted=await encryptBackup(doc,'senha-publica-sintetica-longa');
+          assert.equal((await verifyExportedBackup(JSON.stringify(encrypted),'senha-publica-sintetica-longa',{revision:0,fingerprint:hash})).valid,true);
+          await assert.rejects(verifyExportedBackup(JSON.stringify(encrypted),'errada',{revision:0,fingerprint:hash}),/Senha incorreta/);
+          const scope='https://example.github.io/treino-evolucao/';
+          const present=new Set(OFFLINE_ASSETS.map(x=>new URL(x,scope).href));
+          const caches={keys:async()=>[CACHE_NAME],open:async()=>({match:async url=>present.has(String(url))?{ok:true}:null})};
+          assert.equal((await inspectOfflineCache(caches,scope)).complete,true);
+          present.delete(new URL('./body.js',scope).href);
+          assert.equal((await inspectOfflineCache(caches,scope)).complete,false);
+          assert.equal((await inspectOfflineCache(null,scope)).complete,false);
+          console.log('TOTAL_V09_CI_SMOKE=10');
+          JS
+          test ! -f dist/tests/qa_v09.mjs
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
