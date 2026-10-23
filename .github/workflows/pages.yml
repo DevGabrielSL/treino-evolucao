@@ -290,6 +290,53 @@ jobs:
           test -f dist/manifest.webmanifest
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'TOTAL_SHEETS_TESTS=34; NO_PRIVATE_HISTORY=TRUE'
+      - name: Validar importação de RIR intervalar v1.0.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object dist/sheet_sync_core.js)" = "33147921c9a6eb1ff28d8793e399b0d234d7e641"
+          echo "1bc4bb164977a3593d28f19ada65646c7f189f0de070e0408c76be2b83f5ce9f  dist/index.html" | sha256sum -c -
+          echo "203d0d964064d6bfa3208174a55ba54b8a6c1830466b5808bd3d1dbc036c5109  dist/sw.js" | sha256sum -c -
+          echo "b94c4f2d9e1563341b3224be52e828781d8dad479425fe9e5646c1f69f236af5  dist/integrity.js" | sha256sum -c -
+          sed -i 's/v1\.0 beta/v1.0.1 beta/g' dist/index.html
+          sed -i 's/v10-sheets/v101-sheets-rir/g' dist/sw.js dist/integrity.js
+          echo "441e079eed1639a01760f15466e4c7bccfb3313f5e3ac0ab71b747f3980a4ec2  dist/index.html" | sha256sum -c -
+          echo "aab4bcc27870ed54ddf12854765a655e76090bf692ddb26747b58f4766fa5336  dist/sw.js" | sha256sum -c -
+          echo "85fd9b6c7a9071ee610b3a34c0322a38bd823e81fdffa395cfc13eb0272a64f7  dist/integrity.js" | sha256sum -c -
+          node --check dist/sheet_sync_core.js
+          node --check dist/sw.js
+          node --experimental-default-type=module --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {emptyDocument,validateDocument} from './dist/store.js';
+          import {stageInbound,previewRemote,planOutbound,parseReportedRir} from './dist/sheet_sync_core.js';
+          let n=0;const ok=(label,f)=>{f();n++;console.log('PASS '+label);};
+          for(const [raw,want] of [['1-2',1.5],['1 – 2',1.5],['2,5-3',2.75],['2',2]]){
+            ok('RIR '+raw,()=>assert.equal(parseReportedRir(raw).value,want));
+          }
+          ok('RIR ausente',()=>assert.equal(parseReportedRir('').value,null));
+          ok('RIR invertido bloqueado',()=>assert.throws(()=>parseReportedRir('3-1'),/RIR inválido/));
+          const data={
+            Treinos:[['Data','Dia','Sessão','Status']],
+            Series:[['Data','Sessão','Exercício','Equipamento / variação','Tipo','Série','Carga','Unidade','Reps','RIR']],
+            Peso:[['Data','Peso (kg)','Meta (kg)'],['2026-08-24','88','79,9']]
+          };
+          const sessions=[];
+          for(let i=0;i<16;i++){const date=new Date(Date.UTC(2026,7,24+i*3)).toISOString().slice(0,10),name='Treino '+i;sessions.push({date,name});data.Treinos.push([date,'Segunda',name,'Concluído']);}
+          for(let i=0;i<238;i++){const s=sessions[Math.floor(i/15)%16],row=i+2;data.Series.push([s.date,s.name,'Supino','Barra','Efetiva',i%3+1,50,'kg',10,[79,86,87].includes(row)?'1-2':'2']);}
+          const before=emptyDocument(),result=stageInbound(before,data);
+          ok('Importar 16 sessões',()=>assert.equal(result.add.sessions,16));
+          ok('Importar 238 séries',()=>assert.equal(result.add.sets,238));
+          ok('Preservar pesagem',()=>assert.equal(result.add.weigh_ins,1));
+          ok('Três faixas RIR estimadas',()=>assert.equal(result.next.overlay.sets.filter(s=>s.provenance.rir_estimated_midpoint).length,3));
+          ok('Texto exato preservado',()=>assert.ok(result.next.overlay.sets.filter(s=>s.provenance.rir_estimated_midpoint).every(s=>s.provenance.rir_reported_text==='1-2'&&s.rir===1.5)));
+          ok('Estado validado',()=>assert.equal(validateDocument(result.next),true));
+          ok('Nada duplicado na reimportação',()=>assert.deepEqual(previewRemote(result.next,data).counts,{Treinos:0,Series:0,Peso:0}));
+          ok('Nada antigo enviado ao servidor',()=>assert.deepEqual(planOutbound(result.next,data),{Treinos:[],Series:[],Peso:[]}));
+          ok('Importação repetida estável',()=>assert.equal(stageInbound(result.next,data).add.sets,0));
+          console.log('SHEETS_RIR_HOTFIX_TESTS='+n);
+          JS
+          test -f dist/icons/icon-192.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
