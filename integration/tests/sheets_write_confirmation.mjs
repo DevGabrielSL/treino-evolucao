@@ -61,7 +61,6 @@ ok('Server received all three IDs',()=>assert.ok(tabs.Treinos.at(-1)[9]==='sessi
 const retry=await uploadNewRows(id,doc,{fetchImpl:mock.fetchImpl});
 ok('Retry is idempotent',()=>assert.deepEqual(retry.written,{Treinos:0,Series:0,Peso:0}));
 ok('Retry writes no extra rows',()=>assert.equal(mock.writes.filter(v=>v.startsWith('ROW ')).length,3));
-ok('Preview after successful upload has zero pending records',async()=>{});
 const after=await previewUpload(id,doc,{fetchImpl:mock.fetchImpl});
 ok('Post-upload preview empty',()=>assert.deepEqual(after.counts,{Treinos:0,Series:0,Peso:0}));
 const altered=structuredClone(doc);altered.overlay.sets[0].load_value=55;
