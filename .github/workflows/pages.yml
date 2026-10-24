@@ -341,8 +341,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_browser.js)" = "b61d7b8b9240738aff9f27613e41bfa882de682a"
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "b61d7b8b9240738aff9f27613e41bfa882de682a"
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "ec81cbf090d4528e470b9f59aff9ff23099769ce"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "ec81cbf090d4528e470b9f59aff9ff23099769ce"
           cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
           grep -q 'shell-v101-sheets-rir' dist/sw.js
           grep -q 'shell-v101-sheets-rir' dist/integrity.js
