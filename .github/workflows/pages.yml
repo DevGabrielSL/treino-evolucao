@@ -363,6 +363,46 @@ jobs:
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Proteger primeira gravação v1.0.3 e executar testes de integridade
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "ec81cbf090d4528e470b9f59aff9ff23099769ce"
+          grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
+          grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
+          grep -q 'v1.0.2 beta Sheets' dist/index.html
+          cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
+          python3 - <<'PY'
+          import json,base64,lzma,hashlib
+          from pathlib import Path
+          data=json.loads(lzma.decompress(base64.b64decode(Path('patches/v103-app-delta.xz.b64').read_text().strip(),validate=True)))
+          file=Path('dist/app.js')
+          before=file.read_text(encoding='utf-8')
+          assert hashlib.sha256(before.encode()).hexdigest()==data['base_sha']=='3ebe98bf71a4eabbe2aae8e05823b3e51218ae13a09a12b81d28addbcc417796','Base app.js incompatível'
+          updated=before
+          for start,end,text in reversed(data['ops']):
+              updated=updated[:start]+text+updated[end:]
+          assert hashlib.sha256(updated.encode()).hexdigest()==data['result_sha']=='fe2292c955547b13dc1dbcb6d40d79ce17ae792528baa5b2041c79ca7f0c549a','Patch inesperado'
+          file.write_text(updated,encoding='utf-8')
+          print('V103_UI_PATCH_HASH_VERIFIED; original local state preserved')
+          PY
+          sed -i 's/shell-v102-sheets-typed-numbers/shell-v103-sheets-verify-write/g' dist/sw.js dist/integrity.js
+          sed -i 's/v1\.0\.2 beta Sheets/v1.0.3 beta Sheets/g' dist/index.html
+          node --check dist/app.js
+          node --check dist/sheet_sync_browser.js
+          node --check dist/sheet_sync_core.js
+          node --check dist/sw.js
+          node --experimental-default-type=module integration/tests/sheets_write_confirmation.mjs | tee /tmp/treino-sheets-write-tests.log
+          grep -qx 'SHEETS_WRITE_CONFIRMATION_TESTS=15' /tmp/treino-sheets-write-tests.log
+          node --experimental-default-type=module integration/tests/sheets_numeric_formats.mjs | tee /tmp/treino-typed-retests.log
+          grep -qx 'SHEETS_TYPED_NUMBERS_TESTS=19' /tmp/treino-typed-retests.log
+          grep -q 'shell-v103-sheets-verify-write' dist/sw.js
+          grep -q 'shell-v103-sheets-verify-write' dist/integrity.js
+          grep -q 'v1.0.3 beta Sheets' dist/index.html
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test -f dist/manifest.webmanifest
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
