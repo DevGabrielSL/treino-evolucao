@@ -78,6 +78,16 @@ export async function inspectSpreadsheet(sheetId,doc,options={}){
  return {rows,preview,pending:Object.fromEntries(Object.entries(outbound).map(([t,v])=>[t,v.length]))};
 }
 /** Safe transaction plan: append-only. Never overwrite historical A:I/A:N/A:F entries. */
+/** Read-only preview. No header, row, or token is written to Google.
+ * Always re-fetch immediately before any subsequent upload.
+ */
+export async function previewUpload(sheetId,doc,{fetchImpl=fetch}={}){
+ const rows=await fetchTables(sheetId,{fetchImpl});
+ const drift=detectOutboundDrift(doc,rows);
+ if(drift.length)throw new Error('Há divergência em '+drift.length+' registro(s) já enviados. Revise antes de continuar.');
+ const pending=planOutbound(doc,rows);
+ return {pending,counts:Object.fromEntries(Object.entries(pending).map(([name,items])=>[name,items.length])),remote:previewRemote(doc,rows).remoteCounts};
+}
 export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
  const id=parseSheetId(sheetId);
  const endpoints={Treinos:"'Treinos'!A:J",Series:"'Series'!A:O",Peso:"'Peso'!A:G"};
@@ -103,11 +113,18 @@ export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
    const url=`${SHEETS_ORIGIN}/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(endpoints[tab])}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
    await request(url,{method:'POST',body:{majorDimension:'ROWS',values:[item.values]},fetchImpl});
    const check=await fetchTables(id,{fetchImpl});
-   if(!check[tab].slice(1).some(r=>String(r?.[{Treinos:9,Series:14,Peso:6}[tab]]||'')===item.id))throw new Error('Confirmação de escrita ausente na aba '+tab+'. Verifique a planilha antes de repetir.');
+   const matches=check[tab].slice(1).filter(r=>String(r?.[{Treinos:9,Series:14,Peso:6}[tab]]||'')===item.id);
+   if(matches.length!==1)throw new Error('Confirmação de escrita ausente ou duplicada na aba '+tab+'. Verifique a planilha antes de repetir.');
+   // An ID alone is not a receipt: verify the written cell values too.
+   const mismatch=detectOutboundDrift(doc,check).find(x=>x.tab===tab&&x.id===item.id);
+   if(mismatch)throw new Error('A linha foi recebida no Google Sheets, mas os valores não correspondem ao registro local. Revise a aba '+tab+' antes de tentar novamente.');
    written[tab]++;
   }
  }
- const after=await fetchTables(id,{fetchImpl});const remaining=planOutbound(doc,after);
+ const after=await fetchTables(id,{fetchImpl});
+ const drift=detectOutboundDrift(doc,after);
+ if(drift.length)throw new Error('Dados divergentes após gravação no Google Sheets. Verifique a planilha antes de tentar novamente: '+drift.map(x=>x.tab+' '+x.id).join(', ').slice(0,180));
+ const remaining=planOutbound(doc,after);
  if(Object.values(remaining).some(a=>a.length))throw new Error('Existem registros ainda pendentes na planilha. Tente sincronizar novamente após conferir os dados.');
  return {written,remote:previewRemote(doc,after).remoteCounts};
 }
