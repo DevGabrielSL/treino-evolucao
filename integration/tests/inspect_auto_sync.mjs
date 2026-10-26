@@ -1,17 +1,12 @@
-/* Build-only inspection of automatic Sheets sync. No user data. */
 import fs from 'node:fs';
-const s=fs.readFileSync('dist/app.js','utf8');
-const words=['verifiedWrite','sheets-auto','sheets-sync','autoSync','auto_sync','sheetsAutomatic','syncAutomatic','sheets_auto','sheetsLast','sheetsBusy','syncInProgress','document.addEventListener','window.addEventListener'];
-const seen=new Set();
-let n=0;
-for(const word of words){
- let pos=-1,count=0;
- while((pos=s.indexOf(word,pos+1))>=0 && count++<9){
-  const key=Math.floor(pos/300);
-  if(seen.has(key))continue;seen.add(key);
-  const begin=Math.max(0,pos-380),end=Math.min(s.length,pos+850);
-  const snippet=s.slice(begin,end).replaceAll('\n',' ⏎ ').slice(0,1220);
-  console.log('AUTO_FIND_'+word+'_'+(++n)+'='+snippet);
- }
+const src=fs.readFileSync('dist/app.js','utf8');
+for(const [name,start,end] of [
+ ['SYNC','async function sheetsSyncNow','function updateConnectivity'],
+ ['SAVE','async function perform','function parseNumber'],
+ ['INIT','async function init','window.addEventListener(\'beforeinstallprompt\''],
+ ['EVENT','window.addEventListener(\'online\'','window.addEventListener(\'offline\'']
+]){
+ const a=src.indexOf(start),b=a<0?-1:src.indexOf(end,a+start.length);
+ const data=a<0?'MISSING':src.slice(a,b>a?Math.min(b,a+11500):a+9500);
+ console.log('AUTO_DETAIL_'+name+'='+data.replaceAll('\\n',' ⏎ ').slice(0,11500));
 }
-console.log('AUTO_FIND_COUNT='+n);
