@@ -12,8 +12,12 @@ const numeric=(v)=>{
 };
 const rirNumeric=v=>{
  const raw=text(v),m=raw.match(/^(\d+(?:[.,]\d+)?)\s*[-–—a]\s*(\d+(?:[.,]\d+)?)$/i);
- if(m)return (Number(m[1].replace(',','.'))+Number(m[2].replace(',','.')))/2;
- return numeric(v);
+ if(m){const a=Number(m[1].replace(',','.')),b=Number(m[2].replace(',','.'));
+  if(b<a||b>30)throw new Error('Faixa de RIR inválida na conciliação');
+  return (a+b)/2;}
+ const value=numeric(v);
+ if(value!==null&&value>30)throw new Error('RIR inválido na conciliação');
+ return value;
 };
 const kind=v=>({'efetiva':'effective','aquecimento':'warmup','core':'core','drop set':'drop_set','back off':'back_off','rampa':'ramp_up','extra':'extra','estendida':'extended'}[norm(v)]||'other');
 const status=v=>({'concluido':'completed','em andamento':'in_progress','planejado':'planned','cancelado':'cancelled'}[norm(v)]||null);
