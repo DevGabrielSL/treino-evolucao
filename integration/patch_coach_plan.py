@@ -21,6 +21,19 @@ s=one(s,"  const score=Math.max(...scores);if(!Number.isFinite(score))continue;\
   const recent=last.get(v.id);""","evaluate before list")
 s=one(s,"unit:v.unit||'reps',score,hasHistory:!!recent",
 "unit:v.unit||'reps',score:adjustedScore,hasHistory:!!recent","weighted score")
+# As abas Plano podem armazenar rótulo da regra e valor em colunas
+# diferentes. Apenas uma linha com ambos é elegível como faixa RIR.
+policyFile=Path('dist/coach_policy.js')
+p=policyFile.read_text('utf8')
+old="const rirLine=lines.find(line=>/rir\\s+alvo|repeticoes?\\s+em\\s+reserva/i.test(normal(line)))||'';"
+new="const rirLine=lines.find(line=>/rir\\s+alvo|repeticoes?\\s+em\\s+reserva/i.test(normal(line))&&/\\d+\\s*[–—-]\\s*\\d+/.test(normal(line)))||'';"
+if p.count(old)!=1:raise ValueError('Âncora da faixa RIR inválida')
+p=p.replace(old,new)
+oldPriority="const priorityWords=normal(lines.find(x=>/^(prioridades|objetivo principal)/i.test(normal(x)))||'');"
+newPriority="const priorityWords=normal(lines.find(x=>/^(prioridades|objetivo principal)/i.test(normal(x))&&x.includes(' — '))||'');"
+if p.count(oldPriority)!=1:raise ValueError('Âncora da prioridade inválida')
+p=p.replace(oldPriority,newPriority)
+policyFile.write_text(p,'utf8')
 logic.write_text(s,'utf8')
 a=one(a,"import {parseGoal,groupLabel,suggestExercises,parseSeriesMessage} from './coach_logic.js';",
 """import {parseGoal,groupLabel,suggestExercises,parseSeriesMessage} from './coach_logic.js';
