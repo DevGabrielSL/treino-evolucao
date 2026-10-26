@@ -676,6 +676,11 @@ jobs:
           grep -q 'v1.1.0 beta Sincronização' dist/index.html
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA4=PASS; NO_PRIVATE_DATA=TRUE; AUTO_DISABLED_UNTIL_VERIFIED_WRITE=TRUE'
+      - name: Etapa 5 — inspecionar seleção do assistente
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-default-type=module integration/tests/inspect_coach_plan.mjs
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
