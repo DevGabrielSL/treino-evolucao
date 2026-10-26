@@ -272,11 +272,14 @@ jobs:
           cp integration/legacy_identity.js dist/legacy_identity.js
           test -f integration/remote_reconcile.js
           cp integration/remote_reconcile.js dist/remote_reconcile.js
+          test -f integration/write_receipt.js
+          cp integration/write_receipt.js dist/write_receipt.js
           mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration/tests /tmp/sheets-qa/tests
           cp -R dist/. /tmp/sheets-qa/public/
           cp dist/sheet_sync_*.js /tmp/sheets-qa/integration/
           cp dist/legacy_identity.js /tmp/sheets-qa/integration/
           cp dist/remote_reconcile.js /tmp/sheets-qa/integration/
+          cp dist/write_receipt.js /tmp/sheets-qa/integration/
           cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
           cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
           node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
@@ -349,8 +352,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_browser.js)" = "ec81cbf090d4528e470b9f59aff9ff23099769ce"
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "ec81cbf090d4528e470b9f59aff9ff23099769ce"
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "c254471838e09326dd48302eb21ef2eeb8530157"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "c254471838e09326dd48302eb21ef2eeb8530157"
           cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
           grep -q 'shell-v101-sheets-rir' dist/sw.js
           grep -q 'shell-v101-sheets-rir' dist/integrity.js
@@ -375,7 +378,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "ec81cbf090d4528e470b9f59aff9ff23099769ce"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "c254471838e09326dd48302eb21ef2eeb8530157"
           grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
           grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
           grep -q 'v1.0.2 beta Sheets' dist/index.html
@@ -582,6 +585,46 @@ jobs:
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA2=PASS; NO_PRIVATE_HISTORY=TRUE'
+      - name: Etapa 3 — recibo integral e recuperação de falhas sem duplicação
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/write_receipt.js
+          node --check dist/write_receipt.js
+          node --check dist/sheet_sync_browser.js
+          node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa3-write-tests.log
+          grep -qx 'ETAPA3_WRITE_TESTS=39' /tmp/etapa3-write-tests.log
+          node --experimental-default-type=module integration/tests/sheets_write_confirmation.mjs | tee /tmp/etapa3-write-regressions.log
+          grep -qx 'SHEETS_WRITE_CONFIRMATION_TESTS=15' /tmp/etapa3-write-regressions.log
+          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-write-regressions.log
+          grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/etapa2-write-regressions.log
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('sw.js','integrity.js'):
+              p=Path('dist')/name
+              data=p.read_text('utf8')
+              assert 'shell-v108-remote-three-way' in data,name
+              assert "'./sheet_sync_browser.js'" in data,name
+              assert "'./write_receipt.js'" not in data,name
+              data=data.replace("'./sheet_sync_browser.js'","'./write_receipt.js','./sheet_sync_browser.js'")
+              data=data.replace('shell-v108-remote-three-way','shell-v109-write-receipts')
+              p.write_text(data,'utf8')
+          p=Path('dist/index.html')
+          data=p.read_text('utf8')
+          assert 'v1.0.8 beta Conciliação' in data
+          p.write_text(data.replace('v1.0.8 beta Conciliação','v1.0.9 beta Escrita'),'utf8')
+          PY
+          grep -q 'shell-v109-write-receipts' dist/sw.js
+          grep -q 'shell-v109-write-receipts' dist/integrity.js
+          grep -q "'./write_receipt.js'" dist/sw.js
+          grep -q "'./write_receipt.js'" dist/integrity.js
+          grep -q 'v1.0.9 beta Escrita' dist/index.html
+          for name in app sheet_sync_core sheet_sync_browser write_receipt remote_reconcile legacy_identity sw integrity; do node --check dist/$name.js; done
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test -f dist/manifest.webmanifest
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA3=PASS; GOOGLE_SHEETS_NOT_MODIFIED_BY_TESTS=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
