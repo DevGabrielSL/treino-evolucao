@@ -1,4 +1,5 @@
 import {locateWriteReceipt} from './write_receipt.js';
+import {parseCoachPlanRows} from './coach_plan_read.js';
 /* Browser-only Google Sheets transport. No token is persisted, logged, or embedded. */
 import {previewRemote,stageInbound,planOutbound,detectOutboundDrift,sessionValues,setValues,weightValues} from './sheet_sync_core.js';
 export const SHEETS_SCOPE='https://www.googleapis.com/auth/spreadsheets';
@@ -73,6 +74,16 @@ export async function fetchTables(sheetId,{fetchImpl=fetch}={}){
   });
  });
  return result;
+}
+/** Read-only Google API request. User-specific Plan data stays in browser state.
+ * The returned rows are parsed, not written to the public code.
+ */
+export async function fetchCoachPlanRows(sheetId,{fetchImpl=fetch}={}){
+ const id=parseSheetId(sheetId);
+ const range="'Plano'!A1:I40";
+ const url=SHEETS_ORIGIN+'/v4/spreadsheets/'+encodeURIComponent(id)+'/values/'+encodeURIComponent(range)+'?valueRenderOption=FORMATTED_VALUE';
+ const response=await request(url,{fetchImpl});
+ return parseCoachPlanRows(response.values||[]);
 }
 export async function inspectSpreadsheet(sheetId,doc,options={}){
  const rows=await fetchTables(sheetId,options);
