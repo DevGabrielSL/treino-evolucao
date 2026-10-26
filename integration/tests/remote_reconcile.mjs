@@ -1,0 +1,107 @@
+import assert from 'node:assert/strict';
+import {emptyDocument,validateDocument} from '../../dist/store.js';
+import {stageInbound,previewRemote,planOutbound} from '../sheet_sync_core.js';
+import {reconcileImportedRows,requireRemoteUpToDate} from '../remote_reconcile.js';
+let count=0;
+function ok(label,run){run();count++;console.log('PASS '+label);}
+const rows=()=>({
+ Treinos:[['Data','Dia','Sessão','Status','Duração (min)','Peso (kg)','Dor lombar antes (0-10)','Dor lombar depois (0-10)','Observações'],['2026-10-20','Terça','Sessão de teste','Concluído',45,85,2,1,'Sem dor']],
+ Series:[['Data','Sessão','Exercício','Equipamento / variação','Tipo','Série','Carga','Unidade','Reps','RIR','RPE','Índice de volume','Dor / desconforto','Observações'],['2026-10-20','Sessão de teste','Supino de teste','Barra','Efetiva',1,50,'kg',10,2,8,500,'','Tudo bem']],
+ Peso:[['Data','Peso (kg)','Meta (kg)','Variação desde início (kg)','Restante até meta (kg)','Observações'],['2026-10-20',85,80,0,5,'Pesagem de teste']]
+});
+const source=rows(),first=stageInbound(emptyDocument(),source),document=first.next;
+const clone=()=>structuredClone(document);
+ok('Nova importação mantém 1 sessão, série e pesagem',()=>assert.deepEqual([first.add.sessions,first.add.sets,first.add.weigh_ins],[1,1,1]));
+ok('Dados importados têm três baselines persistentes',()=>assert.equal(first.reconciled.baselineInitialized,3));
+ok('Dados importados não são alterados quando iguais',()=>assert.equal(first.reconciled.rowsUpdated,0));
+ok('Documento importado válido',()=>assert.equal(validateDocument(document),true));
+ok('Reimportação não cria linhas duplicadas',()=>assert.deepEqual(stageInbound(document,source).add,{sessions:0,sets:0,exercises:0,exercise_variants:0,weigh_ins:0}));
+ok('Reimportação não move valores',()=>assert.equal(stageInbound(document,source).reconciled.rowsUpdated,0));
+ok('Nenhuma linha importada sai como pendência',()=>assert.deepEqual(planOutbound(document,source),{Treinos:[],Series:[],Peso:[]}));
+const modified=rows();modified.Series[1][6]=55;
+ok('Prévia não cria outra série após mudança remota',()=>assert.equal(previewRemote(document,modified).counts.Series,0));
+ok('Impedir envio antes de importar alteração do Sheets',()=>assert.throws(()=>planOutbound(document,modified),/Importe as novidades/));
+const m=stageInbound(document,modified);
+ok('Alteração remota de carga aplicada',()=>assert.equal(m.next.overlay.sets[0].load_value,55));
+ok('Uma linha e um campo atualizados',()=>assert.deepEqual([m.reconciled.rowsUpdated,m.reconciled.fieldsUpdated],[1,1]));
+ok('Referência da última leitura avançou para carga nova',()=>assert.equal(m.next.overlay.sets[0].provenance.remote_state_v1.fields.load_value,55));
+ok('Nova leitura da alteração é idempotente',()=>assert.equal(stageInbound(m.next,modified).reconciled.rowsUpdated,0));
+ok('A alteração na planilha não muda o objeto original',()=>assert.equal(document.overlay.sets[0].load_value,50));
+ok('Documento atualizado válido',()=>assert.equal(validateDocument(m.next),true));
+const other=rows();other.Treinos[1][4]=60;other.Treinos[1][8]='Observação no Sheets';
+other.Series[1][9]='1-2';other.Series[1][10]=9;other.Series[1][12]='Desconforto leve';other.Series[1][13]='Nota editada';
+other.Peso[1][1]=84;other.Peso[1][2]=79.9;
+const multi=stageInbound(document,other);
+ok('Duração de treino atualizada',()=>assert.equal(multi.next.overlay.sessions[0].duration_minutes,60));
+ok('Observações de treino atualizadas',()=>assert.equal(multi.next.overlay.sessions[0].notes,'Observação no Sheets'));
+ok('RIR em intervalo convertido para número',()=>assert.equal(multi.next.overlay.sets[0].rir,1.5));
+ok('Texto da faixa RIR é preservado',()=>assert.equal(multi.next.overlay.sets[0].provenance.rir_reported_text,'1-2'));
+ok('RPE atualizado',()=>assert.equal(multi.next.overlay.sets[0].rpe,9));
+ok('Desconforto e notas atualizados',()=>assert.deepEqual([multi.next.overlay.sets[0].discomfort,multi.next.overlay.sets[0].notes],['Desconforto leve','Nota editada']));
+ok('Peso e meta atualizados',()=>assert.deepEqual([multi.next.overlay.weigh_ins[0].weight_kg,multi.next.overlay.weigh_ins[0].goal_weight_kg_reported],[84,79.9]));
+ok('Documento com múltiplos campos alterados válido',()=>assert.equal(validateDocument(multi.next),true));
+ok('Todos campos iguais depois da reimportação',()=>assert.equal(stageInbound(multi.next,other).reconciled.fieldsUpdated,0));
+const originalRir=stageInbound(document,other).next,onlyNote=structuredClone(other);
+onlyNote.Series[1][13]='Outra nota';
+const note=stageInbound(originalRir,onlyNote);
+ok('Alteração de observação mantém texto original do RIR',()=>assert.equal(note.next.overlay.sets[0].provenance.rir_reported_text,'1-2'));
+const removeRange=rows();
+removeRange.Series[1][9]=1;
+const cleanRir=stageInbound(originalRir,removeRange);
+ok('Mudança de RIR numérico remove marca de intervalo',()=>assert.equal(cleanRir.next.overlay.sets[0].provenance.rir_reported_text,undefined));
+const onPhone=clone();onPhone.overlay.sets[0].load_value=60;
+const unchanged=stageInbound(onPhone,source);
+ok('Alteração local isolada é preservada',()=>assert.equal(unchanged.next.overlay.sets[0].load_value,60));
+ok('Alteração local pendente é contabilizada',()=>assert.equal(unchanged.reconciled.localEditsPending,1));
+ok('Envio de alteração local ainda não suportado é bloqueado',()=>assert.throws(()=>planOutbound(onPhone,source),/alterações locais/));
+const disjoint=rows();disjoint.Series[1][9]=1;
+const merge=stageInbound(onPhone,disjoint);
+ok('Mudanças em campos diferentes são mescladas sem perda',()=>assert.deepEqual([merge.next.overlay.sets[0].load_value,merge.next.overlay.sets[0].rir],[60,1]));
+ok('Mudança local mesclada continua pendente para futura conciliação',()=>assert.equal(merge.reconciled.localEditsPending,1));
+const both=rows();both.Series[1][6]=55;
+ok('Alterações conflitantes do mesmo campo são bloqueadas',()=>assert.throws(()=>stageInbound(onPhone,both),/Conflito/));
+ok('Conflito não muda nenhum byte do original local',()=>assert.equal(onPhone.overlay.sets[0].load_value,60));
+const agreed=rows();agreed.Series[1][6]=60;
+ok('Mudança simultânea para valor igual não é conflito',()=>assert.equal(stageInbound(onPhone,agreed).next.overlay.sets[0].load_value,60));
+ok('Mudança convergente não fica pendente',()=>assert.equal(stageInbound(onPhone,agreed).reconciled.localEditsPending,0));
+const nobase=clone();delete nobase.overlay.sets[0].provenance.remote_state_v1;
+ok('Baseline ausente pode ser inicializada se dados iguais',()=>assert.equal(stageInbound(nobase,source).reconciled.baselineInitialized,1));
+ok('Baseline ausente com divergência não é sobrescrita',()=>assert.throws(()=>stageInbound(nobase,both),/sem referência de sincronização/));
+const older=clone();delete older.overlay.weigh_ins[0].provenance.remote_state_v1;delete older.overlay.weigh_ins[0].goal_weight_kg_reported;
+const oldRes=stageInbound(older,source);
+ok('Campo opcional realmente ausente pode ser preenchido',()=>assert.equal(oldRes.next.overlay.weigh_ins[0].goal_weight_kg_reported,80));
+const explicitNull=clone();delete explicitNull.overlay.weigh_ins[0].provenance.remote_state_v1;explicitNull.overlay.weigh_ins[0].goal_weight_kg_reported=null;
+ok('Campo explicitamente nulo não é sobrescrito na primeira comparação',()=>assert.throws(()=>stageInbound(explicitNull,source),/sem referência de sincronização/));
+const foreign=rows();foreign.Series[1][14]='other-device-id';
+ok('ID remoto diferente bloqueado',()=>assert.throws(()=>stageInbound(document,foreign),/Identificador alterado/));
+const missing=rows();missing.Series.splice(1,1);
+ok('Linha histórica removida não é reintroduzida silenciosamente',()=>assert.throws(()=>stageInbound(document,missing),/desapareceu/));
+const shifted=rows();shifted.Series[1][3]='Máquina';
+ok('Mudança de equipamento exige revisão de identidade',()=>assert.throws(()=>stageInbound(document,shifted),/Identidade/));
+const sessionChanged=rows();sessionChanged.Treinos[1][2]='Sessão outra';
+ok('Renomear sessão associada exige revisão',()=>assert.throws(()=>stageInbound(document,sessionChanged),/Identidade|correspondente/));
+const badReps=rows();badReps.Series[1][8]=10.5;
+ok('Repetições fracionárias remotas rejeitadas',()=>assert.throws(()=>stageInbound(document,badReps),/Repetições inválidas/));
+const badRir=rows();badRir.Series[1][9]='31.12';
+ok('RIR com formatação de data inválida não é aceito',()=>assert.throws(()=>stageInbound(document,badRir),/RIR inválido/));
+const badStatus=rows();badStatus.Treinos[1][3]='Estado desconhecido';
+ok('Status remoto desconhecido bloqueado',()=>assert.throws(()=>stageInbound(document,badStatus),/Status não reconhecido/));
+const expanded=rows();expanded.Treinos.push(['2026-10-22','Quinta','Sessão de teste nova','Concluído']);
+expanded.Series.push(['2026-10-22','Sessão de teste nova','Outro de teste','Barra','Efetiva',1,30,'kg',12,2,8]);
+expanded.Series[1][6]=55;
+const expand=stageInbound(document,expanded);
+ok('Importa uma sessão e série novas junto à atualização de outra',()=>assert.deepEqual([expand.add.sessions,expand.add.sets,expand.reconciled.rowsUpdated],[1,1,1]));
+ok('Não duplica sessões com atualização remota',()=>assert.equal(expand.next.overlay.sessions.length,2));
+ok('Documentos expandidos continuam válidos',()=>assert.equal(validateDocument(expand.next),true));
+const baseDoc=emptyDocument(),baseData=clone();
+baseDoc.base={app:'treino-evolucao',schema_version:'2.0',entities:{
+ sessions:baseData.overlay.sessions,sets:baseData.overlay.sets,
+ exercises:baseData.overlay.exercises,exercise_variants:baseData.overlay.exercise_variants,
+ weigh_ins:baseData.overlay.weigh_ins,goals:[],plan_parameters:[],training_rules:[],weekly_schedule:[]
+}};
+ok('Base histórica de arquivo é válida',()=>assert.equal(validateDocument(baseDoc),true));
+const baseUpdated=stageInbound(baseDoc,modified);
+ok('Atualiza série também na base histórica sem criar overlay duplicado',()=>assert.deepEqual([baseUpdated.next.base.entities.sets[0].load_value,baseUpdated.next.overlay.sets.length],[55,0]));
+ok('Base original da memória permanece inalterada',()=>assert.equal(baseDoc.base.entities.sets[0].load_value,50));
+ok('Conciliação read-only sem alterações retorna verdadeiro',()=>assert.equal(requireRemoteUpToDate(document,source),true));
+console.log('ETAPA2_RECONCILIATION_TESTS='+count);
