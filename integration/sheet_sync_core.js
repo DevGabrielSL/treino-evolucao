@@ -1,3 +1,4 @@
+import {matchLegacySeries} from './legacy_identity.js';
 /* Google Sheets adapter: pure transformations. No identity secrets or personal datasets. */
 export const SYNC_SCHEMA='treino-sheets-sync-v1';
 export const COLUMN_IDS=Object.freeze({Treinos:9,Series:14,Peso:6}); // 0-based: J,O,G
@@ -38,6 +39,8 @@ export function readRowSets(raw){
 /** A projection does not edit the Google Sheet and does not overwrite historical rows. */
 export function previewRemote(doc,raw){
  const rows=readRowSets(raw),existing={sessions:[...(doc.base?.entities?.sessions||[]),...doc.overlay.sessions],sets:[...(doc.base?.entities?.sets||[]),...doc.overlay.sets],weigh_ins:[...(doc.base?.entities?.weigh_ins||[]),...doc.overlay.weigh_ins]};
+ const legacyLinks=matchLegacySeries(doc,rows.Series,setValues);
+ const legacyRows=new Set(legacyLinks.map(x=>x.row));
  const haveProvenance=(list,sheet,row)=>list.some(v=>v.provenance?.sheet===sheet&&v.provenance?.row===row);
  const haveId=(list,id)=>Boolean(id)&&list.some(v=>v.id===id);
  const matches={Treinos:[],Series:[],Peso:[]},counts={Treinos:0,Series:0,Peso:0};
@@ -49,11 +52,12 @@ export function previewRemote(doc,raw){
    remoteKeys[t].add(key);
    const collection={Treinos:existing.sessions,Series:existing.sets,Peso:existing.weigh_ins}[t];
    let present=haveProvenance(collection,t,row)||haveId(collection,id);
+   if(t==='Series')present ||=legacyRows.has(row);
    if(t==='Treinos')present ||=collection.some(s=>sessionKey(s.date,s.name)===key);
    if(t==='Peso')present ||=collection.some(w=>w.date===date(r[0])&&w.weight_kg===number(r[1],{positive:true}));
    if(!present){counts[t]++;matches[t].push({row,record:r});}
  }
- return {counts,newRows:matches,remoteCounts:Object.fromEntries(['Treinos','Series','Peso'].map(t=>[t,rows[t].slice(1).filter(r=>str(r?.[0])).length]))};
+ return {counts,newRows:matches,legacyLinks,remoteCounts:Object.fromEntries(['Treinos','Series','Peso'].map(t=>[t,rows[t].slice(1).filter(r=>str(r?.[0])).length]))};
 }
 export function sessionValues(s){
  if(!s?.id||!s.name||!s.date)throw new Error('Sessão local incompleta');
@@ -81,8 +85,9 @@ export function planOutbound(doc,raw){
  const localSessions=doc.overlay.sessions.filter(s=>!s.provenance?.sheet&&s.status==='completed');
  for(const s of localSessions){if(remote.has('Treinos:'+s.id))continue;if(seenSessions.has(sessionKey(s.date,s.name)))throw new Error('Conflito: sessão com mesma data e nome já existe no Sheets. Revise antes de sincronizar: '+s.date+' '+s.name);plan.Treinos.push({id:s.id,values:sessionValues(s)});}
  const entities={sessions,sets:[...(doc.base?.entities?.sets||[]),...doc.overlay.sets],exercises:[...(doc.base?.entities?.exercises||[]),...doc.overlay.exercises],exercise_variants:[...(doc.base?.entities?.exercise_variants||[]),...doc.overlay.exercise_variants]};
+ const matchedLegacyIds=new Set(matchLegacySeries(doc,rows.Series,setValues).filter(x=>x.collection==='overlay').map(x=>x.id));
  const done=new Set(sessions.filter(s=>s.status==='completed').map(s=>s.id));
- for(const s of doc.overlay.sets.filter(s=>!s.provenance?.sheet&&done.has(s.session_id))){if(!remote.has('Series:'+s.id))plan.Series.push({id:s.id,values:setValues(s,entities)});}
+ for(const s of doc.overlay.sets.filter(s=>!s.provenance?.sheet&&!matchedLegacyIds.has(s.id)&&done.has(s.session_id))){if(!remote.has('Series:'+s.id))plan.Series.push({id:s.id,values:setValues(s,entities)});}
  const weights=rows.Peso.slice(1).filter(r=>str(r?.[0]));
  const initial=weights.length?number(weights[0][1],{positive:true}):null,goal=weights.length?number(weights[0][2]):null;
  for(const w of doc.overlay.weigh_ins.filter(w=>!w.provenance?.sheet)){
@@ -96,6 +101,12 @@ export function planOutbound(doc,raw){
 export function stageInbound(doc,raw){
  const view=previewRemote(doc,raw),next=structuredClone(doc),add={sessions:0,sets:0,exercises:0,exercise_variants:0,weigh_ins:0};
  const ent=c=>[...(next.base?.entities?.[c]||[]),...next.overlay[c]];
+ // Link uniquely matching legacy overlay rows without deleting or re-creating any series.
+ for(const link of view.legacyLinks){if(link.collection!=='overlay')continue;
+  const local=next.overlay.sets.find(s=>s.id===link.id);
+  if(!local)throw new Error('Registro local alterado durante a reconciliação: '+link.id);
+  local.provenance={...(local.provenance||{}),sheet:'Series',row:link.row,matched_legacy:true};
+ }
  const oldSessions=new Map(ent('sessions').map(s=>[sessionKey(s.date,s.name),s]));
  for(const {row,record:r} of view.newRows.Treinos){const sessionStatus=status(r[3]);if(!sessionStatus)throw new Error('Status desconhecido em Treinos, linha '+row);
   const id=str(r[9])||'sheet_session_'+row;
@@ -114,7 +125,7 @@ export function stageInbound(doc,raw){
   next.overlay.sets.push(set);add.sets++;
  }
  for(const {row,record:r} of view.newRows.Peso){const w={id:str(r[6])||'sheet_weight_'+row,date:date(r[0]),weight_kg:number(r[1],{positive:true}),goal_weight_kg_reported:number(r[2]),notes:str(r[5]),provenance:{sheet:'Peso',row}};next.overlay.weigh_ins.push(w);add.weigh_ins++;}
- return {next,add,remoteCounts:view.remoteCounts};
+ return {next,add,linked_legacy_sets:view.legacyLinks.length,remoteCounts:view.remoteCounts};
 }
 /** Detect local edits after an app-generated record has already been uploaded. */
 export function detectOutboundDrift(doc,raw){
