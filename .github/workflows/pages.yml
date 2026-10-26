@@ -782,7 +782,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 testing/build_sandbox.py
+          rm -rf dist/tests
+          SANDBOX_ENGINE_TEST_MODE=1 python3 testing/build_sandbox.py
           node --experimental-default-type=module testing/isolation_tests.mjs | tee /tmp/sandbox-isolation.log
           grep -qx 'SANDBOX_ISOLATION_TESTS=17' /tmp/sandbox-isolation.log
           node --experimental-default-type=module testing/input_validation_tests.mjs | tee /tmp/input-validation.log
@@ -804,6 +805,12 @@ jobs:
           grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/grid_receipt_regression.log
           node --experimental-default-type=module testing/missing_ids_tests.mjs | tee /tmp/missing_ids.log
           grep -qx 'MISSING_IDS_TESTS=32' /tmp/missing_ids.log
+          node --experimental-default-type=module testing/coordinator_tests.mjs | tee /tmp/coordinator-tests.log
+          grep -qx 'COORDINATOR_CANDIDATE_TESTS=24' /tmp/coordinator-tests.log
+          rm -rf dist/tests
+          env -u SANDBOX_ENGINE_TEST_MODE python3 testing/build_sandbox.py
+          node --experimental-default-type=module testing/concurrency_gate_tests.mjs | tee /tmp/concurrency-gate.log
+          grep -qx 'CONCURRENCY_GATE_TESTS=14' /tmp/concurrency-gate.log
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5

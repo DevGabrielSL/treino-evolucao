@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {authorize,disconnect,uploadNewRows,fetchTables,COORDINATOR_GATE_MESSAGE} from '../dist/testes/sheet_sync_browser.js';
+import {automaticSyncEligibility,createAutomaticSyncScheduler} from '../dist/testes/automatic_sync.js';
+import {emptyDocument,commit,validateDocument} from '../dist/testes/store.js';
+import {stageInbound} from '../dist/testes/sheet_sync_core.js';
+import {SHEET_ID} from '../dist/testes/sheets_config.js';
+import {gridResponse} from './grid_mock.mjs';
+const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures.json',import.meta.url)));
+Object.defineProperty(globalThis,'navigator',{value:{onLine:true},configurable:true});
+globalThis.google={accounts:{oauth2:{initTokenClient:({callback})=>({requestAccessToken:()=>callback({access_token:'SYNTHETIC_GATE_TOKEN',expires_in:3600})})}}};
+await authorize('1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com');
+let count=0;const test=async(name,fn)=>{await fn();count++;console.log('PASS '+name)};
+const ready=()=>({doc:{revision:1,settings:{sheet_sync:{auto:true,last_write_confirmed_at:'synthetic',spreadsheet_id:SHEET_ID}},overlay:{sessions:[],sets:[],weigh_ins:[{id:'new'}]}},sheetId:SHEET_ID,online:true,authorized:true,busy:false,sheetsBusy:false});
+await test('Envio direto é bloqueado antes de qualquer requisição',async()=>{let calls=0;await assert.rejects(uploadNewRows(SHEET_ID,emptyDocument(),{fetchImpl:async()=>{calls++;throw Error('unexpected')}}),e=>e.code==='COORDINATOR_REQUIRED');assert.equal(calls,0)});
+await test('Dois contextos independentes não acessam a escrita insegura',async()=>{const other=await import('../dist/testes/sheet_sync_browser.js?client=two');let calls=0;const fetchImpl=async()=>{calls++;throw Error('unexpected')};const results=await Promise.allSettled([uploadNewRows(SHEET_ID,emptyDocument(),{fetchImpl}),other.uploadNewRows(SHEET_ID,emptyDocument(),{fetchImpl})]);assert.ok(results.every(r=>r.status==='rejected'&&r.reason.code==='COORDINATOR_REQUIRED'));assert.equal(calls,0)});
+await test('Pesagem concorrente fica preservada no documento local',async()=>{const d=emptyDocument();d.overlay.weigh_ins.push({id:'w',date:'2026-10-26',weight_kg:80});const before=structuredClone(d);await assert.rejects(uploadNewRows(SHEET_ID,d),/Envios de testes pausados/);assert.deepEqual(d,before)});
+await test('Preferência automática antiga não habilita escrita direta',async()=>assert.equal(automaticSyncEligibility(ready()).reason,'coordinator_unavailable'));
+await test('Consentimento desligado continua respeitado',async()=>{const e=ready();e.doc.settings.sheet_sync.auto=false;assert.equal(automaticSyncEligibility(e).reason,'disabled')});
+await test('Agendador não cria temporizador nem executa envio',async()=>{let timers=0,runs=0;const s=createAutomaticSyncScheduler({getSnapshot:ready,run:async()=>runs++,setTimer:()=>timers++});assert.equal(s.request('online').reason,'coordinator_unavailable');assert.equal(timers,0);assert.equal(runs,0)});
+await test('Leitura única da planilha continua disponível',async()=>{let calls=0;const rows=await fetchTables(SHEET_ID,{fetchImpl:async(url,o)=>{calls++;assert.equal(o.method,'GET');return {ok:true,status:200,json:async()=>gridResponse(fixture)}}});assert.equal(calls,1);assert.equal(rows.Series.length,fixture.Series.length)});
+const app=fs.readFileSync(new URL('../dist/testes/app.js',import.meta.url),'utf8');
+function importHarness({fail=false,doc=emptyDocument()}={}){
+ let saves=0,errors=[];const ctx=vm.createContext({doc:structuredClone(doc),busy:false,sheetsBusy:false,sheetsError:'',storageGeneration:0,recoveryAvailable:false,stageInbound,validateDocument,commit,sheetsInspect:async()=>({rows:fixture}),saveSnapshot:async()=>{saves++;if(fail)throw Error('storage unavailable');return 1},hasRecovery:async()=>false,notify:()=>{},render:()=>{},error:e=>errors.push(e)});
+ const a=app.indexOf('async function sheetsImportReadOnly(){'),b=app.indexOf('async function sheetsSyncNow(',a);assert.ok(a>=0&&b>a);vm.runInContext(app.slice(a,b),ctx);return {ctx,errors,get saves(){return saves}};
+}
+await test('Importação permanece funcional sem chamar upload',async()=>{const h=importHarness();await h.ctx.sheetsImportReadOnly();assert.equal(h.ctx.doc.overlay.sessions.length,2);assert.equal(h.ctx.doc.overlay.sets.length,4);assert.equal(h.saves,1);assert.equal(h.errors.length,0);assert.equal(h.ctx.sheetsBusy,false)});
+await test('Importação preserva pesagem local pendente',async()=>{const d=emptyDocument();d.overlay.weigh_ins.push({id:'new-weight',date:'2026-10-26',weight_kg:77});const h=importHarness({doc:d});await h.ctx.sheetsImportReadOnly();assert.ok(h.ctx.doc.overlay.weigh_ins.some(w=>w.id==='new-weight'&&w.weight_kg===77))});
+await test('Falha ao salvar importação mantém documento anterior',async()=>{const d=emptyDocument(),h=importHarness({fail:true,doc:d});await h.ctx.sheetsImportReadOnly();assert.deepEqual(JSON.parse(JSON.stringify(h.ctx.doc)),d);assert.equal(h.errors.length,1);assert.equal(h.ctx.sheetsBusy,false)});
+await test('Importação respeita operação local em andamento',async()=>{const h=importHarness();h.ctx.busy=true;await h.ctx.sheetsImportReadOnly();assert.equal(h.saves,0)});
+await test('Interface mostra pausa e desabilita os botões de envio',async()=>{assert.ok(app.includes('role="status">${e(COORDINATOR_GATE_MESSAGE)}'));assert.match(app,/<button disabled[^>]*data-action="sheets-sync"/);assert.match(app,/<button disabled[^>]*data-action="sheets-auto"/);assert.ok(app.includes('data-action="sheets-import-readonly"'));assert.ok(COORDINATOR_GATE_MESSAGE.includes('continuam salvos'))});
+await test('Manipular botão não contorna proteção do handler',async()=>assert.ok(app.includes("if(a==='sheets-sync'||a==='sheets-auto')return error(new Error(COORDINATOR_GATE_MESSAGE))")));
+await test('Versão final identifica test.6',async()=>assert.match(fs.readFileSync(new URL('../dist/testes/index.html',import.meta.url),'utf8'),/v1\.1\.2-test\.6/));
+disconnect();console.log('CONCURRENCY_GATE_TESTS='+count);
