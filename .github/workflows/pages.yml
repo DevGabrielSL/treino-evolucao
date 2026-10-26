@@ -588,7 +588,7 @@ jobs:
       - name: Etapa 3 — recibo integral e recuperação de falhas sem duplicação
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           test -f dist/write_receipt.js
           node --check dist/write_receipt.js
           node --check dist/sheet_sync_browser.js
@@ -617,11 +617,11 @@ jobs:
           assert 'v1.0.8 beta Conciliação' in data
           p.write_text(data.replace('v1.0.8 beta Conciliação','v1.0.9.1 beta Escrita Segura'),'utf8')
           PY
-          grep -q 'shell-v109-write-receipts' dist/sw.js
-          grep -q 'shell-v109-write-receipts' dist/integrity.js
+          grep -q 'shell-v1091-formula-safe' dist/sw.js
+          grep -q 'shell-v1091-formula-safe' dist/integrity.js
           grep -q "'./write_receipt.js'" dist/sw.js
           grep -q "'./write_receipt.js'" dist/integrity.js
-          grep -q 'v1.0.9 beta Escrita' dist/index.html
+          grep -q 'v1.0.9.1 beta Escrita Segura' dist/index.html
           for name in app sheet_sync_core sheet_sync_browser write_receipt remote_reconcile legacy_identity sw integrity; do node --check dist/$name.js; done
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
