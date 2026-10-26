@@ -26,14 +26,16 @@ const gather=(doc,key)=>[...(doc.base?.entities?.[key]||[]),...(doc.overlay?.[ke
 export function matchLegacySeries(doc,remoteRows,serialize){
  const rows=remoteRows||[],sets=gather(doc,'sets'),sessions=gather(doc,'sessions'),exercises=gather(doc,'exercises'),variants=gather(doc,'exercise_variants');
  const entities={sessions,exercises,exercise_variants:variants};
- const candidates=[];
+ const candidates=[],protectedLocal=[];
  for(const collection of ['base','overlay']){
   const list=collection==='base'?(doc.base?.entities?.sets||[]):(doc.overlay?.sets||[]);
   for(const s of list){
    // Explicitly user-created Android records must never be silently adopted.
-   if(s.provenance?.sheet||s.provenance?.source==='android_local'||s.provenance?.source==='assistant')continue;
+   if(s.provenance?.sheet)continue;
    let values;try{values=serialize(s,entities);}catch{continue;}
-   candidates.push({id:s.id,collection,full:full(values),slot:slot(values)});
+   const entry={id:s.id,collection,full:full(values),slot:slot(values)};
+   if(s.provenance?.source==='android_local'||s.provenance?.source==='assistant')protectedLocal.push(entry);
+   else candidates.push(entry);
   }
  }
  const alreadyKnown=remoteRow=>
@@ -44,6 +46,7 @@ export function matchLegacySeries(doc,remoteRows,serialize){
  for(const item of pending){const key=full(item.r);if(!remoteByFull.has(key))remoteByFull.set(key,[]);remoteByFull.get(key).push(item);}
  const used=new Set(),links=[];
  for(const [signature,group] of remoteByFull){
+  for(const remote of group)if(protectedLocal.some(x=>x.slot===slot(remote.r)))throw new Error('Série local do Android ocupa a mesma posição no Sheets, linha '+remote.row+'. Confirme os IDs antes de importar.');
   const exact=candidates.filter(x=>x.full===signature);
   if(!exact.length){
    for(const remote of group){
