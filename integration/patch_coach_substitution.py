@@ -5,7 +5,7 @@ p=Path('dist/coach_commands.js');s=p.read_text('utf8')
 anchor=" if(/^(?:proximo|proxima|avancar|seguir)(?:\\s+exercicio)?[.!]?$/.test(msg))return {kind:'next'};"
 if s.count(anchor)!=1:raise ValueError('Âncora de comandos não encontrada')
 new=""" const substitution=source.match(/^\\s*(?:substituir|trocar)\\s+(?:.+?\\s+)?(?:por|para)\\s+(.+)$/i);
- if(substitution)return {kind:'replace',name:substitution[1].trim()};
+ if(substitution&&!/^\s*trocar\s+para\b/i.test(source))return {kind:'replace',name:substitution[1].trim()};
 """+anchor
 s=s.replace(anchor,new,1)
 p.write_text(s,'utf8')
