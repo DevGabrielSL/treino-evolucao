@@ -17,6 +17,18 @@ async function fakeFetch(url,config){
  assert.equal(config.headers.Authorization,'Bearer FAKE_TOKEN_FOR_TEST');
  const u=new URL(url);assert.equal(u.origin,'https://sheets.googleapis.com');
  if(u.pathname.endsWith('values:batchGet')){reads++;return response({valueRanges:['Treinos','Series','Peso'].map(n=>({values:tabs[n]}))});}
+ if(u.pathname.endsWith('/values:batchUpdate')){
+  const data=JSON.parse(config.body).data;
+  assert.equal(data.length,2);
+  assert.match(data[0].range,/^'Peso'!A\d+:C\d+$/);
+  assert.match(data[1].range,/^'Peso'!F\d+:G\d+$/);
+  const row=Number(data[0].range.match(/!A(\d+)/)[1]);
+  assert.equal(data[1].range.match(/!F(\d+)/)[1],String(row));
+  assert.equal(tabs.Peso[row-1]?.[0],undefined);
+  tabs.Peso[row-1]=[...data[0].values[0],'','',...data[1].values[0]];
+  writes.push({method:'POST',tab:'Peso'});
+  return response({totalUpdatedCells:5});
+ }
  const m=u.pathname.match(/\/values\/(.*?)(:append)?$/),range=decodeURIComponent(m?.[1]||'');
  const tab=range.match(/'(Treinos|Series|Peso)'/)?.[1];assert.ok(tab);
  if(config.method==='PUT'){assert.equal(tabs[tab][0].length<{Treinos:10,Series:15,Peso:7}[tab],true);tabs[tab][0][{Treinos:9,Series:14,Peso:6}[tab]]='ID do aplicativo';writes.push({method:'PUT',tab});return response({});}
