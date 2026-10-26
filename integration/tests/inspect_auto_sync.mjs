@@ -1,10 +1,17 @@
-/* Temporary build-time audit of automatic sync control. No runtime behavior. */
+/* Build-only inspection of automatic Sheets sync. No user data. */
 import fs from 'node:fs';
-const p='dist/app.js',s=fs.readFileSync(p,'utf8');
-const patterns=[/auto[_ -]?sync/ig,/sincroniza[^\n]{0,25}autom[aá]tic/ig,/first.*(upload|send|write)/ig,/sheetSync/ig,/syncEnabled/ig,/sync.*timer/ig];
-const spans=[];
-for(const re of patterns){let m,c=0;while((m=re.exec(s))&&c++<16){spans.push([Math.max(0,m.index-300),Math.min(s.length,m.index+580)]);}}
-spans.sort((a,b)=>a[0]-b[0]);
-let out=[],prev=-1;for(const [a,b] of spans){if(a<=prev)continue;out.push(s.slice(a,b).replace(/\n/g,'\\n'));prev=b;if(out.length>=24)break;}
-console.log('AUTO_SYNC_BUILD_INSPECT_MATCHES='+out.length);
-out.forEach((v,i)=>console.log('AUTO_SYNC_INSPECT_'+i+'='+v.slice(0,850)));
+const s=fs.readFileSync('dist/app.js','utf8');
+const words=['verifiedWrite','sheets-auto','sheets-sync','autoSync','auto_sync','sheetsAutomatic','syncAutomatic','sheets_auto','sheetsLast','sheetsBusy','syncInProgress','document.addEventListener','window.addEventListener'];
+const seen=new Set();
+let n=0;
+for(const word of words){
+ let pos=-1,count=0;
+ while((pos=s.indexOf(word,pos+1))>=0 && count++<9){
+  const key=Math.floor(pos/300);
+  if(seen.has(key))continue;seen.add(key);
+  const begin=Math.max(0,pos-380),end=Math.min(s.length,pos+850);
+  const snippet=s.slice(begin,end).replaceAll('\n',' ⏎ ').slice(0,1220);
+  console.log('AUTO_FIND_'+word+'_'+(++n)+'='+snippet);
+ }
+}
+console.log('AUTO_FIND_COUNT='+n);
