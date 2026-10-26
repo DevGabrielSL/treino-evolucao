@@ -2,7 +2,13 @@ import {gridResponse} from './grid_mock.mjs';
 import assert from 'node:assert/strict';
 import {emptyDocument,validateDocument} from '../dist/testes/store.js';
 import {locateWriteReceipt} from '../dist/testes/write_receipt.js';
-import {authorize,disconnect,authorized,previewUpload,uploadNewRows} from '../dist/testes/sheet_sync_browser.js';
+import {authorize,disconnect,authorized,previewUpload,uploadNewRows as uploadWithCheckpoint} from '../dist/testes/sheet_sync_browser.js';
+// Each scenario owns a separate synthetic device state. Checkpoint persistence
+// uses a private clone so unrelated mock spreadsheets cannot share prior IDs.
+async function uploadNewRows(id,doc,options={}){
+ const device=structuredClone(doc);
+ return uploadWithCheckpoint(id,device,{...options,onCheckpoint:async ledger=>{device.settings.sheet_sync={...device.settings.sheet_sync,known_remote_ids_v1:structuredClone(ledger)};}});
+}
 let count=0;const ok=(label,fn)=>{fn();count++;console.log('PASS '+label)};
 Object.defineProperty(globalThis,'navigator',{value:{onLine:true},configurable:true});
 globalThis.google={accounts:{oauth2:{initTokenClient:({callback})=>({requestAccessToken:()=>callback({access_token:'TEST_ONLY_TOKEN',expires_in:3600})})}}};

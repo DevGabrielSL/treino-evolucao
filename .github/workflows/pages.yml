@@ -802,6 +802,8 @@ jobs:
           grep -qx 'GRID_WRITE_CONFIRMATION_TESTS=15' /tmp/grid_write_regression.log
           node --experimental-default-type=module testing/grid_receipt_regression.mjs | tee /tmp/grid_receipt_regression.log
           grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/grid_receipt_regression.log
+          node --experimental-default-type=module testing/missing_ids_tests.mjs | tee /tmp/missing_ids.log
+          grep -qx 'MISSING_IDS_TESTS=32' /tmp/missing_ids.log
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
