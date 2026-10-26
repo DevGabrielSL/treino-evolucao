@@ -53,7 +53,7 @@ export function matchLegacySeries(doc,remoteRows,serialize){
    continue;
   }
   if(group.length!==1||exact.length!==1||used.has(exact[0].id))throw new Error('Séries históricas ambíguas sem ID no Sheets (linha '+group[0].row+'). Não mesclamos séries iguais automaticamente.');
-  const hit=exact[0];used.add(hit.id);
+  const hit=exact[0];if(group[0].id&&group[0].id!==hit.id)throw new Error('ID de série histórica divergente no Sheets, linha '+group[0].row+'. Revisão necessária.');used.add(hit.id);
   links.push({row:group[0].row,id:hit.id,collection:hit.collection});
  }
  return links;
@@ -74,6 +74,7 @@ export function matchLegacySessions(doc,remoteRows,serialize){
   if(!candidates.length)continue;
   if(candidates.length!==1||occupied.has(candidates[0].id))throw new Error('Sessão histórica ambígua sem ID, linha '+row+'. Revise antes de importar.');
   const local=candidates[0];
+  if(remoteId&&remoteId!==local.id)throw new Error('ID de sessão histórica divergente no Sheets, linha '+row+'. Revisão necessária.');
   const a=serialize(local);
   if([0,2,3,4,5,6,7,8].some(col=>standard(a,col)!==standard(r,col)))throw new Error('Sessão histórica com diferenças no Sheets, linha '+row+'. Revise antes de importar.');
   occupied.add(local.id);
@@ -92,6 +93,7 @@ export function matchLegacyWeights(doc,remoteRows){
   if(!candidates.length)continue;
   if(candidates.length!==1||occupied.has(candidates[0].id))throw new Error('Pesagem histórica ambígua sem ID, linha '+row+'. Revise antes de importar.');
   const local=candidates[0];
+  if(remoteId&&remoteId!==local.id)throw new Error('ID de pesagem histórica divergente no Sheets, linha '+row+'. Revisão necessária.');
   if(norm(local.notes)!==norm(r[5]))throw new Error('Pesagem histórica com observação diferente no Sheets, linha '+row+'. Revise antes de importar.');
   occupied.add(local.id);
   links.push({row,id:local.id,collection:(doc.overlay?.weigh_ins||[]).some(x=>x.id===local.id)?'overlay':'base'});
