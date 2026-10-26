@@ -36,6 +36,21 @@ function api({failPostTab=null,failPostMode='',failGetAfterPost=false,mutateTab=
    if(state.unreadable)throw Error('simulated disconnected GET');
    return reply({valueRanges:['Treinos','Series','Peso'].map(n=>({values:tabs[n]}))});
   }
+  if(u.pathname.endsWith('/values:batchUpdate')){
+   const body=JSON.parse(config.body),parts=body.data;
+   assert.equal(body.valueInputOption,'RAW');
+   assert.equal(parts.length,2);
+   assert.match(parts[0].range,/^'Peso'!A\d+:C\d+$/);
+   assert.match(parts[1].range,/^'Peso'!F\d+:G\d+$/);
+   const number=Number(parts[0].range.match(/!A(\d+)/)[1]);
+   assert.equal(parts[1].range.match(/!F(\d+)/)[1],String(number));
+   if(tabs.Peso[number-1]?.[0])throw Error('Unsafe overwrite in mock');
+   const cells=[...parts[0].values[0],'','',...parts[1].values[0]];
+   assert.equal(cells.length,7);
+   tabs.Peso[number-1]=cells;
+   stats.posts.push({tab:'Peso',id:cells.at(-1)});
+   return reply({totalUpdatedCells:5});
+  }
   const range=decodeURIComponent(u.pathname.match(/\/values\/(.*?)(?:\:append)?$/)?.[1]||'');
   const tab=range.match(/'(Treinos|Series|Peso)'/)?.[1];
   assert.ok(tab,'invalid test route '+u.pathname);
