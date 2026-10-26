@@ -75,7 +75,7 @@ export async function fetchTables(sheetId,{fetchImpl=fetch}={}){
  return result;
 }
 export async function inspectSpreadsheet(sheetId,doc,options={}){
- const rows=await fetchTables(sheetId,options);const preview=previewRemote(doc,rows);const outbound=planOutbound(doc,rows);
+ const rows=await fetchTables(sheetId,options);verifyPreviouslySent(doc,rows);const preview=previewRemote(doc,rows);const outbound=planOutbound(doc,rows);
  return {rows,preview,pending:Object.fromEntries(Object.entries(outbound).map(([t,v])=>[t,v.length]))};
 }
 /** Safe transaction plan: append-only. Never overwrite historical A:I/A:N/A:F entries. */
@@ -84,6 +84,7 @@ export async function inspectSpreadsheet(sheetId,doc,options={}){
  */
 export async function previewUpload(sheetId,doc,{fetchImpl=fetch}={}){
  const rows=await fetchTables(sheetId,{fetchImpl});
+ verifyPreviouslySent(doc,rows);
  const drift=detectOutboundDrift(doc,rows);
  if(drift.length)throw new Error('Há divergência em '+drift.length+' registro(s) já enviados. Revise antes de continuar.');
  const pending=planOutbound(doc,rows);
