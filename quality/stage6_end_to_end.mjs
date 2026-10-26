@@ -54,7 +54,7 @@ check('Não recomenda exercício fora do grupo',()=>assert.ok(proposed.every(x=>
 
 d=commit(d,x=>x.overlay.sessions.push({
  id:'synthetic-session',date:'2026-10-26',name:'Peito · Assistente sintético',status:'in_progress',
- planned_variant_ids:proposed.map(x=>x.variant_id),provenance:{source:'android_local'}
+ planned_variant_ids:[proposed.find(x=>x.variant_id==='bench-bar').variant_id],provenance:{source:'android_local'}
 }));
 check('Sessão inicial é válida',()=>assert.equal(validateDocument(d),true));
 const beforeStart=planOutbound(d,emptyTables());
@@ -81,6 +81,7 @@ const action=replaceCoachVariant(replaced,'synthetic-session','bench-bar','fly-m
 check('Substituição preserva série existente',()=>assert.equal(replaced.overlay.sets[0].id,'synthetic-set-1'));
 check('Substituição preserva carga anterior',()=>assert.equal(replaced.overlay.sets[0].load_value,55));
 check('Substituição permite variante nova no roteiro',()=>assert.equal(action.selected,'fly-machine'));
+check('Substituição após série preserva o exercício e inclui o próximo',()=>assert.deepEqual(replaced.overlay.sessions[0].planned_variant_ids,['bench-bar','fly-machine']));
 check('Substituição é recuperável ao reabrir',()=>assert.equal(resumeSelectedVariant(replaced,'synthetic-session',replaced.overlay.sessions[0].planned_variant_ids),'bench-bar'));
 check('Documento substituído continua válido',()=>assert.equal(validateDocument(replaced),true));
 const fly=parseSeriesMessage('5 plaquetas 12 reps RIR 2','plaquetas');
