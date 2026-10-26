@@ -1,5 +1,6 @@
+import {locateWriteReceipt} from './write_receipt.js';
 /* Browser-only Google Sheets transport. No token is persisted, logged, or embedded. */
-import {previewRemote,stageInbound,planOutbound,detectOutboundDrift} from './sheet_sync_core.js';
+import {previewRemote,stageInbound,planOutbound,detectOutboundDrift,sessionValues,setValues,weightValues} from './sheet_sync_core.js';
 export const SHEETS_SCOPE='https://www.googleapis.com/auth/spreadsheets';
 const SHEETS_ORIGIN='https://sheets.googleapis.com';
 let accessToken=null,expiresAt=0;
@@ -88,7 +89,33 @@ export async function previewUpload(sheetId,doc,{fetchImpl=fetch}={}){
  const pending=planOutbound(doc,rows);
  return {pending,counts:Object.fromEntries(Object.entries(pending).map(([name,items])=>[name,items.length])),remote:previewRemote(doc,rows).remoteCounts};
 }
-export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
+/** Confirm previously submitted app records before planning anything new.
+ * Full-value receipts apply on immediate append; for a previously written
+ * weigh-in, derived delta columns (D/E) may depend on later history edits.
+ */
+function verifyPreviouslySent(doc,rows){
+ const lookup={
+  Treinos:{list:doc.overlay.sessions,make:x=>sessionValues(x)},
+  Series:{list:doc.overlay.sets,make:x=>setValues(x,{
+   sessions:[...(doc.base?.entities?.sessions||[]),...doc.overlay.sessions],
+   exercises:[...(doc.base?.entities?.exercises||[]),...doc.overlay.exercises],
+   exercise_variants:[...(doc.base?.entities?.exercise_variants||[]),...doc.overlay.exercise_variants]})},
+  Peso:{list:doc.overlay.weigh_ins,make:x=>weightValues(x,{
+   initial:rows.Peso[1]?.[1]===undefined?null:Number(String(rows.Peso[1][1]).replace(',','.')),
+   goal:rows.Peso[1]?.[2]===undefined?null:Number(String(rows.Peso[1][2]).replace(',','.'))})}
+ };
+ for(const [tab,{list,make}] of Object.entries(lookup)){
+  const idColumn={Treinos:9,Series:14,Peso:6}[tab];
+  const ids=new Set(rows[tab].slice(1).map(r=>String(r?.[idColumn]??'').trim()).filter(Boolean));
+  for(const local of list){
+   if(local.provenance?.sheet||!ids.has(local.id))continue;
+   const columns=tab==='Peso'?[0,1,2,5,6]:undefined;
+   locateWriteReceipt(tab,rows[tab],{id:local.id,values:make(local)},columns?{columns}:undefined);
+  }
+ }
+}
+const activeUploads=new Set();
+async function uploadNewRowsUnlocked(sheetId,doc,{fetchImpl=fetch}={}){
  const id=parseSheetId(sheetId);
  const endpoints={Treinos:"'Treinos'!A:J",Series:"'Series'!A:O",Peso:"'Peso'!A:G"};
  const headerNames={Treinos:'ID do aplicativo',Series:'ID do aplicativo',Peso:'ID do aplicativo'};
@@ -97,6 +124,7 @@ export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
  for(const tab of ['Treinos','Series','Peso']){
   // Re-read the sheet before every append: a lost HTTP response must never create a duplicate on retry.
   let rows=await fetchTables(id,{fetchImpl});
+  verifyPreviouslySent(doc,rows);
   const drift=detectOutboundDrift(doc,rows);if(drift.length)throw new Error('Alterações em registros já enviados precisam de revisão antes de sincronizar: '+drift.map(x=>x.tab+' '+x.id).join(', ').slice(0,180));
   let outbound=planOutbound(doc,rows)[tab];
   if(!outbound.length)continue;
@@ -107,24 +135,56 @@ export async function uploadNewRows(sheetId,doc,{fetchImpl=fetch}={}){
   }
   for(const item of outbound){
    rows=await fetchTables(id,{fetchImpl});
+   verifyPreviouslySent(doc,rows);
    const changed=detectOutboundDrift(doc,rows);if(changed.length)throw new Error('Encontradas alterações em linhas já sincronizadas. Envio interrompido.');
    outbound=planOutbound(doc,rows)[tab];
    if(!outbound.some(v=>v.id===item.id))continue;
    const url=`${SHEETS_ORIGIN}/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(endpoints[tab])}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
-   await request(url,{method:'POST',body:{majorDimension:'ROWS',values:[item.values]},fetchImpl});
-   const check=await fetchTables(id,{fetchImpl});
-   const matches=check[tab].slice(1).filter(r=>String(r?.[{Treinos:9,Series:14,Peso:6}[tab]]||'')===item.id);
-   if(matches.length!==1)throw new Error('Confirmação de escrita ausente ou duplicada na aba '+tab+'. Verifique a planilha antes de repetir.');
-   // An ID alone is not a receipt: verify the written cell values too.
-   const mismatch=detectOutboundDrift(doc,check).find(x=>x.tab===tab&&x.id===item.id);
-   if(mismatch)throw new Error('A linha foi recebida no Google Sheets, mas os valores não correspondem ao registro local. Revise a aba '+tab+' antes de tentar novamente.');
+   let appendError=null;
+   try{
+    await request(url,{method:'POST',body:{majorDimension:'ROWS',values:[item.values]},fetchImpl});
+   }catch(error){appendError=error;}
+   // Regardless of the HTTP response, only a fresh read counts as a receipt.
+   // A dropped response can follow a successful append. Never blindly POST
+   // the same item twice within this attempt.
+   let check;
+   try{check=await fetchTables(id,{fetchImpl});}
+   catch(error){
+    throw new Error('O resultado do envio de '+tab+' não pôde ser confirmado pela leitura da planilha. Não repetimos o envio automaticamente. Confira a planilha antes de tentar de novo.');
+   }
+   const receipt=locateWriteReceipt(tab,check[tab],item);
+   if(receipt.status==='absent'){
+    if(appendError)throw new Error('Envio de '+tab+' não confirmado no Google Sheets ('+String(appendError.message).slice(0,130)+'). Registro local preservado para uma próxima tentativa.');
+    throw new Error('O Google respondeu ao envio, mas não encontramos o ID na planilha ('+tab+'). Não foi marcada confirmação.');
+   }
+   verifyPreviouslySent(doc,check);
    written[tab]++;
   }
  }
  const after=await fetchTables(id,{fetchImpl});
+ verifyPreviouslySent(doc,after);
  const drift=detectOutboundDrift(doc,after);
  if(drift.length)throw new Error('Dados divergentes após gravação no Google Sheets. Verifique a planilha antes de tentar novamente: '+drift.map(x=>x.tab+' '+x.id).join(', ').slice(0,180));
  const remaining=planOutbound(doc,after);
  if(Object.values(remaining).some(a=>a.length))throw new Error('Existem registros ainda pendentes na planilha. Tente sincronizar novamente após conferir os dados.');
  return {written,remote:previewRemote(doc,after).remoteCounts};
+}
+/** Prevent concurrent submissions in one window. When supported, the Web
+ * Locks API also protects separate tabs of this origin on this device.
+ * Cross-device writes remain non-atomic and require server-side ID checks.
+ */
+export async function uploadNewRows(sheetId,doc,options={}){
+ const id=parseSheetId(sheetId);
+ if(activeUploads.has(id))throw new Error('Outro envio ao Google Sheets já está em andamento neste aplicativo.');
+ activeUploads.add(id);
+ try{
+  if(globalThis.navigator?.locks?.request){
+   return await navigator.locks.request('treino-evolucao-sheets-upload-'+id,
+    {mode:'exclusive',ifAvailable:true},async lock=>{
+     if(!lock)throw new Error('O Google Sheets já está sendo sincronizado em outra aba deste dispositivo.');
+     return uploadNewRowsUnlocked(id,doc,options);
+    });
+  }
+  return await uploadNewRowsUnlocked(id,doc,options);
+ }finally{activeUploads.delete(id);}
 }
