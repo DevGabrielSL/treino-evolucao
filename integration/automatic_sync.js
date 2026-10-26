@@ -51,7 +51,7 @@ export function createAutomaticSyncScheduler({
    inFlight=true;lastRevision=currentRev;
    try{await run({automatic:true});}
    catch(error){onFailure(error);}
-   finally{inFlight=false;}
+   finally{lastRevision=getSnapshot()?.doc?.revision??lastRevision;inFlight=false;}
   },delayMs);
   return {allowed:true,reason:'scheduled'};
  }
