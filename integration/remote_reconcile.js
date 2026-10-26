@@ -60,7 +60,7 @@ const entities=doc=>({
 export function reconcileImportedRows(doc,raw){
  const next=structuredClone(doc);
  const indexes=entities(next);
- const metrics={baselineInitialized:0,rowsUpdated:0,fieldsUpdated:0,unchanged:0};
+ const metrics={baselineInitialized:0,rowsUpdated:0,fieldsUpdated:0,unchanged:0,localEditsPending:0};
  for(const [tab,key] of [['Treinos','sessions'],['Series','sets'],['Peso','weigh_ins']]){
   const values=Array.isArray(raw?.[tab])?raw[tab]:raw?.[tab]?.values;
   if(!Array.isArray(values)||!values.length)throw new Error('Aba ausente na conciliação: '+tab);
@@ -98,6 +98,7 @@ export function reconcileImportedRows(doc,raw){
    for(const field of fields[tab]){
     const ancestor=baseline.fields[field]??null,own=comparison.own[field]??null,current=comparison.remote[field]??null;
     const ownDiff=!equal(own,ancestor),remoteDiff=!equal(current,ancestor);
+    if(ownDiff&&!remoteDiff)metrics.localEditsPending++;
     if(ownDiff&&remoteDiff&&!equal(own,current))throw new Error('Conflito: '+tab+' linha '+sheetRow+' campo '+field+' alterado tanto no Android quanto no Sheets. Revise antes de sincronizar.');
     if(remoteDiff&&!ownDiff){local[field]=current;changed++;metrics.fieldsUpdated++;if(field==='rir')rirUpdated=true;}
    }
@@ -120,5 +121,6 @@ export function reconcileImportedRows(doc,raw){
 export function requireRemoteUpToDate(doc,raw){
  const {metrics}=reconcileImportedRows(doc,raw);
  if(metrics.rowsUpdated>0)throw new Error('A planilha contém alterações em registros antigos. Importe as novidades antes de enviar novas séries.');
+ if(metrics.localEditsPending>0)throw new Error('Há alterações locais em registros já importados. O envio de edições precisa de conciliação; nenhuma mudança foi enviada.');
  return true;
 }
