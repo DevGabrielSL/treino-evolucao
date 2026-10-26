@@ -20,7 +20,7 @@ function explicitExclusions(lines){
 }
 export function buildCoachPolicy(entities={},settings={}){
  const entries=[...(entities.plan_parameters||[]),...(entities.training_rules||[]),...(entities.weekly_schedule||[])];
- const lines=entries.flatMap(textFields);
+ const lines=entries.flatMap(item=>{const cells=textFields(item);return [...cells,cells.join(' — ')];});
  const exclusions=explicitExclusions(lines);
  for(const excluded of settings.excluded_exercises||[])if(normal(excluded).length>=3)exclusions.add(normal(excluded));
  const preferred=new Set((settings.preferred_exercises||[]).map(normal).filter(Boolean));
