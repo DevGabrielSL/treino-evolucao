@@ -1,3 +1,4 @@
+import {reconcileImportedRows,requireRemoteUpToDate} from './remote_reconcile.js';
 import {matchLegacySeries,matchLegacySessions,matchLegacyWeights} from './legacy_identity.js';
 /* Google Sheets adapter: pure transformations. No identity secrets or personal datasets. */
 export const SYNC_SCHEMA='treino-sheets-sync-v1';
@@ -80,7 +81,8 @@ export function weightValues(w,{initial=null,goal=null}={}){
 }
 /** Only local overlay records are candidates. An imported row is NEVER uploaded back. */
 export function planOutbound(doc,raw){
- const rows=readRowSets(raw),remote=new Set(),plan={Treinos:[],Series:[],Peso:[]};
+ const rows=readRowSets(raw);requireRemoteUpToDate(doc,rows);
+ const remote=new Set(),plan={Treinos:[],Series:[],Peso:[]};
  for(const t of ['Treinos','Series','Peso'])for(const r of rows[t].slice(1)){const id=str(r?.[COLUMN_IDS[t]]);if(id)remote.add(t+':'+id);}
  const matchedSessionIds=new Set(matchLegacySessions(doc,rows.Treinos,sessionValues).filter(x=>x.collection==='overlay').map(x=>x.id));
  const matchedWeightIds=new Set(matchLegacyWeights(doc,rows.Peso).filter(x=>x.collection==='overlay').map(x=>x.id));
@@ -137,7 +139,8 @@ export function stageInbound(doc,raw){
   next.overlay.sets.push(set);add.sets++;
  }
  for(const {row,record:r} of view.newRows.Peso){const w={id:str(r[6])||'sheet_weight_'+row,date:date(r[0]),weight_kg:number(r[1],{positive:true}),goal_weight_kg_reported:number(r[2]),notes:str(r[5]),provenance:{sheet:'Peso',row}};next.overlay.weigh_ins.push(w);add.weigh_ins++;}
- return {next,add,linked_legacy_sets:view.legacyLinks.length,linked_legacy_sessions:view.legacySessionLinks.length,linked_legacy_weights:view.legacyWeightLinks.length,remoteCounts:view.remoteCounts};
+ const reconciliation=reconcileImportedRows(next,raw);
+ return {next:reconciliation.next,add,reconciled:reconciliation.metrics,linked_legacy_sets:view.legacyLinks.length,linked_legacy_sessions:view.legacySessionLinks.length,linked_legacy_weights:view.legacyWeightLinks.length,remoteCounts:view.remoteCounts};
 }
 /** Detect local edits after an app-generated record has already been uploaded. */
 export function detectOutboundDrift(doc,raw){
