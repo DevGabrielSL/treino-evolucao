@@ -270,10 +270,13 @@ jobs:
           done
           test -f integration/legacy_identity.js
           cp integration/legacy_identity.js dist/legacy_identity.js
+          test -f integration/remote_reconcile.js
+          cp integration/remote_reconcile.js dist/remote_reconcile.js
           mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration/tests /tmp/sheets-qa/tests
           cp -R dist/. /tmp/sheets-qa/public/
           cp dist/sheet_sync_*.js /tmp/sheets-qa/integration/
           cp dist/legacy_identity.js /tmp/sheets-qa/integration/
+          cp dist/remote_reconcile.js /tmp/sheets-qa/integration/
           cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
           cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
           node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
@@ -299,7 +302,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_core.js)" = "45568b9bd3f281ce5f81a590807cbb3ae88dfd62"
+          test "$(git hash-object dist/sheet_sync_core.js)" = "6a2598cc8d19c7dbaba0f929cfafe703a7c3ba10"
           echo "1bc4bb164977a3593d28f19ada65646c7f189f0de070e0408c76be2b83f5ce9f  dist/index.html" | sha256sum -c -
           echo "203d0d964064d6bfa3208174a55ba54b8a6c1830466b5808bd3d1dbc036c5109  dist/sw.js" | sha256sum -c -
           echo "b94c4f2d9e1563341b3224be52e828781d8dad479425fe9e5646c1f69f236af5  dist/integrity.js" | sha256sum -c -
@@ -539,6 +542,46 @@ jobs:
           test -f dist/manifest.webmanifest
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA1=PASS; NO_REAL_USER_DATA=TRUE'
+      - name: Etapa 2 — conciliar edições remotas com referência histórica
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/remote_reconcile.js
+          node --check dist/remote_reconcile.js
+          node --check dist/sheet_sync_core.js
+          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-tests.log
+          grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/etapa2-tests.log
+          node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/etapa1-retests.log
+          grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/etapa1-retests.log
+          node --experimental-default-type=module quality/sync_preflight_tests.mjs | tee /tmp/etapa0-retests.log
+          grep -qx 'ETAPA0_PREFLIGHT_TESTS=17' /tmp/etapa0-retests.log
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('sw.js','integrity.js'):
+              p=Path('dist')/name
+              data=p.read_text('utf8')
+              assert 'shell-v107-dedup' in data,name
+              assert data.count("'./sheet_sync_core.js'")==1,name
+              assert "'./remote_reconcile.js'" not in data,name
+              data=data.replace("'./sheet_sync_core.js'","'./remote_reconcile.js','./sheet_sync_core.js'")
+              data=data.replace('shell-v107-dedup','shell-v108-remote-three-way')
+              p.write_text(data,'utf8')
+          p=Path('dist/index.html')
+          data=p.read_text('utf8')
+          assert 'v1.0.7 beta Reconciliação' in data
+          p.write_text(data.replace('v1.0.7 beta Reconciliação','v1.0.8 beta Conciliação'),'utf8')
+          PY
+          grep -q 'shell-v108-remote-three-way' dist/sw.js
+          grep -q 'shell-v108-remote-three-way' dist/integrity.js
+          grep -q 'remote_reconcile.js' dist/sw.js
+          grep -q 'remote_reconcile.js' dist/integrity.js
+          grep -q 'v1.0.8 beta Conciliação' dist/index.html
+          for module in app coach_logic coach_commands store sheet_sync_core sheet_sync_browser remote_reconcile sw integrity; do node --check dist/$module.js; done
+          test -f dist/manifest.webmanifest
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA2=PASS; NO_PRIVATE_HISTORY=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
