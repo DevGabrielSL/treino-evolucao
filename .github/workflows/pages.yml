@@ -684,18 +684,23 @@ jobs:
           set -euo pipefail
           test -f integration/coach_policy.js
           cp integration/coach_policy.js dist/coach_policy.js
+          cp integration/coach_substitution.js dist/coach_substitution.js
           node --check dist/coach_policy.js
           node --check dist/coach_plan_read.js
           node --experimental-default-type=module integration/tests/coach_plan_read.mjs | tee /tmp/etapa5-plan-read.log
           grep -qx 'ETAPA5_PLAN_READ_TESTS=16' /tmp/etapa5-plan-read.log
           python3 integration/patch_coach_plan.py | tee /tmp/etapa5-coach-patch.log
           grep -qx 'ETAPA5_COACH_PATCH=APPLIED' /tmp/etapa5-coach-patch.log
+          python3 integration/patch_coach_substitution.py | tee /tmp/etapa5-substitution-patch.log
+          grep -qx 'ETAPA5_SUBSTITUTION_PATCH=APPLIED' /tmp/etapa5-substitution-patch.log
           node --check dist/coach_logic.js
           node --check dist/app.js
           grep -q 'fetchCoachPlanRows' dist/app.js
           grep -q 'coach_plan_rules' dist/app.js
           node --experimental-default-type=module integration/tests/coach_policy.mjs | tee /tmp/etapa5-coach-policy.log
           grep -qx 'ETAPA5_COACH_POLICY_TESTS=39' /tmp/etapa5-coach-policy.log
+          node --experimental-default-type=module integration/tests/coach_substitution.mjs | tee /tmp/etapa5-substitution.log
+          grep -qx 'ETAPA5_SUBSTITUTION_TESTS=26' /tmp/etapa5-substitution.log
           mkdir -p dist/tests
           cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
           cp /tmp/coach-v105/coach_commands_release.mjs dist/tests/coach_commands.mjs
@@ -712,21 +717,23 @@ jobs:
               assert 'shell-v110-automatic-safe' in data,name
               assert "'./coach_logic.js'" in data,name
               assert "'./coach_policy.js'" not in data,name
-              data=data.replace("'./coach_logic.js'","'./coach_policy.js','./coach_logic.js'")
-              data=data.replace('shell-v110-automatic-safe','shell-v111-coach-plan')
+              data=data.replace("'./coach_logic.js'","'./coach_plan_read.js','./coach_substitution.js','./coach_policy.js','./coach_logic.js'")
+              data=data.replace('shell-v110-automatic-safe','shell-v112-coach-plan-sync')
               p.write_text(data,'utf8')
           p=Path('dist/index.html')
           html=p.read_text('utf8')
           assert 'v1.1.0 beta Sincronização' in html
-          p.write_text(html.replace('v1.1.0 beta Sincronização','v1.1.1 beta Assistente Plano'),'utf8')
+          p.write_text(html.replace('v1.1.0 beta Sincronização','v1.1.2 beta Assistente Plano'),'utf8')
           PY
           node --check dist/sw.js
           node --check dist/integrity.js
-          grep -q 'shell-v111-coach-plan' dist/sw.js
-          grep -q 'shell-v111-coach-plan' dist/integrity.js
+          grep -q 'shell-v112-coach-plan-sync' dist/sw.js
+          grep -q 'shell-v112-coach-plan-sync' dist/integrity.js
           grep -q "'./coach_policy.js'" dist/sw.js
           grep -q "'./coach_policy.js'" dist/integrity.js
-          grep -q 'v1.1.1 beta Assistente Plano' dist/index.html
+          grep -q "'./coach_substitution.js'" dist/sw.js
+          grep -q "'./coach_plan_read.js'" dist/sw.js
+          grep -q 'v1.1.2 beta Assistente Plano' dist/index.html
           test -f dist/manifest.webmanifest
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
