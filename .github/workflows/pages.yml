@@ -352,8 +352,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_browser.js)" = "c254471838e09326dd48302eb21ef2eeb8530157"
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "c254471838e09326dd48302eb21ef2eeb8530157"
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "71eb4075413abab5d56e004369833e36381fc490"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "71eb4075413abab5d56e004369833e36381fc490"
           cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
           grep -q 'shell-v101-sheets-rir' dist/sw.js
           grep -q 'shell-v101-sheets-rir' dist/integrity.js
@@ -378,7 +378,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "c254471838e09326dd48302eb21ef2eeb8530157"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "71eb4075413abab5d56e004369833e36381fc490"
           grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
           grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
           grep -q 'v1.0.2 beta Sheets' dist/index.html
@@ -592,8 +592,11 @@ jobs:
           test -f dist/write_receipt.js
           node --check dist/write_receipt.js
           node --check dist/sheet_sync_browser.js
+          node --check integration/tests/sheets_browser.mjs
+          grep -q 'writeWeightPreservingFormulas' dist/sheet_sync_browser.js
+          grep -q 'values:batchUpdate' dist/sheet_sync_browser.js
           node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa3-write-tests.log
-          grep -qx 'ETAPA3_WRITE_TESTS=39' /tmp/etapa3-write-tests.log
+          grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/etapa3-write-tests.log
           node --experimental-default-type=module integration/tests/sheets_write_confirmation.mjs | tee /tmp/etapa3-write-regressions.log
           grep -qx 'SHEETS_WRITE_CONFIRMATION_TESTS=15' /tmp/etapa3-write-regressions.log
           node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-write-regressions.log
@@ -607,12 +610,12 @@ jobs:
               assert "'./sheet_sync_browser.js'" in data,name
               assert "'./write_receipt.js'" not in data,name
               data=data.replace("'./sheet_sync_browser.js'","'./write_receipt.js','./sheet_sync_browser.js'")
-              data=data.replace('shell-v108-remote-three-way','shell-v109-write-receipts')
+              data=data.replace('shell-v108-remote-three-way','shell-v1091-formula-safe')
               p.write_text(data,'utf8')
           p=Path('dist/index.html')
           data=p.read_text('utf8')
           assert 'v1.0.8 beta Conciliação' in data
-          p.write_text(data.replace('v1.0.8 beta Conciliação','v1.0.9 beta Escrita'),'utf8')
+          p.write_text(data.replace('v1.0.8 beta Conciliação','v1.0.9.1 beta Escrita Segura'),'utf8')
           PY
           grep -q 'shell-v109-write-receipts' dist/sw.js
           grep -q 'shell-v109-write-receipts' dist/integrity.js
