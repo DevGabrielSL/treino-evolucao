@@ -31,6 +31,21 @@ function mockApi(tabs,{mutateUpload=false}={}){
    assert.ok(['FORMATTED_VALUE','UNFORMATTED_VALUE'].includes(u.searchParams.get('valueRenderOption')));
    return {ok:true,status:200,json:async()=>({valueRanges:['Treinos','Series','Peso'].map(name=>({values:tabs[name]}))})};
   }
+  if(u.pathname.endsWith('/values:batchUpdate')){
+   const body=JSON.parse(config.body),data=body.data;
+   assert.equal(body.valueInputOption,'RAW');
+   assert.equal(data.length,2);
+   assert.match(data[0].range,/^'Peso'!A\d+:C\d+$/);
+   assert.match(data[1].range,/^'Peso'!F\d+:G\d+$/);
+   const row=Number(data[0].range.match(/!A(\d+)/)[1]);
+   assert.equal(data[1].range.match(/!F(\d+)/)[1],String(row));
+   const written=[...data[0].values[0],'','',...data[1].values[0]];
+   assert.equal(written.length,7);
+   if(tabs.Peso[row-1]?.[0])throw Error('Overwriting existing weigh-in in test');
+   tabs.Peso[row-1]=written;
+   writes.push('ROW Peso');
+   return {ok:true,status:200,json:async()=>({totalUpdatedCells:5})};
+  }
   const match=u.pathname.match(/\/values\/(.*?)(:append)?$/);
   const name=decodeURIComponent(match?.[1]||'').match(/'(Treinos|Series|Peso)'/)?.[1];
   assert.ok(name,'unexpected table '+u.pathname);
