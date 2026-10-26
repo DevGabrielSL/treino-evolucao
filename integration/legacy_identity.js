@@ -58,3 +58,43 @@ export function matchLegacySeries(doc,remoteRows,serialize){
  }
  return links;
 }
+
+/** A historical session may have an identical natural identity without provenance.
+ * Never adopt an Android-created session; surface changed values as a conflict.
+ */
+export function matchLegacySessions(doc,remoteRows,serialize){
+ const entries=gather(doc,'sessions'),links=[];
+ const occupied=new Set();
+ for(let i=1;i<(remoteRows||[]).length;i++){
+  const row=i+1,r=remoteRows[i];if(!text(r?.[0]))continue;
+  const remoteId=text(r[9]);
+  if(entries.some(s=>s.provenance?.sheet==='Treinos'&&s.provenance?.row===row||(remoteId&&s.id===remoteId)))continue;
+  const key=norm(r[0])+'|'+norm(r[2]);
+  const candidates=entries.filter(s=>!s.provenance?.sheet && s.provenance?.source!=='android_local' && s.provenance?.source!=='assistant' && norm(s.date)+'|'+norm(s.name)===key);
+  if(!candidates.length)continue;
+  if(candidates.length!==1||occupied.has(candidates[0].id))throw new Error('Sessão histórica ambígua sem ID, linha '+row+'. Revise antes de importar.');
+  const local=candidates[0];
+  const a=serialize(local);
+  if([0,2,3,4,5,6,7,8].some(col=>standard(a,col)!==standard(r,col)))throw new Error('Sessão histórica com diferenças no Sheets, linha '+row+'. Revise antes de importar.');
+  occupied.add(local.id);
+  links.push({row,id:local.id,collection:(doc.overlay?.sessions||[]).some(x=>x.id===local.id)?'overlay':'base'});
+ }
+ return links;
+}
+/** Match imported local weight records only when date, weight and notes agree. */
+export function matchLegacyWeights(doc,remoteRows){
+ const entries=gather(doc,'weigh_ins'),links=[],occupied=new Set();
+ for(let i=1;i<(remoteRows||[]).length;i++){
+  const row=i+1,r=remoteRows[i];if(!text(r?.[0]))continue;
+  const remoteId=text(r[6]);
+  if(entries.some(w=>w.provenance?.sheet==='Peso'&&w.provenance?.row===row||(remoteId&&w.id===remoteId)))continue;
+  const candidates=entries.filter(w=>!w.provenance?.sheet && w.provenance?.source!=='android_local' && w.provenance?.source!=='assistant' && norm(w.date)===norm(r[0])&&numeral(w.weight_kg)===numeral(r[1]));
+  if(!candidates.length)continue;
+  if(candidates.length!==1||occupied.has(candidates[0].id))throw new Error('Pesagem histórica ambígua sem ID, linha '+row+'. Revise antes de importar.');
+  const local=candidates[0];
+  if(norm(local.notes)!==norm(r[5]))throw new Error('Pesagem histórica com observação diferente no Sheets, linha '+row+'. Revise antes de importar.');
+  occupied.add(local.id);
+  links.push({row,id:local.id,collection:(doc.overlay?.weigh_ins||[]).some(x=>x.id===local.id)?'overlay':'base'});
+ }
+ return links;
+}
