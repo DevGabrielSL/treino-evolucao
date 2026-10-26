@@ -141,11 +141,16 @@ async function writeWeightPreservingFormulas(sheetId,rows,item,{fetchImpl=fetch}
 }
 function checkWeightFormulaHealth(tab,receipt){
  if(receipt.status!=='confirmed')return;
- const row=tab[receipt.row-1]||[];
- for(const c of [3,4]){
-  const val=String(row[c]??'');
-  if(/^#(REF!|ERROR!|VALUE!|SPILL!)/i.test(val))
-   throw new Error('A fórmula de pesagem foi danificada no Google Sheets (linha '+receipt.row+', coluna '+(c+1)+'). Envio interrompido para revisão.');
+ // Formula origin at D3/E3 can fail while the newly written row has numbers.
+ // Check both the formula anchor and the confirmed data row.
+ const positions=[2,receipt.row-1];
+ for(const index of new Set(positions)){
+  const row=tab[index]||[];
+  for(const c of [3,4]){
+   const val=String(row[c]??'');
+   if(/^#(REF!|ERROR!|VALUE!|SPILL!)/i.test(val))
+    throw new Error('A fórmula de pesagem foi danificada no Google Sheets (linha '+(index+1)+', coluna '+(c+1)+'). Envio interrompido para revisão.');
+  }
  }
 }
 async function uploadNewRowsUnlocked(sheetId,doc,{fetchImpl=fetch}={}){
