@@ -274,6 +274,7 @@ jobs:
           cp integration/remote_reconcile.js dist/remote_reconcile.js
           test -f integration/write_receipt.js
           cp integration/write_receipt.js dist/write_receipt.js
+          cp integration/coach_plan_read.js dist/coach_plan_read.js
           test -f integration/automatic_sync.js
           cp integration/automatic_sync.js dist/automatic_sync.js
           mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration/tests /tmp/sheets-qa/tests
@@ -282,6 +283,7 @@ jobs:
           cp dist/legacy_identity.js /tmp/sheets-qa/integration/
           cp dist/remote_reconcile.js /tmp/sheets-qa/integration/
           cp dist/write_receipt.js /tmp/sheets-qa/integration/
+          cp dist/coach_plan_read.js /tmp/sheets-qa/integration/
           cp dist/automatic_sync.js /tmp/sheets-qa/integration/
           cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
           cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
@@ -355,8 +357,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_browser.js)" = "bfbf87610f3e7ec027ef04b2e429ca6becf20b63"
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "bfbf87610f3e7ec027ef04b2e429ca6becf20b63"
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "845836e885e9d0967da6a1d6668827600fb8e1c8"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "845836e885e9d0967da6a1d6668827600fb8e1c8"
           cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
           grep -q 'shell-v101-sheets-rir' dist/sw.js
           grep -q 'shell-v101-sheets-rir' dist/integrity.js
@@ -381,7 +383,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "bfbf87610f3e7ec027ef04b2e429ca6becf20b63"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "845836e885e9d0967da6a1d6668827600fb8e1c8"
           grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
           grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
           grep -q 'v1.0.2 beta Sheets' dist/index.html
