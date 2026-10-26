@@ -53,5 +53,37 @@ a=one(a,"const preview=(coachPlan&&!active)?panel(",
 a=one(a,"Escolhida exclusivamente dentre seus exercícios registrados. Revise o roteiro: nenhuma série foi criada.",
 "Exercícios do histórico filtrados pelas regras locais do Plano e suas preferências. Revise o roteiro: nenhuma série foi criada.",
 "plan UI attribution")
+# Buscar Plano real somente quando autorizado; salvá-lo no IndexedDB para
+# recomendações offline posteriores. Nunca publicar linhas privadas no GitHub.
+a=one(a,
+"import {loadGoogleIdentity,authorize,authorized,disconnect,inspectSpreadsheet,uploadNewRows} from './sheet_sync_browser.js';",
+"import {loadGoogleIdentity,authorize,authorized,disconnect,inspectSpreadsheet,uploadNewRows,fetchCoachPlanRows} from './sheet_sync_browser.js';",
+'leitura remota do plano')
+a=one(a,
+" if(!active){\n  const rawGroups=parseGoal(input),m=g(),policy=buildCoachPolicy(m.entities,doc.settings.coach_preferences||{});",
+""" if(!active){
+  if(authorized()&&navigator.onLine){
+   try{
+    const updatedPlan=await fetchCoachPlanRows(SHEET_ID);
+    if(JSON.stringify(doc.settings.coach_plan_rules||{})!==JSON.stringify(updatedPlan)){
+     await perform(d=>{d.settings.coach_plan_rules=updatedPlan;},
+      'Regras do Plano atualizadas localmente para uso offline.');
+    }
+   }catch(planError){
+    coachSay('assistant','Não consegui atualizar a aba Plano neste acesso. Usarei apenas as regras locais já disponíveis; nenhuma série foi modificada.');
+   }
+  }
+  const rawGroups=parseGoal(input),m=g();
+  const cached=doc.settings.coach_plan_rules||{};
+  const planEntities={...m.entities,
+   plan_parameters:[...(cached.plan_parameters||[]),...(m.entities.plan_parameters||[])],
+   training_rules:[...(cached.training_rules||[]),...(m.entities.training_rules||[])],
+   weekly_schedule:[...(cached.weekly_schedule||[]),...(m.entities.weekly_schedule||[])]};
+  const policy=buildCoachPolicy(planEntities,doc.settings.coach_preferences||{});""",
+'Plano privado consultado na conversa')
+a=one(a,
+"  coachSay('assistant','Sugeri '+items.length+' exercícios de '+groupLabel(groups)+' com base no histórico e nas regras locais do planejamento. '+policy.notes.join(' ')+' Confira e toque em Confirmar e começar treino.');",
+"  coachSay('assistant','Sugeri '+items.length+' exercícios de '+groupLabel(groups)+' com base no histórico '+(policy.hasPlan?'e nas regras do planejamento. ':'(sem Plano local disponível neste acesso). ')+policy.notes.join(' ')+' Confira e toque em Confirmar e começar treino.');",
+'transparência de origem das recomendações')
 app.write_text(a,'utf8')
 print('ETAPA5_COACH_PATCH=APPLIED')
