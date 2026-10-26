@@ -35,14 +35,12 @@ replace_unique("""async function perform(mutate,message){
 }""",'salvar')
 replace_unique("window.addEventListener('online',()=>{updateConnectivity();if(authorized()&&doc.settings.sheet_sync?.auto)sheetsSyncNow({automatic:true});});",
 "window.addEventListener('online',()=>{updateConnectivity();automaticSheets.request('online');});",'reconectar')
-replace_unique("""   if(totalIncoming){
-    // The entire staged document is validated before saving; no historical base records are overwritten.
-    const next=commit(doc,d=>{d.overlay=incoming.next.overlay;});""",
-"""   if(totalIncoming||incoming.reconciled?.rowsUpdated||incoming.reconciled?.baselineInitialized||
-      incoming.reconciled?.fieldsUpdated||incoming.linked_legacy_sets||
-      incoming.linked_legacy_sessions||incoming.linked_legacy_weights){
-    // The staged document was validated; persist base and overlay atomically.
-    const next=commit(doc,d=>{d.base=incoming.next.base;d.overlay=incoming.next.overlay;});""",'persistir conciliação')
+replace_unique("if(totalIncoming){",
+"if(totalIncoming||incoming.reconciled?.rowsUpdated||incoming.reconciled?.baselineInitialized||incoming.reconciled?.fieldsUpdated||incoming.linked_legacy_sets||incoming.linked_legacy_sessions||incoming.linked_legacy_weights){",
+'persistir conciliação')
+replace_unique("d.overlay=incoming.next.overlay;","d.base=incoming.next.base;d.overlay=incoming.next.overlay;",'preservar base reconciliada')
+replace_unique("The entire staged document is validated before saving; no historical base records are overwritten.",
+"The staged document is validated before saving; base and overlay updates are preserved.",'comentário conciliação')
 replace_unique("  }catch(err){sheetsError=err.message||String(err);error(err);render();}",
 """  }catch(err){
    sheetsError=err.message||String(err);
