@@ -85,7 +85,7 @@ function stateWrite_(snapshot,state){
  return {updateCells:{range:{sheetId:snapshot.sheets[SYNC_CONTROL_].properties.sheetId,startRowIndex:0,endRowIndex:1,startColumnIndex:0,endColumnIndex:1},rows:[{values:[{userEnteredValue:{stringValue:text}}]}],fields:'userEnteredValue'}};
 }
 /** The only intended API entry point; the deployment must restrict to MYSELF. */
-function coordinateSync(request){
+function coordinateSync_(request){
  var props=config_(),op=operation_(request),lock=LockService.getScriptLock();
  if(!lock.tryLock(5000))return {ok:false,code:'BUSY'};
  try{
@@ -144,4 +144,10 @@ function initializeCoordinator(){
   var check=snapshot_();if(check.state.fingerprint!==fingerprint_(check.rows))syncError_('INITIALIZATION_UNCERTAIN');
   return {ok:true,revision:0,enabled:false};
  }finally{lock.releaseLock();}
+}
+
+function coordinateSync(request){
+ var result=coordinateSync_(request);
+ result.protocol=1;result.spreadsheetId=SYNC_TEST_SHEET_;result.environment='test';
+ return result;
 }

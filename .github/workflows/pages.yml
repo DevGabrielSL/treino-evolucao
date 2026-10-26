@@ -811,6 +811,8 @@ jobs:
           env -u SANDBOX_ENGINE_TEST_MODE python3 testing/build_sandbox.py
           node --experimental-default-type=module testing/concurrency_gate_tests.mjs | tee /tmp/concurrency-gate.log
           grep -qx 'CONCURRENCY_GATE_TESTS=14' /tmp/concurrency-gate.log
+          node --experimental-default-type=module testing/coordinator_client_tests.mjs | tee /tmp/coordinator-client.log
+          grep -qx 'COORDINATOR_CLIENT_TESTS=28' /tmp/coordinator-client.log
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5

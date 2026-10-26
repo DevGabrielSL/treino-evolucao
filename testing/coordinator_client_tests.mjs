@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {harness} from './coordinator/mock_service.mjs';
+import {emptyDocument,commit} from '../dist/testes/store.js';
+import {SHEET_ID} from '../dist/testes/sheets_config.js';
+import {validateCoordinatorResponse} from '../dist/testes/coordinator_client.js';
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'coordinator-client-'));
+fs.cpSync(new URL('../dist/testes/',import.meta.url),temp,{recursive:true});
+const config=path.join(temp,'sheets_config.js');fs.writeFileSync(config,fs.readFileSync(config,'utf8').replace("COORDINATOR_DEPLOYMENT_ID=''","COORDINATOR_DEPLOYMENT_ID='SYNTHETIC_DEPLOYMENT_ID_123456'").replace('COORDINATOR_ENABLED=false','COORDINATOR_ENABLED=true'));
+Object.defineProperty(globalThis,'navigator',{value:{onLine:true},configurable:true});let scope='';
+globalThis.google={accounts:{oauth2:{initTokenClient:options=>{scope=options.scope;return {requestAccessToken:()=>options.callback({access_token:'SYNTHETIC_INTEGRATION_TOKEN',expires_in:3600})}}}}};
+const transport=await import(pathToFileURL(path.join(temp,'sheet_sync_browser.js')).href);
+await transport.authorize('1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com');
+const model=()=>{const d=emptyDocument();d.overlay.exercises.push({id:'ex',name:'Supino'});d.overlay.exercise_variants.push({id:'v',exercise_id:'ex',equipment_or_variation:'Barra',unit:'kg',unit_confirmed:true});d.overlay.sessions.push({id:'s',date:'2026-10-26',name:'Treino A',status:'completed'});d.overlay.sets.push({id:'r',date:'2026-10-26',session_id:'s',exercise_id:'ex',variant_id:'v',set_type:'effective',set_number:1,load_value:50,repetitions:10,rir:2,rpe:8});d.overlay.weigh_ins.push({id:'w',date:'2026-10-26',weight_kg:80});return d};
+function device(doc=model()){
+ let saved=structuredClone(doc);return {get doc(){return saved},edit:fn=>{saved=commit(saved,fn)},onState:async state=>{saved=commit(saved,d=>{d.settings.sheet_sync={...d.settings.sheet_sync,coordinator_v1:structuredClone(state)}})},onCheckpoint:async ledger=>{saved=commit(saved,d=>{d.settings.sheet_sync={...d.settings.sheet_sync,known_remote_ids_v1:structuredClone(ledger)}})}};
+}
+function wire(service,client,{before=()=>{},after=x=>x,context=service.a}={}){
+ const requests=[];
+ return {requests,fetchImpl:async(url,options)=>{
+  const u=new URL(url);assert.equal(u.origin,'https://script.googleapis.com');assert.match(u.pathname,/\/v1\/scripts\/SYNTHETIC_DEPLOYMENT_ID_123456:run$/);assert.equal(options.method,'POST');assert.equal(options.headers.Authorization,'Bearer SYNTHETIC_INTEGRATION_TOKEN');
+  const body=JSON.parse(options.body);assert.equal(body.function,'coordinateSync');assert.equal(body.devMode,false);assert.equal(body.parameters.length,1);const op=body.parameters[0];requests.push(structuredClone(op));
+  if(op.action==='append')assert.deepEqual(client.doc.settings.sheet_sync.coordinator_v1.pending,op,'Queue must be persisted before request');
+  await before(op);const result=service.call(context,op),execution=await after({done:true,response:{result}},op);
+  return {ok:true,status:200,json:async()=>execution};
+ }};
+}
+const send=(client,wire,options={})=>transport.uploadNewRows(SHEET_ID,client.doc,{fetchImpl:wire.fetchImpl,onState:client.onState,onCheckpoint:client.onCheckpoint,...options});
+let count=0;const test=async(name,fn)=>{await fn();count++;console.log('PASS '+name)};
+try{
+await test('Configuração ativa usa somente a API autenticada do coordenador',async()=>{const h=harness(),d=device(),w=wire(h,d);const r=await send(d,w);assert.deepEqual(r.written,{Treinos:1,Series:1,Peso:1});assert.equal(h.tabs.Treinos.length,2);assert.equal(h.tabs.Series.length,2);assert.equal(h.tabs.Peso.length,2);assert.equal(d.doc.settings.sheet_sync.coordinator_v1.pending,null);assert.ok(scope.includes('userinfo.email'));assert.equal(w.requests.filter(r=>r.action==='append').length,1)});
+await test('Leitura de sincronização também passa pelo coordenador quando configurado',async()=>{const h=harness(),d=device(),w=wire(h,d);const rows=await transport.fetchTables(SHEET_ID,{fetchImpl:w.fetchImpl});assert.ok(rows.Treinos);assert.deepEqual(w.requests.map(r=>r.action),['read']);assert.equal(h.writes,0)});
+await test('Nova consulta após confirmação não duplica os registros',async()=>{const h=harness(),d=device(),w=wire(h,d);await send(d,w);const writes=h.writes;assert.deepEqual((await send(d,w)).written,{Treinos:0,Series:0,Peso:0});assert.equal(h.writes,writes)});
+await test('Resposta perdida conserva operação e recupera recibo após restauração',async()=>{const h=harness(),d=device();let lost=true;const w=wire(h,d,{after:(e,o)=>{if(o.action==='append'&&lost){lost=false;throw Error('network response lost')}return e}});await assert.rejects(send(d,w),/network response lost/);const pending=structuredClone(d.doc.settings.sheet_sync.coordinator_v1.pending);assert.ok(pending);const restored=device(JSON.parse(JSON.stringify(d.doc))),second=wire(h,restored);const writes=h.writes;await send(restored,second);assert.deepEqual(second.requests[0],pending);assert.equal(h.writes,writes);assert.equal(restored.doc.settings.sheet_sync.coordinator_v1.pending,null);assert.equal(h.tabs.Series.length,2)});
+await test('Falha de rede antes da execução conserva identificador para tentar novamente',async()=>{const h=harness(),d=device();let offline=true;const w=wire(h,d,{before:o=>{if(o.action==='append'&&offline){offline=false;throw Error('network before execution')}}});await assert.rejects(send(d,w));const id=d.doc.settings.sheet_sync.coordinator_v1.pending.operationId;await send(d,w);const posts=w.requests.filter(o=>o.action==='append');assert.equal(posts.length,2);assert.ok(posts.every(o=>o.operationId===id));assert.equal(h.tabs.Treinos.length,2)});
+await test('Conflito de versão preserva operação e impede retorno à escrita direta',async()=>{const h=harness(),d=device();let inject=true;const w=wire(h,d,{before:o=>{if(o.action==='append'&&inject){inject=false;const other={protocol:1,action:'append',operationId:'other_operation_00001',expectedRevision:0,records:[{tab:'Peso',values:['2026-10-25',82,'','','','','other-weight']}]};assert.equal(h.call(h.b,other).ok,true)}}});await assert.rejects(send(d,w),e=>e.code==='COORDINATOR_VERSION_CONFLICT');assert.ok(d.doc.settings.sheet_sync.coordinator_v1.pending);assert.equal(h.tabs.Treinos.length,1);assert.equal(h.tabs.Peso[1][6],'other-weight')});
+await test('Recibo com hash divergente mantém operação pendente',async()=>{const h=harness(),d=device(),w=wire(h,d,{after:(e,o)=>{if(o.action==='append')e.response.result.receipt.digest='0'.repeat(64);return e}});await assert.rejects(send(d,w),e=>e.code==='COORDINATOR_INVALID_RECEIPT');assert.ok(d.doc.settings.sheet_sync.coordinator_v1.pending)});
+await test('Recibo de revisão incorreta não confirma operação',async()=>{const h=harness(),d=device(),w=wire(h,d,{after:(e,o)=>{if(o.action==='append')e.response.result.receipt.revision=99;return e}});await assert.rejects(send(d,w),e=>e.code==='COORDINATOR_INVALID_RECEIPT');assert.ok(d.doc.settings.sheet_sync.coordinator_v1.pending)});
+await test('ID extra no recibo não confirma operação',async()=>{const h=harness(),d=device(),w=wire(h,d,{after:(e,o)=>{if(o.action==='append')e.response.result.receipt.applied.push({tab:'Peso',id:'not-requested'});return e}});await assert.rejects(send(d,w),e=>e.code==='COORDINATOR_INVALID_RECEIPT')});
+await test('Falta de registro na conferência posterior impede limpar fila',async()=>{const h=harness(),d=device();let appended=false;const w=wire(h,d,{after:(e,o)=>{if(o.action==='append')appended=true;if(appended&&o.action==='read')e.response.result.rows.Series.splice(1);return e}});await assert.rejects(send(d,w),/desapareceu/);assert.ok(d.doc.settings.sheet_sync.coordinator_v1.pending)});
+await test('Falha ao persistir fila impede qualquer mutação remota',async()=>{const h=harness(),d=device(),w=wire(h,d);await assert.rejects(send(d,w,{onState:async()=>{throw Error('disk full')}}),e=>e.code==='COORDINATOR_LOCAL_STORAGE');assert.equal(h.writes,0);assert.equal(w.requests.some(o=>o.action==='append'),false)});
+await test('Falha ao persistir IDs antes do envio impede mutação remota',async()=>{const h=harness(),d=device(),w=wire(h,d);await assert.rejects(send(d,w,{onCheckpoint:async()=>{throw Error('disk full')}}),e=>e.code==='COORDINATOR_LOCAL_STORAGE');assert.equal(h.writes,0)});
+await test('Falha ao limpar fila após sucesso conserva operação recuperável',async()=>{const h=harness(),d=device(),w=wire(h,d);await assert.rejects(send(d,w,{onState:async s=>{if(s.pending===null)throw Error('disk full');await d.onState(s)}}),e=>e.code==='COORDINATOR_LOCAL_STORAGE');assert.ok(d.doc.settings.sheet_sync.coordinator_v1.pending);const writes=h.writes;await send(d,w);assert.equal(h.writes,writes);assert.equal(d.doc.settings.sheet_sync.coordinator_v1.pending,null)});
+await test('Pesagem criada durante envio não é apagada pelos checkpoints',async()=>{const h=harness(),d=device();let edit=true;const w=wire(h,d,{before:o=>{if(o.action==='append'&&edit){edit=false;d.edit(x=>x.overlay.weigh_ins.push({id:'w2',date:'2026-10-27',weight_kg:79}))}}});await send(d,w);assert.ok(d.doc.overlay.weigh_ins.some(x=>x.id==='w2'));await send(d,w);assert.deepEqual(h.tabs.Peso.slice(1).map(r=>r[6]),['w','w2'])});
+await test('Payload capturado permanece igual se o registro local for editado',async()=>{const h=harness(),d=device();let edited=false;const w=wire(h,d,{before:o=>{if(o.action==='append'&&!edited){edited=true;d.edit(x=>{x.overlay.sets[0].load_value=55})}}});await send(d,w);assert.equal(h.tabs.Series[1][6],50);assert.equal(d.doc.overlay.sets[0].load_value,55)});
+await test('Operação pendente adulterada com ID já usado é rejeitada',async()=>{const h=harness(),d=device();const w=wire(h,d,{after:(e,o)=>{if(o.action==='append')throw Error('lost');return e}});await assert.rejects(send(d,w));const changed=structuredClone(d.doc);changed.settings.sheet_sync.coordinator_v1.pending.records[0].values[2]='Other';const restored=device(changed),next=wire(h,restored);await assert.rejects(send(restored,next),e=>e.code==='COORDINATOR_OPERATION_REUSED')});
+for(const [name,mutate] of [['destino',s=>s.spreadsheet_id='other'],['versão',s=>s.version=99],['estrutura',s=>s.pending={}]])await test('Fila inválida ('+name+') bloqueia antes de chamar serviço',async()=>{const d=model();d.settings.sheet_sync={coordinator_v1:{version:1,spreadsheet_id:SHEET_ID,pending:null}};mutate(d.settings.sheet_sync.coordinator_v1);const client=device(d),h=harness(),w=wire(h,client);await assert.rejects(send(client,w),e=>e.code==='COORDINATOR_INVALID_QUEUE');assert.equal(w.requests.length,0)});
+for(const [name,execution] of [['JSON sem envelope',{}],['execução incompleta',{done:false}],['erro de execução',{done:true,error:{message:'private'}}],['ambiente errado',{done:true,response:{result:{ok:true,protocol:1,spreadsheetId:SHEET_ID,environment:'production'}}}],['destino errado',{done:true,response:{result:{ok:true,protocol:1,spreadsheetId:'other',environment:'test'}}}]])await test('Resposta inválida ('+name+') não é confirmação',async()=>assert.throws(()=>validateCoordinatorResponse(execution)));
+await test('Dois clientes independentes não duplicam sessão durante disputa real do protocolo',async()=>{
+ const second=await import(pathToFileURL(path.join(temp,'sheet_sync_browser.js')).href+'?independent=two');await second.authorize('1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com');
+ const h=harness(),a=device(),b=device(),wa=wire(h,a),wb=wire(h,b,{context:h.b});
+ const results=await Promise.allSettled([send(a,wa),second.uploadNewRows(SHEET_ID,b.doc,{fetchImpl:wb.fetchImpl,onState:b.onState,onCheckpoint:b.onCheckpoint})]);
+ assert.equal(results.filter(x=>x.status==='fulfilled').length,1);assert.equal(results.filter(x=>x.status==='rejected'&&x.reason.code==='COORDINATOR_VERSION_CONFLICT').length,1);assert.equal(h.tabs.Treinos.length,2);assert.equal(h.tabs.Series.length,2);assert.equal(h.tabs.Peso.length,2);second.disconnect();
+});
+await test('Pesagens de dois clientes em disputa não sobrescrevem a linha vencedora',async()=>{
+ const second=await import(pathToFileURL(path.join(temp,'sheet_sync_browser.js')).href+'?independent=weights');await second.authorize('1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com');
+ const h=harness(),da=emptyDocument(),db=emptyDocument();da.overlay.weigh_ins.push({id:'weight_a',date:'2026-10-26',weight_kg:80});db.overlay.weigh_ins.push({id:'weight_b',date:'2026-10-26',weight_kg:81});
+ const a=device(da),b=device(db),wa=wire(h,a),wb=wire(h,b,{context:h.b});const results=await Promise.allSettled([send(a,wa),second.uploadNewRows(SHEET_ID,b.doc,{fetchImpl:wb.fetchImpl,onState:b.onState,onCheckpoint:b.onCheckpoint})]);
+ assert.equal(results.filter(x=>x.status==='fulfilled').length,1);assert.equal(h.tabs.Peso.length,2);const winner=h.tabs.Peso[1];assert.ok(winner[6]==='weight_a'&&winner[1]===80||winner[6]==='weight_b'&&winner[1]===81);assert.ok(a.doc.settings.sheet_sync.coordinator_v1.pending||b.doc.settings.sheet_sync.coordinator_v1.pending);second.disconnect();
+});
+await test('Mesma janela bloqueia execução sobreposta antes de mudar a segunda fila',async()=>{
+ let release;const gate=new Promise(r=>release=r);const h=harness(),a=device(),b=device();const wa=wire(h,a,{before:async o=>{if(o.action==='read')await gate}}),wb=wire(h,b);
+ const first=send(a,wa);await Promise.resolve();await assert.rejects(send(b,wb),/já está em andamento/);assert.equal(wb.requests.length,0);release();await first;
+});
+await test('Manifesto de cache inclui cliente coordenado',async()=>{for(const f of ['sw.js','integrity.js'])assert.ok(fs.readFileSync(new URL('../dist/testes/'+f,import.meta.url),'utf8').includes("'./coordinator_client.js'"))});
+console.log('COORDINATOR_CLIENT_TESTS='+count);
+}finally{transport.disconnect();fs.rmSync(temp,{recursive:true,force:true})}
