@@ -628,6 +628,11 @@ jobs:
           test -f dist/manifest.webmanifest
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA3=PASS; GOOGLE_SHEETS_NOT_MODIFIED_BY_TESTS=TRUE'
+      - name: Revisar estado da sincronização automática no build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-default-type=module integration/tests/inspect_auto_sync.mjs
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
