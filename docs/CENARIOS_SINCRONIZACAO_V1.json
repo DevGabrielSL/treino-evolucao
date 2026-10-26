@@ -1,0 +1,246 @@
+{
+  "contract_version": "1.0",
+  "status": "specification_only",
+  "reference_commit": "ae21367ecb2afa0da11889f234ed7151b327d434",
+  "scenarios": [
+    {
+      "id": "SC-01",
+      "rules": [
+        "REG-01",
+        "REG-10"
+      ],
+      "scenario": "Repetir a mesma inclusão após confirmação",
+      "expected": "Um único registro; mesma identidade e recibo",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-02",
+      "rules": [
+        "REG-05",
+        "REG-06"
+      ],
+      "scenario": "Informar -50 kg ou 10.5 repetições",
+      "expected": "Erro claro, sem transformar em 50 kg ou 5 reps",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-03",
+      "rules": [
+        "REG-05",
+        "REG-06"
+      ],
+      "scenario": "Informar 50 x 10 lb em variante kg",
+      "expected": "Rejeitar unidade incompatível, sem conversão implícita",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-04",
+      "rules": [
+        "REG-05",
+        "REG-06"
+      ],
+      "scenario": "Informar RIR negativo ou faixa 0-20 num novo comando",
+      "expected": "Rejeitar e preservar texto para correção",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-05",
+      "rules": [
+        "REG-07"
+      ],
+      "scenario": "Falhar a gravação local",
+      "expected": "Não exibir sucesso; preservar entrada e versão anterior",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-06",
+      "rules": [
+        "REG-08",
+        "REG-09"
+      ],
+      "scenario": "Registrar séries em sessão aberta e depois concluir",
+      "expected": "Rascunho identificado; conclusão torna o grupo elegível",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-07",
+      "rules": [
+        "REG-09",
+        "REG-10"
+      ],
+      "scenario": "Confirmar a sessão e falhar uma série",
+      "expected": "Manter somente itens não confirmados pendentes; sem sucesso global",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-08",
+      "rules": [
+        "REG-10",
+        "REG-11"
+      ],
+      "scenario": "Receber HTTP 200 com ID e conteúdo divergente",
+      "expected": "Não confirmar; mostrar divergência",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-09",
+      "rules": [
+        "REG-12"
+      ],
+      "scenario": "Perder resposta depois de gravar no destino",
+      "expected": "Consultar a mesma operação; não duplicar nem dar falso sucesso",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-10",
+      "rules": [
+        "REG-12"
+      ],
+      "scenario": "Ler ausência antes de uma gravação tardia terminar",
+      "expected": "Manter incerteza; não repetir escrita sem deduplicação garantida",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-11",
+      "rules": [
+        "REG-13"
+      ],
+      "scenario": "Erro transitório durante envio",
+      "expected": "Aplicar repetição limitada somente quando segura; conservar pendências",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-12",
+      "rules": [
+        "REG-14"
+      ],
+      "scenario": "Editar enquanto a revisão anterior é enviada",
+      "expected": "Confirmar só a versão antiga e manter a nova pendente",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-13",
+      "rules": [
+        "REG-15",
+        "REG-16"
+      ],
+      "scenario": "Corrigir registro antes e depois da confirmação",
+      "expected": "Manter ID; atualizar versão, sem anexar segunda linha",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-14",
+      "rules": [
+        "REG-17"
+      ],
+      "scenario": "Alterar só no Sheets",
+      "expected": "Importar após validar e atualizar referência",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-15",
+      "rules": [
+        "REG-17",
+        "REG-18"
+      ],
+      "scenario": "Alterar o mesmo campo de modos diferentes nos dois lados",
+      "expected": "Conflito visível; sem vencedor por horário",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-16",
+      "rules": [
+        "REG-17"
+      ],
+      "scenario": "Alterar campos distintos nos dois lados",
+      "expected": "Conciliar se o resultado final for válido",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-17",
+      "rules": [
+        "REG-19"
+      ],
+      "scenario": "Descartar rascunho com operação ainda incerta",
+      "expected": "Não perder referência do envio; resolver a operação",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-18",
+      "rules": [
+        "REG-20"
+      ],
+      "scenario": "Excluir registro já confirmado",
+      "expected": "Marcar exclusão lógica; verificar recibo e permitir recuperação",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-19",
+      "rules": [
+        "REG-21"
+      ],
+      "scenario": "Apagar linha remota ou retirar seu ID",
+      "expected": "Revisão necessária; sem recriação nem apagamento local automático",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-20",
+      "rules": [
+        "REG-21",
+        "REG-22"
+      ],
+      "scenario": "Editar e excluir simultaneamente ou excluir sessão com séries",
+      "expected": "Resolver conflito e preservar vínculos; não declarar grupo excluído parcialmente",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-21",
+      "rules": [
+        "REG-01",
+        "REG-10"
+      ],
+      "scenario": "Enviar a mesma operação em dois aparelhos",
+      "expected": "Uma operação efetiva; bloquear caso não haja garantia entre clientes",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-22",
+      "rules": [
+        "REG-03",
+        "REG-23"
+      ],
+      "scenario": "Reordenar linhas ou mudar identidade entre duas leituras",
+      "expected": "Associar por ID; rejeitar fotografia incoerente",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-23",
+      "rules": [
+        "REG-11",
+        "REG-25"
+      ],
+      "scenario": "Gravar pesagem com fórmulas D/E",
+      "expected": "Preservar fórmulas e conferir resultado sem sobrescrever linha concorrente",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-24",
+      "rules": [
+        "REG-24"
+      ],
+      "scenario": "Restaurar backup com automação antes habilitada",
+      "expected": "Validar, preservar estado anterior e pausar automação até conciliação",
+      "execution_status": "not_executed_by_this_specification"
+    },
+    {
+      "id": "SC-25",
+      "rules": [
+        "REG-02",
+        "REG-25"
+      ],
+      "scenario": "Apontar app de testes à planilha oficial ou ao backup",
+      "expected": "Bloquear destino e manter dados separados",
+      "execution_status": "not_executed_by_this_specification"
+    }
+  ]
+}
