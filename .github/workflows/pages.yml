@@ -489,6 +489,19 @@ jobs:
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ASSISTANT_V105_VALIDATED=TRUE'
+      - name: Etapa 0 — preflight imutável de sincronização e riscos de duplicação
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check quality/sync_preflight.mjs
+          node --check quality/sync_preflight_tests.mjs
+          node --experimental-default-type=module quality/sync_preflight_tests.mjs | tee /tmp/etapa0-preflight.log
+          grep -qx 'ETAPA0_PREFLIGHT_TESTS=17' /tmp/etapa0-preflight.log
+          node --check dist/sheet_sync_core.js
+          node --check dist/sheet_sync_browser.js
+          test -f dist/icons/icon-192.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA0_CHECKS=PASS; GOOGLE_SHEETS_UNMODIFIED=TRUE; ANDROID_DATA_UNMODIFIED=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
