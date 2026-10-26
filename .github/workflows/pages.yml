@@ -685,10 +685,15 @@ jobs:
           test -f integration/coach_policy.js
           cp integration/coach_policy.js dist/coach_policy.js
           node --check dist/coach_policy.js
+          node --check dist/coach_plan_read.js
+          node --experimental-default-type=module integration/tests/coach_plan_read.mjs | tee /tmp/etapa5-plan-read.log
+          grep -qx 'ETAPA5_PLAN_READ_TESTS=16' /tmp/etapa5-plan-read.log
           python3 integration/patch_coach_plan.py | tee /tmp/etapa5-coach-patch.log
           grep -qx 'ETAPA5_COACH_PATCH=APPLIED' /tmp/etapa5-coach-patch.log
           node --check dist/coach_logic.js
           node --check dist/app.js
+          grep -q 'fetchCoachPlanRows' dist/app.js
+          grep -q 'coach_plan_rules' dist/app.js
           node --experimental-default-type=module integration/tests/coach_policy.mjs | tee /tmp/etapa5-coach-policy.log
           grep -qx 'ETAPA5_COACH_POLICY_TESTS=39' /tmp/etapa5-coach-policy.log
           mkdir -p dist/tests
