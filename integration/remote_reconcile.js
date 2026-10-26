@@ -79,8 +79,17 @@ export function reconcileImportedRows(doc,raw){
    if(tab==='Series'&&comparison.remote.repetitions!==null&&!Number.isInteger(comparison.remote.repetitions))throw new Error('Repetições inválidas na planilha, linha '+sheetRow);
    const baseline=local.provenance.remote_state_v1;
    if(!baseline){
-    const different=fields[tab].filter(f=>!equal(comparison.own[f],comparison.remote[f]));
+    // Old backups sometimes omit optional fields entirely. Initializing a
+    // genuinely absent field loses no previous observation. Explicit null,
+    // zero or user-provided text is NOT treated as absent.
+    const different=fields[tab].filter(f=>local[f]!==undefined&&!equal(comparison.own[f],comparison.remote[f]));
     if(different.length)throw new Error('Registro antigo sem referência de sincronização e com diferenças em '+tab+' linha '+sheetRow+' ('+different.join(', ')+'). Revisão manual necessária; nada foi sobrescrito.');
+    for(const field of fields[tab]){
+      if(local[field]===undefined&&comparison.remote[field]!==null){
+        local[field]=comparison.remote[field];
+        metrics.fieldsUpdated++;
+      }
+    }
     local.provenance.remote_state_v1={identity:wanted,fields:structuredClone(comparison.remote)};
     metrics.baselineInitialized++;continue;
    }
