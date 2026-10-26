@@ -64,10 +64,10 @@ ok('Retry writes no extra rows',()=>assert.equal(mock.writes.filter(v=>v.startsW
 const after=await previewUpload(id,doc,{fetchImpl:mock.fetchImpl});
 ok('Post-upload preview empty',()=>assert.deepEqual(after.counts,{Treinos:0,Series:0,Peso:0}));
 const altered=structuredClone(doc);altered.overlay.sets[0].load_value=55;
-await assert.rejects(previewUpload(id,altered,{fetchImpl:mock.fetchImpl}),/divergência/);
+await assert.rejects(previewUpload(id,altered,{fetchImpl:mock.fetchImpl}),/divergência|divergente/);
 ok('Read-only preview detects edited uploaded sets',()=>{});
 const badTabs=empty(),bad=mockApi(badTabs,{mutateUpload:true});
-await assert.rejects(uploadNewRows(id,doc,{fetchImpl:bad.fetchImpl}),/valores não correspondem/);
+await assert.rejects(uploadNewRows(id,doc,{fetchImpl:bad.fetchImpl}),/valores não correspondem|Recibo divergente/);
 ok('Bad server echo is never marked confirmed',()=>assert.equal(badTabs.Series.filter(v=>v[14]==='set-public').length,1));
 ok('Bad echo blocks weigh-in write',()=>assert.equal(bad.writes.some(v=>v==='ROW Peso'),false));
 ok('Failed confirmation leaves only one remote ID to avoid duplicate replay',()=>assert.equal(badTabs.Series.filter(v=>v[14]==='set-public').length,1));
