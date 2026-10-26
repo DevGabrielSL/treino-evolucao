@@ -14,7 +14,7 @@ const decimal=x=>{
 /** Determine whether one unique row with the expected complete payload exists.
  * Does not mutate the sheet, infer a write from HTTP alone, or rely on row order.
  */
-export function locateWriteReceipt(tab,rows,item){
+export function locateWriteReceipt(tab,rows,item,{columns=null}={}){
  const idIndex=ID_COLUMNS[tab];
  if(idIndex===undefined||!Array.isArray(rows)||!Array.isArray(item?.values)||!cell(item.id))throw new Error('Recibo inválido: aba ou linha não reconhecida.');
  if(cell(item.values[idIndex])!==cell(item.id))throw new Error('Recibo inválido: ID local inconsistente.');
@@ -23,7 +23,9 @@ export function locateWriteReceipt(tab,rows,item){
  if(matches.length===0)return {status:'absent'};
  const stored=matches[0];
  const numeric=new Set(NUMBER_COLUMNS[tab]);
- for(let col=0;col<=idIndex;col++){
+ const selected=columns??Array.from({length:idIndex+1},(_,i)=>i);
+ for(const col of selected){
+  if(!Number.isInteger(col)||col<0||col>idIndex)throw new Error('Coluna de recibo inválida.');
   const expected=numeric.has(col)?decimal(item.values[col]):cell(item.values[col]);
   const actual=numeric.has(col)?decimal(stored.record[col]):cell(stored.record[col]);
   if(expected!==actual)throw new Error('Recibo divergente no Google Sheets: '+tab+', ID '+item.id+', coluna '+(col+1)+'. O envio foi interrompido para revisão.');
