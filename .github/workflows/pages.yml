@@ -462,7 +462,14 @@ jobs:
           mkdir -p /tmp/coach-v105
           tar -xJf /tmp/coach-v105.tar.xz -C /tmp/coach-v105
           test "$(find /tmp/coach-v105 -type f | wc -l)" -eq 4
-          python3 /tmp/coach-v105/apply_v105.py dist /tmp/coach-v105
+          echo "c932bb88683ecec46fe97f87b793b2003418ef3a3fcbcb66c73b2046f34aa39f  assistant-v105/semantic-part01.b64" | sha256sum --check
+          echo "c33e2cf4122a5c3013b2035a8b9d63f3125b1ffacbbe3b305a11cc94b83092b0  assistant-v105/semantic-part02.b64" | sha256sum --check
+          echo "aa6eaa5c305dbb908d4dd8efaa7194d6eaede45cf951abfff1c037b5e094c26f  assistant-v105/semantic-part03.b64" | sha256sum --check
+          cat assistant-v105/semantic-part01.b64 assistant-v105/semantic-part02.b64 assistant-v105/semantic-part03.b64 | base64 --decode > /tmp/coach-v105-semantic.py.xz
+          echo "0c207f5c32e1108064661fb720cf829272c72ffab9ff44425b664169dd83bdce  /tmp/coach-v105-semantic.py.xz" | sha256sum --check
+          xz -dc /tmp/coach-v105-semantic.py.xz > /tmp/coach-v105-semantic.py
+          echo "d36876e6b0899f4f86a8d37137999f4448265b0c25294b87c73daa861638a2c2  /tmp/coach-v105-semantic.py" | sha256sum --check
+          python3 /tmp/coach-v105-semantic.py dist /tmp/coach-v105
           mkdir -p dist/tests
           cp /tmp/coach-v105/coach_commands_release.mjs dist/tests/coach_commands.mjs
           cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
