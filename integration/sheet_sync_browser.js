@@ -75,8 +75,15 @@ export async function fetchTables(sheetId,{fetchImpl=fetch}={}){
  return result;
 }
 export async function inspectSpreadsheet(sheetId,doc,options={}){
- const rows=await fetchTables(sheetId,options);verifyPreviouslySent(doc,rows);const preview=previewRemote(doc,rows);const outbound=planOutbound(doc,rows);
- return {rows,preview,pending:Object.fromEntries(Object.entries(outbound).map(([t,v])=>[t,v.length]))};
+ const rows=await fetchTables(sheetId,options);
+ verifyPreviouslySent(doc,rows);
+ const preview=previewRemote(doc,rows);
+ // First stage reconciled remote edits without mutating the live document.
+ // Planning outbound against the stale document would reject legitimate
+ // changes in the Sheet before the app has a chance to import them.
+ const staged=stageInbound(doc,rows);
+ const outbound=planOutbound(staged.next,rows);
+ return {rows,preview,reconciled:staged.reconciled,pending:Object.fromEntries(Object.entries(outbound).map(([t,v])=>[t,v.length]))};
 }
 /** Safe transaction plan: append-only. Never overwrite historical A:I/A:N/A:F entries. */
 /** Read-only preview. No header, row, or token is written to Google.
