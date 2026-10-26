@@ -7,6 +7,7 @@ on:
       - 'patches/**'
       - 'tests/**'
       - 'release-staging/**'
+      - 'assistant-v104/**'
       - 'integration/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -403,6 +404,48 @@ jobs:
           test -f dist/icons/icon-512.png
           test -f dist/manifest.webmanifest
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+      - name: Implantar assistente local v1.0.4 com testes e cache offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat assistant-v104/part01.b64 assistant-v104/part02.b64 assistant-v104/part03.b64 assistant-v104/part04.b64 | base64 --decode > /tmp/treino-coach-v104.tar.xz
+          echo "74087b0c010e948efd207e3c59a5e83ea40a14b01a16d726b81b0288736b9c43  /tmp/treino-coach-v104.tar.xz" | sha256sum --check
+          mkdir -p /tmp/treino-coach-v104
+          tar -xJf /tmp/treino-coach-v104.tar.xz -C /tmp/treino-coach-v104
+          test "$(find /tmp/treino-coach-v104 -type f | wc -l)" -eq 3
+          python3 /tmp/treino-coach-v104/apply_coach.py dist
+          cp /tmp/treino-coach-v104/coach_logic.js dist/coach_logic.js
+          mkdir -p dist/tests
+          cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
+          node --experimental-default-type=module dist/tests/coach.mjs | tee /tmp/coach-tests-v104.log
+          grep -qx 'COACH_TESTS=25' /tmp/coach-tests-v104.log
+          rm -rf dist/tests
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('dist/index.html')
+          text=html.read_text()
+          assert 'v1.0.3 beta Sheets' in text
+          html.write_text(text.replace('v1.0.3 beta Sheets','v1.0.4 beta Assistente'),encoding='utf8')
+          for filename in ('sw.js','integrity.js'):
+              file=Path('dist')/filename
+              text=file.read_text()
+              assert 'shell-v103-sheets-verify-write' in text
+              assert text.count("'./app.js'")==1
+              text=text.replace("'./app.js'","'./coach_logic.js','./app.js'")
+              text=text.replace('shell-v103-sheets-verify-write','shell-v104-assistant')
+              file.write_text(text,encoding='utf8')
+          PY
+          for module in app store metrics backup integrity history insights body edit_ops template_ops sheet_sync_core sheet_sync_browser coach_logic sw; do node --check dist/$module.js; done
+          grep -q 'shell-v104-assistant' dist/sw.js
+          grep -q 'shell-v104-assistant' dist/integrity.js
+          grep -q "'./coach_logic.js'" dist/sw.js
+          grep -q "'./coach_logic.js'" dist/integrity.js
+          grep -q 'v1.0.4 beta Assistente' dist/index.html
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test -f dist/manifest.webmanifest
+          echo 'ASSISTANT_V104=VERIFIED; PRIVATE_WORKOUT_DATA=NONE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
