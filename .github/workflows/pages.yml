@@ -745,7 +745,7 @@ jobs:
           set -euo pipefail
           node --check quality/stage6_end_to_end.mjs
           node --experimental-default-type=module quality/stage6_end_to_end.mjs | tee /tmp/stage6-e2e.log
-          grep -qx 'STAGE6_E2E_TESTS=54' /tmp/stage6-e2e.log
+          grep -qx 'STAGE6_E2E_TESTS=56' /tmp/stage6-e2e.log
           node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/stage6-dedup.log
           grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/stage6-dedup.log
           node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/stage6-conflict.log
