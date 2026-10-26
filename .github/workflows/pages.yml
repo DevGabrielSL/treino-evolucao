@@ -10,6 +10,7 @@ on:
       - 'assistant-v104/**'
       - 'assistant-v105/**'
       - 'integration/**'
+      - 'testing/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
@@ -777,6 +778,14 @@ jobs:
           PY
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA6_AUTOMATED_QA=PASS; NO_REAL_USER_DATA=TRUE; NO_ANDROID_HARDWARE_ATTESTATION=TRUE'
+      - name: Preparar ambiente isolado com dados fictícios
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 testing/build_sandbox.py
+          node --experimental-default-type=module testing/isolation_tests.mjs | tee /tmp/sandbox-isolation.log
+          grep -qx 'SANDBOX_ISOLATION_TESTS=17' /tmp/sandbox-isolation.log
+          for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação

@@ -1,0 +1,248 @@
+{
+  "Treinos": [
+    [
+      "Data",
+      "Dia",
+      "Sessão",
+      "Status",
+      "Duração (min)",
+      "Peso (kg)",
+      "Dor lombar antes (0-10)",
+      "Dor lombar depois (0-10)",
+      "Observações",
+      "ID do aplicativo"
+    ],
+    [
+      "2026-10-19",
+      "Segunda",
+      "TESTE Peito A",
+      "Concluído",
+      45,
+      80,
+      0,
+      0,
+      "Exemplo fictício",
+      "test_session_001"
+    ],
+    [
+      "2026-10-21",
+      "Quarta",
+      "TESTE Pernas B",
+      "Concluído",
+      50,
+      79.5,
+      0,
+      0,
+      "Exemplo fictício",
+      "test_session_002"
+    ]
+  ],
+  "Series": [
+    [
+      "Data",
+      "Sessão",
+      "Exercício",
+      "Equipamento / variação",
+      "Tipo",
+      "Série",
+      "Carga",
+      "Unidade",
+      "Reps",
+      "RIR",
+      "RPE",
+      "Índice de volume",
+      "Dor / desconforto",
+      "Observações",
+      "ID do aplicativo"
+    ],
+    [
+      "2026-10-19",
+      "TESTE Peito A",
+      "Supino sintético",
+      "Barra de teste",
+      "Efetiva",
+      1,
+      40,
+      "kg",
+      10,
+      2,
+      8,
+      400,
+      "",
+      "Dado fictício",
+      "test_set_001"
+    ],
+    [
+      "2026-10-19",
+      "TESTE Peito A",
+      "Supino sintético",
+      "Barra de teste",
+      "Efetiva",
+      2,
+      42.5,
+      "kg",
+      8,
+      1.5,
+      8.5,
+      340,
+      "",
+      "Dado fictício",
+      "test_set_002"
+    ],
+    [
+      "2026-10-21",
+      "TESTE Pernas B",
+      "Leg press sintético",
+      "Máquina de teste",
+      "Efetiva",
+      1,
+      80,
+      "kg",
+      12,
+      2,
+      8,
+      960,
+      "",
+      "Dado fictício",
+      "test_set_003"
+    ],
+    [
+      "2026-10-21",
+      "TESTE Pernas B",
+      "Cadeira extensora sintética",
+      "Máquina de teste",
+      "Efetiva",
+      1,
+      4,
+      "plaquetas",
+      12,
+      2,
+      8,
+      48,
+      "",
+      "Dado fictício",
+      "test_set_004"
+    ]
+  ],
+  "Peso": [
+    [
+      "Data",
+      "Peso (kg)",
+      "Meta (kg)",
+      "Variação desde início (kg)",
+      "Restante até meta (kg)",
+      "Observações",
+      "ID do aplicativo"
+    ],
+    [
+      "2026-10-19",
+      80,
+      75,
+      0,
+      5,
+      "Pesagem fictícia inicial",
+      "test_weight_001"
+    ],
+    [
+      "2026-10-21",
+      79.5,
+      75,
+      -0.5,
+      4.5,
+      "Pesagem fictícia seguinte",
+      "test_weight_002"
+    ]
+  ],
+  "Plano": [
+    [
+      "Parâmetro",
+      "Definição",
+      "",
+      "Dia",
+      "Sessão",
+      "Intenção",
+      "",
+      "Regra",
+      "Aplicação"
+    ],
+    [
+      "Objetivo",
+      "Somente homologação",
+      "",
+      "Segunda",
+      "Peito",
+      "Exemplo",
+      "",
+      "RIR alvo",
+      "2–3 nas séries iniciais"
+    ],
+    [
+      "Frequência",
+      "4 sessões fictícias",
+      "",
+      "Quarta",
+      "Pernas",
+      "Exemplo",
+      "",
+      "Progressão",
+      "Subir repetições antes da carga"
+    ]
+  ],
+  "Casos": [
+    [
+      "Caso",
+      "Condição preparada",
+      "Resultado esperado"
+    ],
+    [
+      "TESTE-01",
+      "Importação inicial dos exemplos",
+      "2 sessões, 4 séries, 2 pesagens"
+    ],
+    [
+      "TESTE-02",
+      "Repetir importação",
+      "Não duplicar IDs"
+    ],
+    [
+      "TESTE-03",
+      "Carga -50 kg no assistente",
+      "Rejeitar valor inválido"
+    ],
+    [
+      "TESTE-04",
+      "10.5 repetições no assistente",
+      "Rejeitar quantidade fracionária"
+    ],
+    [
+      "TESTE-05",
+      "Enviar em dois contextos",
+      "Verificar bloqueio e duplicatas"
+    ],
+    [
+      "TESTE-06",
+      "Resposta lenta ou perdida",
+      "Conferir recibo antes de repetir"
+    ],
+    [
+      "TESTE-07",
+      "Editar registro no destino",
+      "Conferir conciliação e conflitos"
+    ],
+    [
+      "TESTE-08",
+      "Excluir registro no destino",
+      "Conferir política de exclusão"
+    ],
+    [
+      "TESTE-09",
+      "Peso: preservar D/E",
+      "Manter fórmulas após envio"
+    ],
+    [
+      "TESTE-10",
+      "Abrir ambiente de testes",
+      "Banco local e destino separados"
+    ]
+  ]
+}
