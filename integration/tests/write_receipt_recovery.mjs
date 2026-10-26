@@ -111,12 +111,18 @@ ok('Prévia não envia nem cria cabeçalhos',()=>assert.deepEqual(normal.stats.p
 const initial=await uploadNewRows(id,model,{fetchImpl:normal.fetchImpl});
 ok('Grava 1 sessão, 2 séries e 1 pesagem',()=>assert.deepEqual(initial.written,{Treinos:1,Series:2,Peso:1}));
 ok('Quatro gravações únicas no servidor',()=>assert.equal(normal.stats.posts.length,4));
+ok('Peso gravado sem preencher colunas das fórmulas',()=>assert.deepEqual(normal.tabs.Peso.at(-1).slice(3,5),['','']));
 const second=await uploadNewRows(id,model,{fetchImpl:normal.fetchImpl});
 ok('Repetição após sucesso não grava nada',()=>assert.deepEqual(second.written,{Treinos:0,Series:0,Peso:0}));
 ok('Repetição mantém quatro linhas',()=>assert.equal(normal.stats.posts.length,4));
 const changed=structuredClone(model);changed.overlay.sets[0].load_value=75;
 await assert.rejects(previewUpload(id,changed,{fetchImpl:normal.fetchImpl}),/divergência|divergente/);
 ok('Alteração local após envio não é ignorada',()=>{});
+const broken=api();
+await uploadNewRows(id,model,{fetchImpl:broken.fetchImpl});
+broken.tabs.Peso[2]=['','','','#REF!','#REF!'];
+await assert.rejects(previewUpload(id,model,{fetchImpl:broken.fetchImpl}),/fórmula de pesagem/);
+ok('Erro de fórmula na âncora D3/E3 é identificado após gravação',()=>{});
 normal.tabs.Series[1][11]=777;
 await assert.rejects(previewUpload(id,model,{fetchImpl:normal.fetchImpl}),/Recibo divergente/);
 ok('Alteração somente do índice de volume é detectada antes de enviar',()=>{});
