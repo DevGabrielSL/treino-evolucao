@@ -739,6 +739,44 @@ jobs:
           test -f dist/icons/icon-512.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA5=PASS; PLAN_ONLY_LOCAL=TRUE; USER_SHEET_UNMODIFIED=TRUE'
+      - name: Etapa 6 — homologação E2E do assistente e dados
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check quality/stage6_end_to_end.mjs
+          node --experimental-default-type=module quality/stage6_end_to_end.mjs | tee /tmp/stage6-e2e.log
+          grep -qx 'STAGE6_E2E_TESTS=54' /tmp/stage6-e2e.log
+          node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/stage6-dedup.log
+          grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/stage6-dedup.log
+          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/stage6-conflict.log
+          grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/stage6-conflict.log
+          node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/stage6-write.log
+          grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/stage6-write.log
+          node --experimental-default-type=module integration/tests/automatic_sync.mjs | tee /tmp/stage6-auto.log
+          grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/stage6-auto.log
+          node --experimental-default-type=module integration/tests/coach_plan_read.mjs | tee /tmp/stage6-plan.log
+          grep -qx 'ETAPA5_PLAN_READ_TESTS=16' /tmp/stage6-plan.log
+          node --experimental-default-type=module integration/tests/coach_substitution.mjs | tee /tmp/stage6-substitution.log
+          grep -qx 'ETAPA5_SUBSTITUTION_TESTS=26' /tmp/stage6-substitution.log
+          python3 - <<'PY'
+          from pathlib import Path
+          required=('app.js','store.js','backup.js','coach_logic.js','coach_commands.js','coach_policy.js','coach_substitution.js','coach_plan_read.js','sheet_sync_core.js','sheet_sync_browser.js','automatic_sync.js','write_receipt.js','sw.js','integrity.js','index.html','manifest.webmanifest')
+          for name in required:
+              assert (Path('dist')/name).is_file(),name
+          app=Path('dist/app.js').read_text('utf8')
+          assert 'fetchCoachPlanRows' in app
+          assert "coach_plan_rules" in app
+          assert "automaticSheets.request('save')" in app
+          assert 'replaceCoachVariant' in app
+          for file in ('sw.js','integrity.js'):
+              data=(Path('dist')/file).read_text('utf8')
+              for name in ('coach_plan_read.js','coach_policy.js','coach_substitution.js','automatic_sync.js','sheet_sync_browser.js'):
+                  assert f"'./{name}'" in data,(file,name)
+          assert 'v1.1.2 beta Assistente Plano' in Path('dist/index.html').read_text('utf8')
+          print('STAGE6_OFFLINE_BUILD=PASS')
+          PY
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA6_AUTOMATED_QA=PASS; NO_REAL_USER_DATA=TRUE; NO_ANDROID_HARDWARE_ATTESTATION=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
