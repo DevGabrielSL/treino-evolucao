@@ -41,7 +41,7 @@ replace_unique("if(totalIncoming){",
 replace_unique("d.overlay=incoming.next.overlay;","d.base=incoming.next.base;d.overlay=incoming.next.overlay;",'preservar base reconciliada')
 replace_unique("The entire staged document is validated before saving; no historical base records are overwritten.",
 "The staged document is validated before saving; base and overlay updates are preserved.",'comentário conciliação')
-replace_unique("  }catch(err){sheetsError=err.message||String(err);error(err);render();}",
+replace_unique("}catch(err){sheetsError=err.message||String(err);error(err);render();}",
 """  }catch(err){
    sheetsError=err.message||String(err);
    if(automatic && /conflit|diverg|revis[aã]o|não pôde ser confirmado|recibo|duplicad|fórmula|formula|identidade|desapareceu/i.test(sheetsError)){
