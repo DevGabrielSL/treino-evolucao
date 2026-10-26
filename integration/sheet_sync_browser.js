@@ -111,11 +111,43 @@ function verifyPreviouslySent(doc,rows){
   for(const local of list){
    if(local.provenance?.sheet||!ids.has(local.id))continue;
    const columns=tab==='Peso'?[0,1,2,5,6]:undefined;
-   locateWriteReceipt(tab,rows[tab],{id:local.id,values:make(local)},columns?{columns}:undefined);
+   const receipt=locateWriteReceipt(tab,rows[tab],{id:local.id,values:make(local)},columns?{columns}:undefined);
+   if(tab==='Peso')checkWeightFormulaHealth(rows.Peso,receipt);
   }
  }
 }
 const activeUploads=new Set();
+/** Append one weigh-in without writing D/E, which are ARRAYFORMULA cells.
+ * appendCells may jump to row 501 because the array formula fills the grid;
+ * values.append A:G writes over the formula spill and yields #REF!.
+ * We target only A:C and F:G in a single batch request after re-reading.
+ */
+async function writeWeightPreservingFormulas(sheetId,rows,item,{fetchImpl=fetch}={}){
+ const tab=rows.Peso;
+ let lastDataRow=1;
+ for(let i=1;i<tab.length;i++)if(String(tab[i]?.[0]??'').trim())lastDataRow=i+1;
+ const rowNumber=lastDataRow+1;
+ const at=tab[rowNumber-1]||[];
+ if([0,1,2,5,6].some(k=>String(at[k]??'').trim()))
+  throw new Error('A linha de pesagem foi preenchida por outra operação. Recarregue os dados antes de reenviar.');
+ // A native ARRAYFORMULA begins at D3/E3 in the original workbook.
+ // Never touch the computed columns, including with an empty string.
+ const data=[
+  {range:"'Peso'!A"+rowNumber+":C"+rowNumber,majorDimension:'ROWS',values:[[item.values[0],item.values[1],item.values[2]]]},
+  {range:"'Peso'!F"+rowNumber+":G"+rowNumber,majorDimension:'ROWS',values:[[item.values[5],item.values[6]]]}
+ ];
+ const url=SHEETS_ORIGIN+'/v4/spreadsheets/'+encodeURIComponent(sheetId)+'/values:batchUpdate';
+ return request(url,{method:'POST',body:{valueInputOption:'RAW',data},fetchImpl});
+}
+function checkWeightFormulaHealth(tab,receipt){
+ if(receipt.status!=='confirmed')return;
+ const row=tab[receipt.row-1]||[];
+ for(const c of [3,4]){
+  const val=String(row[c]??'');
+  if(/^#(REF!|ERROR!|VALUE!|SPILL!)/i.test(val))
+   throw new Error('A fórmula de pesagem foi danificada no Google Sheets (linha '+receipt.row+', coluna '+(c+1)+'). Envio interrompido para revisão.');
+ }
+}
 async function uploadNewRowsUnlocked(sheetId,doc,{fetchImpl=fetch}={}){
  const id=parseSheetId(sheetId);
  const endpoints={Treinos:"'Treinos'!A:J",Series:"'Series'!A:O",Peso:"'Peso'!A:G"};
@@ -143,7 +175,8 @@ async function uploadNewRowsUnlocked(sheetId,doc,{fetchImpl=fetch}={}){
    const url=`${SHEETS_ORIGIN}/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(endpoints[tab])}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
    let appendError=null;
    try{
-    await request(url,{method:'POST',body:{majorDimension:'ROWS',values:[item.values]},fetchImpl});
+    if(tab==='Peso') await writeWeightPreservingFormulas(id,rows,item,{fetchImpl});
+    else await request(url,{method:'POST',body:{majorDimension:'ROWS',values:[item.values]},fetchImpl});
    }catch(error){appendError=error;}
    // Regardless of the HTTP response, only a fresh read counts as a receipt.
    // A dropped response can follow a successful append. Never blindly POST
@@ -153,7 +186,8 @@ async function uploadNewRowsUnlocked(sheetId,doc,{fetchImpl=fetch}={}){
    catch(error){
     throw new Error('O resultado do envio de '+tab+' não pôde ser confirmado pela leitura da planilha. Não repetimos o envio automaticamente. Confira a planilha antes de tentar de novo.');
    }
-   const receipt=locateWriteReceipt(tab,check[tab],item);
+   const receipt=locateWriteReceipt(tab,check[tab],item,tab==='Peso'?{columns:[0,1,2,5,6]}:undefined);
+   if(tab==='Peso')checkWeightFormulaHealth(check.Peso,receipt);
    if(receipt.status==='absent'){
     if(appendError)throw new Error('Envio de '+tab+' não confirmado no Google Sheets ('+String(appendError.message).slice(0,130)+'). Registro local preservado para uma próxima tentativa.');
     throw new Error('O Google respondeu ao envio, mas não encontramos o ID na planilha ('+tab+'). Não foi marcada confirmação.');
