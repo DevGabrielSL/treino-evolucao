@@ -676,11 +676,55 @@ jobs:
           grep -q 'v1.1.0 beta Sincronização' dist/index.html
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA4=PASS; NO_PRIVATE_DATA=TRUE; AUTO_DISABLED_UNTIL_VERIFIED_WRITE=TRUE'
-      - name: Etapa 5 — inspecionar seleção do assistente
+      - name: Etapa 5 — personalização por regras do Plano
         shell: bash
         run: |
           set -euo pipefail
-          node --experimental-default-type=module integration/tests/inspect_coach_plan.mjs
+          test -f integration/coach_policy.js
+          cp integration/coach_policy.js dist/coach_policy.js
+          node --check dist/coach_policy.js
+          python3 integration/patch_coach_plan.py | tee /tmp/etapa5-coach-patch.log
+          grep -qx 'ETAPA5_COACH_PATCH=APPLIED' /tmp/etapa5-coach-patch.log
+          node --check dist/coach_logic.js
+          node --check dist/app.js
+          node --experimental-default-type=module integration/tests/coach_policy.mjs | tee /tmp/etapa5-coach-policy.log
+          grep -qx 'ETAPA5_COACH_POLICY_TESTS=39' /tmp/etapa5-coach-policy.log
+          mkdir -p dist/tests
+          cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
+          cp /tmp/coach-v105/coach_commands_release.mjs dist/tests/coach_commands.mjs
+          node --experimental-default-type=module dist/tests/coach.mjs | tee /tmp/etapa5-old-coach.log
+          grep -qx 'COACH_TESTS=25' /tmp/etapa5-old-coach.log
+          node --experimental-default-type=module dist/tests/coach_commands.mjs | tee /tmp/etapa5-old-commands.log
+          grep -qx 'COACH_COMMAND_TESTS=36' /tmp/etapa5-old-commands.log
+          rm -rf dist/tests
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('sw.js','integrity.js'):
+              p=Path('dist')/name
+              data=p.read_text('utf8')
+              assert 'shell-v110-automatic-safe' in data,name
+              assert "'./coach_logic.js'" in data,name
+              assert "'./coach_policy.js'" not in data,name
+              data=data.replace("'./coach_logic.js'","'./coach_policy.js','./coach_logic.js'")
+              data=data.replace('shell-v110-automatic-safe','shell-v111-coach-plan')
+              p.write_text(data,'utf8')
+          p=Path('dist/index.html')
+          html=p.read_text('utf8')
+          assert 'v1.1.0 beta Sincronização' in html
+          p.write_text(html.replace('v1.1.0 beta Sincronização','v1.1.1 beta Assistente Plano'),'utf8')
+          PY
+          node --check dist/sw.js
+          node --check dist/integrity.js
+          grep -q 'shell-v111-coach-plan' dist/sw.js
+          grep -q 'shell-v111-coach-plan' dist/integrity.js
+          grep -q "'./coach_policy.js'" dist/sw.js
+          grep -q "'./coach_policy.js'" dist/integrity.js
+          grep -q 'v1.1.1 beta Assistente Plano' dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA5=PASS; PLAN_ONLY_LOCAL=TRUE; USER_SHEET_UNMODIFIED=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
