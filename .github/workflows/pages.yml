@@ -268,9 +268,12 @@ jobs:
             test -f integration/$module.js
             cp integration/$module.js dist/$module.js
           done
+          test -f integration/legacy_identity.js
+          cp integration/legacy_identity.js dist/legacy_identity.js
           mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration/tests /tmp/sheets-qa/tests
           cp -R dist/. /tmp/sheets-qa/public/
           cp dist/sheet_sync_*.js /tmp/sheets-qa/integration/
+          cp dist/legacy_identity.js /tmp/sheets-qa/integration/
           cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
           cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
           node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
@@ -296,7 +299,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_core.js)" = "33147921c9a6eb1ff28d8793e399b0d234d7e641"
+          test "$(git hash-object dist/sheet_sync_core.js)" = "45568b9bd3f281ce5f81a590807cbb3ae88dfd62"
           echo "1bc4bb164977a3593d28f19ada65646c7f189f0de070e0408c76be2b83f5ce9f  dist/index.html" | sha256sum -c -
           echo "203d0d964064d6bfa3208174a55ba54b8a6c1830466b5808bd3d1dbc036c5109  dist/sw.js" | sha256sum -c -
           echo "b94c4f2d9e1563341b3224be52e828781d8dad479425fe9e5646c1f69f236af5  dist/integrity.js" | sha256sum -c -
@@ -502,6 +505,40 @@ jobs:
           test -f dist/icons/icon-192.png
           ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
           echo 'ETAPA0_CHECKS=PASS; GOOGLE_SHEETS_UNMODIFIED=TRUE; ANDROID_DATA_UNMODIFIED=TRUE'
+      - name: Etapa 1 — validar migração deduplicada sem apagar históricos
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/legacy_identity.js
+          node --check dist/legacy_identity.js
+          node --check dist/sheet_sync_core.js
+          node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/etapa1-tests.log
+          grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/etapa1-tests.log
+          node --experimental-default-type=module quality/sync_preflight_tests.mjs | tee /tmp/etapa0-retro-tests.log
+          grep -qx 'ETAPA0_PREFLIGHT_TESTS=17' /tmp/etapa0-retro-tests.log
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('sw.js','integrity.js'):
+              p=Path('dist')/name
+              data=p.read_text('utf8')
+              assert 'shell-v105-assistant-dialogue' in data,name
+              assert data.count("'./sheet_sync_core.js'")==1,name
+              data=data.replace("'./sheet_sync_core.js'","'./legacy_identity.js','./sheet_sync_core.js'")
+              data=data.replace('shell-v105-assistant-dialogue','shell-v107-dedup')
+              p.write_text(data,'utf8')
+          p=Path('dist/index.html')
+          data=p.read_text('utf8')
+          assert 'v1.0.5 beta Assistente' in data
+          p.write_text(data.replace('v1.0.5 beta Assistente','v1.0.7 beta Reconciliação'),'utf8')
+          PY
+          grep -q 'shell-v107-dedup' dist/sw.js
+          grep -q 'shell-v107-dedup' dist/integrity.js
+          grep -q 'legacy_identity.js' dist/sw.js
+          grep -q 'legacy_identity.js' dist/integrity.js
+          grep -q 'v1.0.7 beta Reconciliação' dist/index.html
+          test -f dist/manifest.webmanifest
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA1=PASS; NO_REAL_USER_DATA=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
