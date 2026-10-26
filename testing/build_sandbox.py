@@ -34,7 +34,7 @@ config = DEST / 'sheets_config.js'
 config.write_text(config.read_text().replace(FORBIDDEN[0], TEST_SHEET))
 edit('store.js', "const DB_NAME='treino-evolucao-local-android-v1';", "const DB_NAME='treino-evolucao-sandbox-local-v1';")
 old_cache = 'treino-evolucao-android-shell-v112-coach-plan-sync'
-cache = 'treino-evolucao-sandbox-shell-v112-test1'
+cache = 'treino-evolucao-sandbox-shell-v112-test2'
 edit('sw.js', old_cache, cache)
 edit('integrity.js', old_cache, cache)
 edit('sw.js', "k.startsWith('treino-evolucao-android-shell-')", "k.startsWith('treino-evolucao-sandbox-shell-')")
@@ -66,7 +66,7 @@ for old, new in [
 ]:
     edit('app.js', old, new)
 
-edit('index.html', '<title>Treino & Evolução · Android · v1.1.2 beta Assistente Plano</title>', '<title>TESTES · Treino & Evolução · v1.1.2-test.1</title>')
+edit('index.html', '<title>Treino & Evolução · Android · v1.1.2 beta Assistente Plano</title>', '<title>TESTES · Treino & Evolução · v1.1.2-test.2</title>')
 edit('index.html', '<b>Treino & Evolução</b>', '<b>TESTES · Treino & Evolução</b>')
 edit('index.html', 'PERSONAL · OFFLINE-FIRST', 'DADOS FICTÍCIOS · AMBIENTE SEPARADO')
 edit('index.html', '<main id="app"', '<aside class="sandbox-notice" role="note"><strong>AMBIENTE DE TESTES — DADOS FICTÍCIOS</strong><p>Use esta versão para experimentar. O destino é uma planilha separada e o banco local é exclusivo dos testes.</p></aside>\n<main id="app"')
@@ -78,6 +78,8 @@ manifest.update(name='TESTES — Treino & Evolução', short_name='Treinos TESTE
 for p in DEST.rglob('*'):
     if p.is_file() and p.suffix in ('.js', '.html', '.json', '.css', '.webmanifest'):
         assert not any(value in p.read_text() for value in FORBIDDEN), p
+import runpy
+runpy.run_path(str(ROOT / 'testing/patch_input_validation.py'))
 assert hashes() == before, 'Production files changed'
 (ROOT / 'sandbox-build-summary.json').write_text(json.dumps({'production_unchanged': True, 'production_files': len(before), 'test_path': 'testes/', 'test_sheet_id': TEST_SHEET}, indent=2))
 print('SANDBOX_BUILD=PASS; PRODUCTION_FILES_UNCHANGED=28')

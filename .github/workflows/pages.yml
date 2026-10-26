@@ -785,6 +785,8 @@ jobs:
           python3 testing/build_sandbox.py
           node --experimental-default-type=module testing/isolation_tests.mjs | tee /tmp/sandbox-isolation.log
           grep -qx 'SANDBOX_ISOLATION_TESTS=17' /tmp/sandbox-isolation.log
+          node --experimental-default-type=module testing/input_validation_tests.mjs | tee /tmp/input-validation.log
+          grep -qx 'INPUT_VALIDATION_TESTS=31' /tmp/input-validation.log
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
