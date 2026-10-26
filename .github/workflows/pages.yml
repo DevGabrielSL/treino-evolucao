@@ -787,6 +787,13 @@ jobs:
           grep -qx 'SANDBOX_ISOLATION_TESTS=17' /tmp/sandbox-isolation.log
           node --experimental-default-type=module testing/input_validation_tests.mjs | tee /tmp/input-validation.log
           grep -qx 'INPUT_VALIDATION_TESTS=31' /tmp/input-validation.log
+          node --experimental-default-type=module testing/sync_queue_tests.mjs | tee /tmp/sync-queue.log
+          grep -qx 'SYNC_QUEUE_TESTS=13' /tmp/sync-queue.log
+          mkdir -p dist/testes/tests
+          cp integration/tests/automatic_sync.mjs dist/testes/tests/
+          node --experimental-default-type=module dist/testes/tests/automatic_sync.mjs | tee /tmp/sandbox-auto-regression.log
+          grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/sandbox-auto-regression.log
+          rm -r dist/testes/tests
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
