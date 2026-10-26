@@ -94,6 +94,13 @@ export function reconcileImportedRows(doc,raw){
         metrics.fieldsUpdated++;
       }
     }
+    if(tab==='Series'){
+      const reported=text(row?.[9]);
+      if(/^\d+(?:[.,]\d+)?\s*[-–—a]\s*\d+(?:[.,]\d+)?$/i.test(reported)){
+        local.provenance.rir_reported_text=reported;
+        local.provenance.rir_estimated_midpoint=true;
+      }
+    }
     local.provenance.remote_state_v1={identity:wanted,fields:structuredClone(comparison.remote)};
     metrics.baselineInitialized++;continue;
    }
