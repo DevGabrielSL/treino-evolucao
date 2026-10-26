@@ -101,8 +101,8 @@ function verifyPreviouslySent(doc,rows){
    exercises:[...(doc.base?.entities?.exercises||[]),...doc.overlay.exercises],
    exercise_variants:[...(doc.base?.entities?.exercise_variants||[]),...doc.overlay.exercise_variants]})},
   Peso:{list:doc.overlay.weigh_ins,make:x=>weightValues(x,{
-   initial:rows.Peso[1]?.[1]===undefined?null:Number(String(rows.Peso[1][1]).replace(',','.')),
-   goal:rows.Peso[1]?.[2]===undefined?null:Number(String(rows.Peso[1][2]).replace(',','.'))})}
+   initial:rows.Peso[1]?.[1]==null||String(rows.Peso[1][1]).trim()===''?null:Number(String(rows.Peso[1][1]).replace(',','.')),
+   goal:rows.Peso[1]?.[2]==null||String(rows.Peso[1][2]).trim()===''?null:Number(String(rows.Peso[1][2]).replace(',','.'))})}
  };
  for(const [tab,{list,make}] of Object.entries(lookup)){
   const idColumn={Treinos:9,Series:14,Peso:6}[tab];
