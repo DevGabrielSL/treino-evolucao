@@ -8,6 +8,7 @@ on:
       - 'tests/**'
       - 'release-staging/**'
       - 'assistant-v104/**'
+      - 'assistant-v105/**'
       - 'integration/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -446,6 +447,41 @@ jobs:
           test -f dist/icons/icon-512.png
           test -f dist/manifest.webmanifest
           echo 'ASSISTANT_V104=VERIFIED; PRIVATE_WORKOUT_DATA=NONE'
+      - name: Atualizar assistente conversacional v1.0.5 e executar regressões
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ba63da9cf790932757543db7bf808ace95ba0d24c71da6fcb344d772f4c332be  assistant-v105/part01.b64" | sha256sum --check
+          echo "bd5a4687f24e9f293e3a4cb70631b87b3926b5e15e61f87e1190af9d8888a508  assistant-v105/part02.b64" | sha256sum --check
+          echo "1376ccc98d9b4ff6c3c18d82f60f6714afeb706eb3362c04be793928a3c98a3b  assistant-v105/part03a.b64" | sha256sum --check
+          echo "261a417a5fa7c38000d83f9a838344ffb0b687bdbb98623a483077865e1fee87  assistant-v105/part03b.b64" | sha256sum --check
+          echo "e2c9252da9c753252e6757468c66f5164db6375e1463f57287d2a6405c6f2032  assistant-v105/part04a.b64" | sha256sum --check
+          echo "973f701fbb5d6734992b71b44431b5e93aaa743a38782d4a14f521db71276bfd  assistant-v105/part04b.b64" | sha256sum --check
+          cat assistant-v105/part01.b64 assistant-v105/part02.b64 assistant-v105/part03a.b64 assistant-v105/part03b.b64 assistant-v105/part04a.b64 assistant-v105/part04b.b64 | base64 --decode > /tmp/coach-v105.tar.xz
+          echo "b96746df63cbae44c427c6f45105571df4705de01cc3069639c970adb1766df1  /tmp/coach-v105.tar.xz" | sha256sum --check
+          mkdir -p /tmp/coach-v105
+          tar -xJf /tmp/coach-v105.tar.xz -C /tmp/coach-v105
+          test "$(find /tmp/coach-v105 -type f | wc -l)" -eq 4
+          python3 /tmp/coach-v105/apply_v105.py dist /tmp/coach-v105
+          mkdir -p dist/tests
+          cp /tmp/coach-v105/coach_commands_release.mjs dist/tests/coach_commands.mjs
+          cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
+          node --experimental-default-type=module dist/tests/coach_commands.mjs | tee /tmp/coach-command-tests-v105.log
+          grep -qx 'COACH_COMMAND_TESTS=36' /tmp/coach-command-tests-v105.log
+          node --experimental-default-type=module dist/tests/coach.mjs | tee /tmp/coach-original-tests-v105.log
+          grep -qx 'COACH_TESTS=25' /tmp/coach-original-tests-v105.log
+          rm -rf dist/tests
+          for module in app coach_logic coach_commands store metrics backup integrity edit_ops sheet_sync_core sheet_sync_browser sw; do node --check dist/$module.js; done
+          grep -q 'shell-v105-assistant-dialogue' dist/sw.js
+          grep -q 'shell-v105-assistant-dialogue' dist/integrity.js
+          grep -q "'./coach_commands.js'" dist/sw.js
+          grep -q "'./coach_commands.js'" dist/integrity.js
+          grep -q 'v1.0.5 beta Assistente' dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ASSISTANT_V105_VALIDATED=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
