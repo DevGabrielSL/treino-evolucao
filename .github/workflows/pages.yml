@@ -588,7 +588,7 @@ jobs:
       - name: Etapa 3 — recibo integral e recuperação de falhas sem duplicação
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           test -f dist/write_receipt.js
           node --check dist/write_receipt.js
           node --check dist/sheet_sync_browser.js
