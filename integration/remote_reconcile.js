@@ -85,14 +85,14 @@ export function reconcileImportedRows(doc,raw){
     metrics.baselineInitialized++;continue;
    }
    if(baseline.identity!==wanted||!baseline.fields)throw new Error('Referência de sincronização incompatível em '+tab+' linha '+sheetRow);
-   let changed=0;
+   let changed=0,rirUpdated=false;
    for(const field of fields[tab]){
     const ancestor=baseline.fields[field]??null,own=comparison.own[field]??null,current=comparison.remote[field]??null;
     const ownDiff=!equal(own,ancestor),remoteDiff=!equal(current,ancestor);
     if(ownDiff&&remoteDiff&&!equal(own,current))throw new Error('Conflito: '+tab+' linha '+sheetRow+' campo '+field+' alterado tanto no Android quanto no Sheets. Revise antes de sincronizar.');
-    if(remoteDiff&&!ownDiff){local[field]=current;changed++;metrics.fieldsUpdated++;}
+    if(remoteDiff&&!ownDiff){local[field]=current;changed++;metrics.fieldsUpdated++;if(field==='rir')rirUpdated=true;}
    }
-   if(tab==='Series'&&changed&&fields.Series.includes('rir')){
+   if(tab==='Series'&&rirUpdated){
      // A historical range is never invented from a midpoint.
      const r=text(row?.[9]);
      const isRange=/^\d+(?:[.,]\d+)?\s*[-–—a]\s*\d+(?:[.,]\d+)?$/i.test(r);
