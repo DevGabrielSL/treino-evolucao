@@ -1,3 +1,4 @@
+import {gridResponse} from './grid_mock.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {SHEET_ID as target} from '../dist/testes/sheets_config.js';
@@ -27,7 +28,7 @@ test('ID do manifesto resolve dentro de testes',()=>{const m=JSON.parse(fs.readF
 Object.defineProperty(globalThis,'navigator',{value:{onLine:true},configurable:true});
 globalThis.google={accounts:{oauth2:{initTokenClient:({callback})=>({requestAccessToken:()=>callback({access_token:'SYNTHETIC_TOKEN',expires_in:3600})})}}};
 await authorize('1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com');
-let writes=0,reads=0;const fetchImpl=async(url,options)=>{assert.equal(new URL(url).origin,'https://sheets.googleapis.com');assert.ok(url.includes('/'+target+'/'));assert.equal(options.method,'GET');reads++;return {ok:true,status:200,json:async()=>({valueRanges:['Treinos','Series','Peso'].map(t=>({values:rows[t]}))})};};
+let writes=0,reads=0;const fetchImpl=async(url,options)=>{assert.equal(new URL(url).origin,'https://sheets.googleapis.com');assert.equal(new URL(url).pathname,'/v4/spreadsheets/'+target);assert.equal(options.method,'GET');reads++;return {ok:true,status:200,json:async()=>gridResponse(rows)};};
 await uploadNewRows(target,doc,{fetchImpl});
 test('Envio vazio consulta somente destino sintético',()=>assert.ok(reads>0));
 disconnect();console.log('SANDBOX_ISOLATION_TESTS='+count);

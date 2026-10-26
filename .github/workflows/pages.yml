@@ -794,6 +794,14 @@ jobs:
           node --experimental-default-type=module dist/testes/tests/automatic_sync.mjs | tee /tmp/sandbox-auto-regression.log
           grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/sandbox-auto-regression.log
           rm -r dist/testes/tests
+          node --experimental-default-type=module testing/grid_read_tests.mjs | tee /tmp/grid_read_tests.log
+          grep -qx 'GRID_READ_TESTS=25' /tmp/grid_read_tests.log
+          node --experimental-default-type=module testing/grid_numeric_regression.mjs | tee /tmp/grid_numeric_regression.log
+          grep -qx 'GRID_TYPED_NUMBERS_TESTS=19' /tmp/grid_numeric_regression.log
+          node --experimental-default-type=module testing/grid_write_regression.mjs | tee /tmp/grid_write_regression.log
+          grep -qx 'GRID_WRITE_CONFIRMATION_TESTS=15' /tmp/grid_write_regression.log
+          node --experimental-default-type=module testing/grid_receipt_regression.mjs | tee /tmp/grid_receipt_regression.log
+          grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/grid_receipt_regression.log
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
