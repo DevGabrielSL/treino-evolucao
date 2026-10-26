@@ -274,12 +274,15 @@ jobs:
           cp integration/remote_reconcile.js dist/remote_reconcile.js
           test -f integration/write_receipt.js
           cp integration/write_receipt.js dist/write_receipt.js
+          test -f integration/automatic_sync.js
+          cp integration/automatic_sync.js dist/automatic_sync.js
           mkdir -p /tmp/sheets-qa/public /tmp/sheets-qa/integration/tests /tmp/sheets-qa/tests
           cp -R dist/. /tmp/sheets-qa/public/
           cp dist/sheet_sync_*.js /tmp/sheets-qa/integration/
           cp dist/legacy_identity.js /tmp/sheets-qa/integration/
           cp dist/remote_reconcile.js /tmp/sheets-qa/integration/
           cp dist/write_receipt.js /tmp/sheets-qa/integration/
+          cp dist/automatic_sync.js /tmp/sheets-qa/integration/
           cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
           cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
           node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
@@ -352,8 +355,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object dist/sheet_sync_browser.js)" = "71eb4075413abab5d56e004369833e36381fc490"
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "71eb4075413abab5d56e004369833e36381fc490"
+          test "$(git hash-object dist/sheet_sync_browser.js)" = "bfbf87610f3e7ec027ef04b2e429ca6becf20b63"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "bfbf87610f3e7ec027ef04b2e429ca6becf20b63"
           cp integration/sheet_sync_browser.js dist/sheet_sync_browser.js
           grep -q 'shell-v101-sheets-rir' dist/sw.js
           grep -q 'shell-v101-sheets-rir' dist/integrity.js
@@ -378,7 +381,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object integration/sheet_sync_browser.js)" = "71eb4075413abab5d56e004369833e36381fc490"
+          test "$(git hash-object integration/sheet_sync_browser.js)" = "bfbf87610f3e7ec027ef04b2e429ca6becf20b63"
           grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
           grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
           grep -q 'v1.0.2 beta Sheets' dist/index.html
@@ -633,6 +636,46 @@ jobs:
         run: |
           set -euo pipefail
           node --experimental-default-type=module integration/tests/inspect_auto_sync.mjs
+      - name: Etapa 4 — sincronização automática consentida e segura
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check integration/automatic_sync.js
+          node --experimental-default-type=module integration/tests/automatic_sync.mjs | tee /tmp/etapa4-policy.log
+          grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/etapa4-policy.log
+          python3 integration/patch_auto_sync.py | tee /tmp/etapa4-patch.log
+          grep -qx 'ETAPA4_APP_PATCH=APPLIED' /tmp/etapa4-patch.log
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('sw.js','integrity.js'):
+              p=Path('dist')/name
+              data=p.read_text('utf8')
+              assert 'shell-v1091-formula-safe' in data,name
+              assert data.count("'./sheet_sync_browser.js'")==1,name
+              assert "'./automatic_sync.js'" not in data,name
+              data=data.replace("'./sheet_sync_browser.js'","'./automatic_sync.js','./sheet_sync_browser.js'")
+              data=data.replace('shell-v1091-formula-safe','shell-v110-automatic-safe')
+              p.write_text(data,'utf8')
+          p=Path('dist/index.html')
+          html=p.read_text('utf8')
+          assert 'v1.0.9.1 beta Escrita Segura' in html
+          p.write_text(html.replace('v1.0.9.1 beta Escrita Segura','v1.1.0 beta Sincronização'),'utf8')
+          PY
+          node --experimental-default-type=module integration/tests/automatic_wiring.mjs | tee /tmp/etapa4-ui.log
+          grep -qx 'ETAPA4_WIRING_TESTS=24' /tmp/etapa4-ui.log
+          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa4-reconcile-regression.log
+          grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/etapa4-reconcile-regression.log
+          node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa4-write-regression.log
+          grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/etapa4-write-regression.log
+          node --check dist/app.js
+          node --check dist/automatic_sync.js
+          node --check dist/sheet_sync_browser.js
+          node --check dist/sw.js
+          node --check dist/integrity.js
+          grep -q 'shell-v110-automatic-safe' dist/sw.js
+          grep -q 'v1.1.0 beta Sincronização' dist/index.html
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          echo 'ETAPA4=PASS; NO_PRIVATE_DATA=TRUE; AUTO_DISABLED_UNTIL_VERIFIED_WRITE=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
