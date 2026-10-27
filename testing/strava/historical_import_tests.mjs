@@ -63,5 +63,8 @@ assert.match(data.description,/DURACAO ESTIMADA/);
 assert.match(ctx.stravaHistoryPublishNext(),/desativada/);
 props.set('STRAVA_HISTORY_ENABLED','true');
 assert.match(ctx.stravaHistoryPublishNext(),/BLOQUEADO/);
+const oneClick=ctx.stravaHistoryImportBatch();
+assert.equal(oneClick.done,false);
+assert.match(oneClick.summary,/BLOQUEADO/);
 assert.equal(networkCalls,0);
 console.log('PASS: 17 sessoes sinteticas, 16 uploads + 1 manual, seguranca e conversoes preservadas; nenhuma rede chamada.');
