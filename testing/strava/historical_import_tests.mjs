@@ -81,4 +81,43 @@ assert.equal(previewRecovery.sourceSetRows,3,'fixture has only 3 synthetic sets,
 assert.equal(previewRecovery.previousLedgerState,'ERROR');
 assert.match(ctx.stravaHistoryPublishFirstManual(),/BLOQUEADO/);
 assert.equal(networkCalls,0);
-console.log('PASS: 17 sessoes sinteticas, diagnostico de erro e recuperação manual bloqueada por padrão; sem rede.');
+const originalRows=ctx.historicRows_;
+ctx.historicRows_=()=>{
+ const copy=originalRows();
+ const first=copy.find(x=>x.id==='historic-20260824');
+ first.series=Array.from({length:21},(_,i)=>first.series[i%3]);
+ return copy;
+};
+props.set('STRAVA_HISTORY_LEDGER_V1',JSON.stringify({'historic-20260824':{state:'ERROR',note:'Error Processing Data',uploadId:'12345'}}));
+props.set('STRAVA_HISTORY_MANUAL_FALLBACK_ENABLED','true');
+props.set('STRAVA_HISTORY_DUPLICATES_REVIEWED','true');
+props.set('STRAVA_HISTORY_ENABLED','false');
+let outboundPosts=0,lookups=0,locked=0;
+ctx.LockService.getScriptLock=()=>({tryLock:()=>{locked++;return true;},releaseLock:()=>{locked--;}});
+ctx.stravaAccessToken_=()=> 'FAKE_TOKEN_FOR_OFFLINE_TEST';
+ctx.stravaResponse_=(url,token,opt={})=>{
+ assert.equal(token,'FAKE_TOKEN_FOR_OFFLINE_TEST');
+ if(url.endsWith('/uploads/12345')){lookups++;return {status:200,body:{error:'Error Processing Data',activity_id:null}};}
+ if(url.endsWith('/activities')){
+  outboundPosts++;
+  assert.equal(opt.method,'post');
+  assert.equal(opt.payload.sport_type,'WeightTraining');
+  assert.equal(opt.payload.elapsed_time,'4500');
+  assert.match(opt.payload.description,/HORARIO ESTIMADO/);
+  assert.equal(opt.payload.description.match(/Voador/g).length,7);
+  return {status:201,body:{id:'500000001'}};
+ }
+ throw Error('unexpected endpoint '+url);
+};
+const result=ctx.stravaHistoryPublishFirstManual();
+assert.match(result,/PUBLICADO/);
+assert.equal(outboundPosts,1);
+assert.equal(lookups,1);
+assert.equal(locked,0);
+const ledgerAfter=JSON.parse(props.get('STRAVA_HISTORY_LEDGER_V1'));
+assert.equal(ledgerAfter['historic-20260824'].state,'PUBLISHED');
+assert.equal(ledgerAfter['historic-20260824'].method,'manual_fallback');
+assert.equal(ledgerAfter['historic-20260824'].originalUploadId,'12345');
+assert.match(ctx.stravaHistoryPublishFirstManual(),/Ja publicado/);
+assert.equal(outboundPosts,1,'idempotence: no duplicate activity');
+console.log('PASS: 17 sessoes sinteticas, diagnostico e recuperacao manual com mock, controle de duplicidade; nenhuma rede real.');
