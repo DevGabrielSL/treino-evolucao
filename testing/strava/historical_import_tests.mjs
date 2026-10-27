@@ -86,6 +86,8 @@ ctx.historicRows_=()=>{
  const copy=originalRows();
  const first=copy.find(x=>x.id==='historic-20260824');
  first.series=Array.from({length:21},(_,i)=>first.series[i%3]);
+ first.recordCount=21;
+ first.duration=75;
  return copy;
 };
 props.set('STRAVA_HISTORY_LEDGER_V1',JSON.stringify({'historic-20260824':{state:'ERROR',note:'Error Processing Data',uploadId:'12345'}}));
@@ -93,7 +95,6 @@ props.set('STRAVA_HISTORY_MANUAL_FALLBACK_ENABLED','true');
 props.set('STRAVA_HISTORY_DUPLICATES_REVIEWED','true');
 props.set('STRAVA_HISTORY_ENABLED','false');
 let outboundPosts=0,lookups=0,locked=0;
-let mockError=null;
 ctx.LockService.getScriptLock=()=>({tryLock:()=>{locked++;return true;},releaseLock:()=>{locked--;}});
 ctx.stravaAccessToken_=()=> 'FAKE_TOKEN_FOR_OFFLINE_TEST';
 ctx.stravaResponse_=(url,token,opt={})=>{
@@ -101,18 +102,16 @@ ctx.stravaResponse_=(url,token,opt={})=>{
  if(url.endsWith('/uploads/12345')){lookups++;return {status:200,body:{error:'Error Processing Data',activity_id:null}};}
  if(url.endsWith('/activities')){
   outboundPosts++;
-  console.log('DEBUG_POST_FIXTURE',JSON.stringify({method:opt.method,sport:opt.payload?.sport_type,seconds:opt.payload?.elapsed_time,type:typeof opt.payload?.elapsed_time,descriptionLength:opt.payload?.description?.length,voadorCount:opt.payload?.description?.match(/Voador/g)?.length}));
   assert.equal(opt.method,'post');
   assert.equal(opt.payload.sport_type,'WeightTraining');
   assert.equal(opt.payload.elapsed_time,'4500');
   assert.match(opt.payload.description,/HORARIO ESTIMADO/);
-  try{assert.equal(opt.payload.description.match(/Voador/g).length,7);}catch(e){mockError=e.message;throw e;}
+  assert.equal(opt.payload.description.match(/Voador/g).length,7);
   return {status:201,body:{id:'500000001'}};
  }
  throw Error('unexpected endpoint '+url);
 };
 const result=ctx.stravaHistoryPublishFirstManual();
-if(!/PUBLICADO/.test(result))console.log('DEBUG_RECOVERY_RESULT',result,'outboundPosts',outboundPosts,'lookups',lookups,'mockError',mockError);
 assert.match(result,/PUBLICADO/);
 assert.equal(outboundPosts,1);
 assert.equal(lookups,1);
