@@ -24,6 +24,12 @@ function stravaLog_(book) {
   return tab;
 }
 function stravaInitializeTest() {
+  // Preenche apenas IDs PUBLICOS e ambiente de testes, nunca segredos OAuth.
+  const p=stravaProps_();
+  const configuredSheet=p.getProperty('STRAVA_SPREADSHEET_ID');
+  if(configuredSheet && configuredSheet!==STRAVA_TEST_SPREADSHEET_ID)throw new Error('Projeto ja configurado para outra planilha: nao substituir.');
+  if(!configuredSheet)p.setProperty('STRAVA_SPREADSHEET_ID',STRAVA_TEST_SPREADSHEET_ID);
+  if(!p.getProperty('STRAVA_CLIENT_ID'))p.setProperty('STRAVA_CLIENT_ID','291398');
   // A inicializacao nao habilita uploads nem altera a planilha oficial.
   const book = stravaTestSheet_();
   const sheets = ['Treinos','Series'];
