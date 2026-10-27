@@ -45,9 +45,11 @@ function stravaAuthorizationUrl() {
   const state = Utilities.getUuid().replace(/-/g,'');
   stravaProps_().setProperty('STRAVA_OAUTH_STATE',state);
   const redirect = 'http://localhost';
-  return 'https://www.strava.com/oauth/authorize?client_id='+encodeURIComponent(id)
+  const url='https://www.strava.com/oauth/authorize?client_id='+encodeURIComponent(id)
     +'&response_type=code&redirect_uri='+encodeURIComponent(redirect)
     +'&approval_prompt=force&scope=activity%3Awrite&state='+encodeURIComponent(state);
+  Logger.log('Abra esta URL para autorizar o Strava: '+url);
+  return url;
 }
 function stravaCompleteAuthorization() {
   const raw = stravaRequired_('STRAVA_CALLBACK_URL');
@@ -201,6 +203,10 @@ function stravaPublisherTick() {
       const id=String(ledger[i][0]||'');
       if(known.has(id))throw new Error('ID duplicado no ledger Strava: '+id);
       if(id)known.set(id,{row:i+1,status:String(ledger[i][1]),uploadId:String(ledger[i][3]||'')});
+    }
+    // Publicacao com resultado desconhecido bloqueia novos envios ate reconciliacao manual.
+    for(const [id,v] of known) {
+      if(v.status==='UNCERTAIN'||v.status==='SUBMITTING')return 'Pausado: conferir publicacao de '+id;
     }
     // Sempre consultar uploads existentes antes de tentar novas publicacoes.
     for(const [id,v] of known){
