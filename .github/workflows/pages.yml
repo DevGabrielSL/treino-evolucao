@@ -848,6 +848,13 @@ jobs:
           p.write_text(s)
           PY
           for file in dist/*.js; do node --check "$file"; done
+      - name: Validar e publicar diagnóstico de leitura
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-default-type=module testing/diagnostico_conexao_tests.mjs
+          cp testing/diagnostico_conexao.html dist/diagnostico_conexao.html
+          cp testing/diagnostico_conexao.js dist/diagnostico_conexao.js
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
