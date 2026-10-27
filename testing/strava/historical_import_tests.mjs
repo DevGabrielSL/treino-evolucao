@@ -110,6 +110,7 @@ ctx.stravaResponse_=(url,token,opt={})=>{
  throw Error('unexpected endpoint '+url);
 };
 const result=ctx.stravaHistoryPublishFirstManual();
+if(!/PUBLICADO/.test(result))console.log('DEBUG_RECOVERY_RESULT',result,'outboundPosts',outboundPosts,'lookups',lookups);
 assert.match(result,/PUBLICADO/);
 assert.equal(outboundPosts,1);
 assert.equal(lookups,1);
