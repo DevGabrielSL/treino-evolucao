@@ -166,3 +166,51 @@ function stravaHoursImportRemaining() {
   Logger.log(JSON.stringify(out));
   return out;
 }
+
+
+/**
+ * Limpa a descricao SOMENTE da atividade de 24/08 ja criada por este script.
+ * Nao cria atividades, nao mexe em horarios, duracao ou visibilidade.
+ * Requer activity:write e a capacidade de editar a atividade no Strava.
+ */
+function stravaHoursClearFirstDescription() {
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(3000)) {
+    Logger.log('BLOQUEADO: operacao de Strava em andamento.');
+    return 'BLOQUEADO: outra operacao em andamento.';
+  }
+  try {
+    const ledger=stravaHoursLedger_();
+    const record=ledger[HOURS_SOURCE_FIRST_ID];
+    if(!record || record.state!=='PUBLISHED' || !/^\d+$/.test(String(record.activityId||''))) {
+      Logger.log('BLOQUEADO: primeira atividade nao foi confirmada no controle.');
+      return 'BLOQUEADO: primeira atividade nao confirmada.';
+    }
+    if(record.descriptionCleared===true) {
+      Logger.log('A descricao do primeiro treino ja foi limpa segundo o controle.');
+      return 'JA CONCLUIDO: confira o Strava.';
+    }
+    const result=stravaResponse_(
+      STRAVA_API_BASE+'/activities/'+String(record.activityId),
+      stravaAccessToken_(),
+      {
+        method:'put',
+        contentType:'application/json',
+        payload:JSON.stringify({description:''})
+      }
+    );
+    if(result.status!==200) {
+      Logger.log('FALHOU: Strava HTTP '+result.status+'. Se a atividade estiver restrita a seguidores, pode ser necessario escopo de leitura adicional. Alternativa: remover a descricao manualmente no Strava.');
+      return 'FALHOU HTTP '+result.status+': remova a descricao manualmente no Strava.';
+    }
+    if(result.body && result.body.description!=null &&
+       String(result.body.description).trim()!=='') {
+      Logger.log('NAO CONFIRMADO: resposta Strava manteve descricao. Conferir manualmente.');
+      return 'NAO CONFIRMADO: confira no Strava; nao repetir automaticamente.';
+    }
+    ledger[HOURS_SOURCE_FIRST_ID]={...record,descriptionCleared:true};
+    stravaHoursSave_(ledger);
+    Logger.log('CONCLUIDO: limpeza solicitada para a descricao da atividade de 24/08. Confira no Strava.');
+    return 'CONCLUIDO: confira atividade de 24/08 no Strava.';
+  } finally {lock.releaseLock();}
+}
