@@ -39,10 +39,12 @@ transport = dist / 'sheet_sync_browser.js'
 source = "import {SHEET_ID as PRODUCTION_SHEET_ID} from './sheets_config.js';\n" + transport.read_text()
 source = replace_once(source, "return id;\n}", "if(id!==PRODUCTION_SHEET_ID)throw new Error('Destino diferente da planilha principal.');return id;\n}")
 transport.write_text(source)
+session_patch = (root / 'testing/production_session_patch.py').read_text()
+exec(compile(session_patch, str(root / 'testing/production_session_patch.py'), 'exec'), {'dist': dist})
 for name in ('sw.js','integrity.js'):
     p = dist / name
     p.write_text(replace_once(p.read_text(), 'treino-evolucao-android-shell-v112-coach-plan-sync',
-                              'treino-evolucao-android-shell-v112-coordinated-candidate1'))
+                              'treino-evolucao-android-shell-v112-coordinated-session2'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
 code = replace_once(code, "'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA'", "'15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'")
