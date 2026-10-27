@@ -4,7 +4,7 @@
  * Depende de Code.gs e Historico.gs existentes no projeto Apps Script.
  * Fonte original: planilha OFICIAL em modo somente leitura.
  * Destino: Strava POST /api/v3/activities (atividades manuais).
- * Nenhuma serie, carga, peso, GPS ou treino FIT/JSON sera enviado.
+ * Nenhuma serie, carga, peso, GPS, descricao ou treino FIT/JSON sera enviado.
  *
  * Por padrao NAO publica. Exige STRAVA_HOURS_ENABLED=true; os outros
  * publicadores precisam estar desligados. Estados sao salvos ANTES
@@ -42,10 +42,7 @@ function stravaHoursBuild_(session) {
     name:conditioning?'Condicionamento físico':'Musculação',
     sport_type:conditioning?'Workout':'WeightTraining',
     start_date_local:session.startISO,
-    elapsed_time:String(session.duration*60),
-    description:session.estimated
-      ?'Histórico App Fitness. Horário de início e duração aproximados.'
-      :'Histórico App Fitness. Horário de início aproximado; duração registrada.',
+    elapsed_time:String(session.duration*60)
   };
 }
 function stravaHoursExistingGuard_(session) {
@@ -81,7 +78,7 @@ function stravaHoursPreview() {
     remainingMinutes:minutes%60,
     recordedDurations:list.filter(x=>!x.durationEstimated).length,
     approximateDurations:list.filter(x=>x.durationEstimated).length,
-    description:'Somente data, inicio, duracao e tipo de atividade; sem series ou pesos',
+    description:'Somente data, inicio, duracao e tipo de atividade; nenhuma descricao enviada ao Strava',
     activities:list
   };
   Logger.log(JSON.stringify(out,null,2));
