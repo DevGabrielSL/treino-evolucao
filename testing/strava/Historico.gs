@@ -235,3 +235,31 @@ function stravaHistoryPublishNext() {
     }
   } finally {lock.releaseLock();}
 }
+
+/**
+ * Processa o lote historico em uma unica execucao manual, ate 60 transicoes.
+ * Suspende se a API demorar ou se qualquer retorno ficar incerto.
+ */
+function stravaHistoryImportBatch() {
+  const results=[];
+  let consecutiveWaits=0;
+  for(let i=0;i<60;i++) {
+    const answer=String(stravaHistoryPublishNext());
+    results.push(answer);
+    Logger.log(answer);
+    if(answer.includes('Sem pendencias: todas'))return {done:true,steps:results.length,summary:answer};
+    if(answer.startsWith('PAUSADO')||answer.startsWith('BLOQUEADO')||
+       answer.includes('desativada')||answer.includes('rejeitado')||
+       answer.includes('incerto')||answer.includes('incerta')||
+       answer.includes('Outra publicacao')) return {done:false,steps:results.length,summary:answer};
+    if(answer.startsWith('Aguardando processamento')) {
+      consecutiveWaits++;
+      if(consecutiveWaits>5)return {done:false,steps:results.length,summary:'Strava ainda processando; executar novamente apos conferir upload.'};
+      Utilities.sleep(2000);
+    } else {
+      consecutiveWaits=0;
+      Utilities.sleep(1000);
+    }
+  }
+  return {done:false,steps:results.length,summary:'Limite preventivo do lote atingido; confira estados antes de repetir.'};
+}
