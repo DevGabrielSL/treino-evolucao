@@ -814,6 +814,19 @@ jobs:
           node --experimental-default-type=module testing/coordinator_client_tests.mjs | tee /tmp/coordinator-client.log
           grep -qx 'COORDINATOR_CLIENT_TESTS=28' /tmp/coordinator-client.log
           for file in dist/testes/*.js; do node --check "$file"; done
+      - name: Ativar coordenador somente no artefato publicado
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('dist/testes/sheets_config.js')
+          data=p.read_text('utf8')
+          data=data.replace("COORDINATOR_DEPLOYMENT_ID='';","COORDINATOR_DEPLOYMENT_ID='AKfycbzOf1uGQ3ItJTAhcKEE19udGUCCPs84-hER-XEPgYvDHphdIQ3X4SiKO8Zn_5Wdlwc1';")
+          data=data.replace('COORDINATOR_ENABLED=false;','COORDINATOR_ENABLED=true;')
+          p.write_text(data,'utf8')
+          PY
+          grep -q "COORDINATOR_ENABLED=true" dist/testes/sheets_config.js
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
