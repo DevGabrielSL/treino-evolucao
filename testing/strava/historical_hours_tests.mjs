@@ -72,8 +72,8 @@ ctx.stravaResponse_=(url,token,options={})=>{
    assert.ok(['WeightTraining','Workout'].includes(options.payload.sport_type));
    assert.equal(typeof options.payload.elapsed_time,'string');
    assert.deepEqual(Object.keys(options.payload).sort(),
-       ['description','elapsed_time','name','sport_type','start_date_local'].sort());
-   assert.match(options.payload.description,/aproximad|registrada/);
+       ['elapsed_time','name','sport_type','start_date_local'].sort());
+   assert.equal(Object.hasOwn(options.payload,'description'),false);
    const string=JSON.stringify(options.payload);
    assert.doesNotMatch(string,/plaquetas|repeticoes|\"(sets|weight|reps)\"\s*:/i);
    if(remotePosts===9) assert.equal(options.payload.sport_type,'Workout');
