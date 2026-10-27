@@ -21,3 +21,5 @@ jobs:
         with:
           node-version: '22'
       - run: node testing/strava/strava_publisher_tests.mjs
+
+      - run: node testing/strava/historical_import_tests.mjs
