@@ -49,4 +49,20 @@ assert.throws(()=>ctx.stravaBuildUpload_([...workout.slice(0,10),''],rows,'UTC')
 assert.throws(()=>ctx.stravaBuildUpload_([...workout.slice(0,3),'Em andamento',...workout.slice(4)],rows,'UTC'),/nao concluido/);
 assert.throws(()=>ctx.stravaBuildUpload_([...workout.slice(0,9),'',workout[10]],rows,'UTC'),/ID estavel/);
 assert.equal(ctx.stravaPublisherTick(),'Desativado');
-console.log('OK: 18 verificacoes locais; sem rede, sem planilha, sem Strava.');
+let controlCreated=false, headerWritten=false;
+const logTab={
+  getRange:()=>({setValues:rows=>{assert.equal(rows[0].length,7);headerWritten=true;}}),
+  setFrozenRows:n=>assert.equal(n,1),hideSheet:()=>{}
+};
+ctx.SpreadsheetApp.openById=(id)=>{
+  assert.equal(id,'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA');
+  return {getSheetByName:name=>name==='Treinos'||name==='Series'?{}:name==='_StravaPublicacoes'&&controlCreated?logTab:null,
+    insertSheet:name=>{assert.equal(name,'_StravaPublicacoes');controlCreated=true;return logTab;}};
+};
+assert.match(ctx.stravaInitializeTest(),/desabilitado|bloqueado/);
+assert.equal(properties.get('STRAVA_CLIENT_ID'),'291398');
+assert.equal(properties.get('STRAVA_SPREADSHEET_ID'),'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA');
+assert.equal(properties.get('STRAVA_ENABLED'),'false');
+assert.equal(controlCreated&&headerWritten,true);
+assert.equal(ctx.stravaPublisherTick(),'Desativado');
+console.log('OK: validacoes locais, inicializacao com objetos ficticios; sem rede e sem Strava.');
