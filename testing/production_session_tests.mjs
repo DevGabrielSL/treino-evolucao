@@ -20,6 +20,7 @@ const d=await import(url+'?session=4');assert.equal(d.authorized(),false);assert
 store.set('treino-evolucao-google-token-v1',JSON.stringify({token:'synthetic',expiresAt:Date.now()+3600000,scope:'other'}));
 const e=await import(url+'?session=5');assert.equal(e.authorized(),false);assert.equal(store.size,0);
 await e.authorize('1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com');
+await assert.rejects(e.fetchTables('15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M',{fetchImpl:async()=>({ok:false,status:403,json:async()=>({error:{message:'Specific denial',details:[{reason:'TEST_DENIAL'}]}})})}),/Google Sheets recusou a solicitação \(403\).*TEST_DENIAL.*Specific denial/);
 await assert.rejects(e.fetchTables('15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M',{fetchImpl:async()=>({ok:false,status:401,json:async()=>({})})}),/expirou/);
 assert.equal(e.authorized(),false);assert.equal(store.size,0);
 globalThis.sessionStorage={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')},removeItem(){throw Error('blocked')}};

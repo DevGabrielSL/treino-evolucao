@@ -32,6 +32,16 @@ s = one(s, 'export function authorized(){return !!accessToken&&Date.now()<expire
 s = one(s, 'export function disconnect(){accessToken=null;expiresAt=0;}',
         'export function disconnect(){accessToken=null;expiresAt=0;clearSessionToken();}')
 s = one(s, "if(!r.ok)throw new Error(r.status===401?", "if(r.status===401)disconnect();\n if(!r.ok)throw new Error(r.status===401?")
+old="if(!r.ok)throw new Error(r.status===401?'A sessão Google expirou. Conecte novamente.':r.status===403?'Sem permissão para esta planilha ou Google Sheets API não ativada.':`Google Sheets recusou a operação (${r.status}). ${String(json?.error?.message||'').slice(0,150)}`);"
+new="""if(!r.ok){
+  const service=new URL(url).hostname==='script.googleapis.com'?'Apps Script':'Google Sheets';
+  const reason=typeof json?.error?.details?.[0]?.reason==='string'?json.error.details[0].reason:'';
+  let detail=typeof json?.error?.message==='string'?json.error.message:'';
+  detail=detail.split(token).join('[removido]').replace(/Bearer\\s+\\S+/gi,'Bearer [removido]').slice(0,350);
+  if(r.status===401)throw new Error('A sessão Google expirou. Conecte novamente.');
+  throw new Error(service+' recusou a solicitação ('+r.status+').'+(reason?' Motivo: '+reason.slice(0,80)+'.':'')+(detail?' '+detail:''));
+ }"""
+s = one(s, old, new)
 p.write_text(s)
 
 p = dist / 'app.js'
