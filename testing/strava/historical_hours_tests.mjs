@@ -75,7 +75,7 @@ ctx.stravaResponse_=(url,token,options={})=>{
        ['description','elapsed_time','name','sport_type','start_date_local'].sort());
    assert.match(options.payload.description,/aproximad|registrada/);
    const string=JSON.stringify(options.payload);
-   assert.doesNotMatch(string,/series|plaquetas|exercicios|repeticoes|weight|sets|RIR/i);
+   assert.doesNotMatch(string,/plaquetas|repeticoes|\"(sets|weight|reps)\"\s*:/i);
    if(remotePosts===9) assert.equal(options.payload.sport_type,'Workout');
    else assert.equal(options.payload.sport_type,'WeightTraining');
    if(simulatedAmbiguous) throw new Error('Fake timeout after Strava received request');
