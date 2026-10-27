@@ -827,6 +827,26 @@ jobs:
           p.write_text(data,'utf8')
           PY
           grep -q "COORDINATOR_ENABLED=true" dist/testes/sheets_config.js
+      - name: Preparar e validar coordenador da versão principal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 testing/production_candidate.py /tmp/treino-production-candidate
+          node --experimental-default-type=module testing/production_candidate_tests.mjs /tmp/treino-production-candidate
+          (cd /tmp/treino-production-candidate && node --experimental-default-type=module testing/coordinator_tests.mjs)
+          cp -a /tmp/treino-production-candidate/dist/. dist/
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('dist/sheets_config.js')
+          s=p.read_text()
+          old="COORDINATOR_DEPLOYMENT_ID='';"
+          assert s.count(old)==1
+          s=s.replace(old,"COORDINATOR_DEPLOYMENT_ID='AKfycbzUX-IlqYS0PFc0B759EHpMmrfoIxOmh4lJha3QQQBrP6NG7M46claSoRny2lAOdVsnBQ';")
+          assert s.count('COORDINATOR_ENABLED=false;')==1
+          s=s.replace('COORDINATOR_ENABLED=false;','COORDINATOR_ENABLED=true;')
+          p.write_text(s)
+          PY
+          for file in dist/*.js; do node --check "$file"; done
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
