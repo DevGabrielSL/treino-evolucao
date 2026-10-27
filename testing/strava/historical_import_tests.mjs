@@ -4,6 +4,7 @@ import {runInNewContext} from 'node:vm';
 
 const core=readFileSync(new URL('./Code.gs',import.meta.url),'utf8');
 const history=readFileSync(new URL('./Historico.gs',import.meta.url),'utf8');
+const diagnose=readFileSync(new URL('./Diagnostico.gs',import.meta.url),'utf8');
 const props=new Map([
  ['STRAVA_ENABLED','false'],
  ['STRAVA_HISTORY_SOURCE_ID','SOURCE_SHEET_FOR_TESTS_1234567890'],
@@ -39,7 +40,7 @@ const ctx={
  LockService:{getScriptLock:()=>{throw new Error('Lock bloqueado sem aprovacao.')}},
  Logger:{log:()=>{}}
 };
-runInNewContext(core+'\n'+history,ctx);
+runInNewContext(core+'\n'+history+'\n'+diagnose,ctx);
 const preview=ctx.stravaHistoryPreview();
 assert.equal(preview.count,17);
 assert.equal(preview.items.filter(x=>x.uploadType==='json').length,16);
