@@ -2,7 +2,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1];dest=root/'dist/testes'
 message='Envios de testes pausados: a proteção entre aparelhos aguarda configuração. Os registros continuam salvos neste dispositivo; você pode conferir e importar a planilha.'
 (dest/'coordinator_client.js').write_text((root/'testing/coordinator_client.js').read_text())
-p=dest/'sheets_config.js';p.write_text(p.read_text()+"\n// Deployment is intentionally absent until account setup and real validation.\nexport const COORDINATOR_DEPLOYMENT_ID='AKfycbzOf1uGQ3ItJTAhcKEE19udGUCCPs84-hER-XEPgYvDHphdIQ3X4SiKO8Zn_5Wdlwc1';\nexport const COORDINATOR_ENABLED=true;\n")
+p=dest/'sheets_config.js';p.write_text(p.read_text()+"\n// Deployment is intentionally absent until account setup and real validation.\nexport const COORDINATOR_DEPLOYMENT_ID='';\nexport const COORDINATOR_ENABLED=false;\n")
 for name in ['sw.js','integrity.js']:
  p=dest/name;s=p.read_text();assert s.count("'./app.js'")==1;p.write_text(s.replace("'./app.js'","'./coordinator_client.js','./app.js'"))
 p=dest/'sheet_sync_browser.js';s=p.read_text();s="import {coordinatorReady,runCoordinatorUpload,validateCoordinatorResponse} from './coordinator_client.js';\nimport {COORDINATOR_DEPLOYMENT_ID} from './sheets_config.js';\n"+s
