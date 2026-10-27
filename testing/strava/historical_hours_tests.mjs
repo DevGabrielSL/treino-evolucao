@@ -14,7 +14,7 @@ const props=new Map([
  ['STRAVA_HISTORY_DUPLICATES_REVIEWED','true'],
  ['STRAVA_HOURS_ENABLED','false']
 ]);
-let remotePosts=0,remoteReads=0;
+let remotePosts=0,remoteReads=0,remoteEdits=0;
 let simulatedAmbiguous=false, simulateSkip=false;
 const ctx={
  PropertiesService:{getScriptProperties:()=>({
@@ -65,6 +65,13 @@ ctx.stravaResponse_=(url,token,options={})=>{
     remoteReads++;
     return {status:200,body:{error:'Error Processing Data',activity_id:null}};
  }
+ if(url.endsWith('/activities/2000001')) {
+   remoteEdits++;
+   assert.equal(options.method,'put');
+   assert.equal(options.contentType,'application/json');
+   assert.deepEqual(JSON.parse(options.payload),{description:''});
+   return {status:200,body:{id:'2000001',description:''}};
+ }
  if(url.endsWith('/activities')) {
    remotePosts++;
    assert.equal(options.method,'post');
@@ -90,6 +97,12 @@ assert.equal(remoteReads,1);
 const states=JSON.parse(props.get('STRAVA_HOURS_LEDGER_V1'));
 assert.equal(states['historic-20260824'].state,'PUBLISHED');
 assert.equal(states['historic-20260824'].method,'manual_hours');
+const cleaned=ctx.stravaHoursClearFirstDescription();
+assert.match(cleaned,/CONCLUIDO/);
+assert.equal(remoteEdits,1);
+assert.equal(JSON.parse(props.get('STRAVA_HOURS_LEDGER_V1'))['historic-20260824'].descriptionCleared,true);
+assert.match(ctx.stravaHoursClearFirstDescription(),/JA CONCLUIDO/);
+assert.equal(remoteEdits,1,'Do not repeat activity edits after success');
 assert.match(ctx.stravaHoursImportRemaining(),/BLOQUEADO/,'do not batch before user reviews first activity');
 props.set('STRAVA_HOURS_BATCH_APPROVED','true');
 const all=ctx.stravaHoursImportRemaining();
