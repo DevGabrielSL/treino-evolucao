@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 const core=readFileSync(new URL('./Code.gs',import.meta.url),'utf8');
 const history=readFileSync(new URL('./Historico.gs',import.meta.url),'utf8');
 const diagnose=readFileSync(new URL('./Diagnostico.gs',import.meta.url),'utf8');
+const recovery=readFileSync(new URL('./Recuperacao.gs',import.meta.url),'utf8');
 const props=new Map([
  ['STRAVA_ENABLED','false'],
  ['STRAVA_HISTORY_SOURCE_ID','SOURCE_SHEET_FOR_TESTS_1234567890'],
@@ -40,7 +41,7 @@ const ctx={
  LockService:{getScriptLock:()=>{throw new Error('Lock bloqueado sem aprovacao.')}},
  Logger:{log:()=>{}}
 };
-runInNewContext(core+'\n'+history+'\n'+diagnose,ctx);
+runInNewContext(core+'\n'+history+'\n'+diagnose+'\n'+recovery,ctx);
 const preview=ctx.stravaHistoryPreview();
 assert.equal(preview.count,17);
 assert.equal(preview.items.filter(x=>x.uploadType==='json').length,16);
@@ -75,4 +76,9 @@ assert.equal(diagnosis.setCount,3);
 assert.deepEqual(Array.from(diagnosis.invalidSetIndexes),[]);
 assert.equal(diagnosis.uploadReceipt,null);
 assert.equal(networkCalls,0,'diagnostico nao pode reenviar');
-console.log('PASS: 17 sessoes sinteticas, importacao bloqueada, diagnostico seguro de falha; sem chamadas de rede.');
+const previewRecovery=ctx.stravaHistoryManualPreviewFirst();
+assert.equal(previewRecovery.sourceSetRows,3,'fixture has only 3 synthetic sets, not 21');
+assert.equal(previewRecovery.previousLedgerState,'ERROR');
+assert.match(ctx.stravaHistoryPublishFirstManual(),/BLOQUEADO/);
+assert.equal(networkCalls,0);
+console.log('PASS: 17 sessoes sinteticas, diagnostico de erro e recuperação manual bloqueada por padrão; sem rede.');
