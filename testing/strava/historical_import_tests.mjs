@@ -101,6 +101,7 @@ ctx.stravaResponse_=(url,token,opt={})=>{
  if(url.endsWith('/uploads/12345')){lookups++;return {status:200,body:{error:'Error Processing Data',activity_id:null}};}
  if(url.endsWith('/activities')){
   outboundPosts++;
+  console.log('DEBUG_POST_FIXTURE',JSON.stringify({method:opt.method,sport:opt.payload?.sport_type,seconds:opt.payload?.elapsed_time,type:typeof opt.payload?.elapsed_time,descriptionLength:opt.payload?.description?.length,voadorCount:opt.payload?.description?.match(/Voador/g)?.length}));
   assert.equal(opt.method,'post');
   assert.equal(opt.payload.sport_type,'WeightTraining');
   assert.equal(opt.payload.elapsed_time,'4500');
