@@ -7,4 +7,6 @@ let result=await simulate({ok:true,json:async()=>({done:true,response:{result:{o
 assert.match(result.display.textContent,/Conexão confirmada/);assert.equal(JSON.parse(result.request.body).parameters[0].action,'read');assert.equal(result.button.disabled,false);
 result=await simulate({ok:false,status:403,json:async()=>({error:{message:'Denied dummy-token',details:[{reason:'PERMISSION_DENIED'}]}})});
 assert.match(result.display.textContent,/PERMISSION_DENIED/);assert.doesNotMatch(result.display.textContent,/dummy-token/);
+result=await simulate({ok:true,json:async()=>({done:true,error:{details:[{errorType:'Error',errorMessage:'SCHEMA_REQUIRED dummy-token'}]}})});
+assert.match(result.display.textContent,/SCHEMA_REQUIRED/);assert.doesNotMatch(result.display.textContent,/dummy-token/);
 console.log('DIAGNOSTIC_TESTS=PASS');

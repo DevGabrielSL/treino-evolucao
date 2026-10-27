@@ -17,7 +17,13 @@ button.addEventListener('click',async()=>{
   const data=await response.json().catch(()=>({}));
   if(!response.ok){const reason=String(data?.error?.details?.[0]?.reason||'').slice(0,80);const detail=String(data?.error?.message||'').split(access).join('[removido]').replace(/Bearer\s+\S+/gi,'Bearer [removido]').slice(0,400);throw new Error('Apps Script recusou a consulta ('+response.status+').'+(reason?' Motivo: '+reason+'.':'')+(detail?' '+detail:''));}
   const result=data?.response?.result;
-  if(data.done!==true||data.error||!result||result.protocol!==1||result.spreadsheetId!==sheetId||result.environment!=='production'||result.ok!==true)throw new Error('A API respondeu, mas o coordenador não confirmou a leitura: '+String(result?.code||data?.error?.status||'resposta inválida').slice(0,80));
+  if(data.error){
+   const detail=data.error.details?.[0]||{};
+   const type=String(detail.errorType||data.error.status||'erro').slice(0,80);
+   const text=String(detail.errorMessage||data.error.message||'sem detalhes').split(access).join('[removido]').replace(/Bearer\s+\S+/gi,'Bearer [removido]').slice(0,350);
+   throw new Error('A execução do Apps Script falhou ('+type+'): '+text);
+  }
+  if(data.done!==true||!result||result.protocol!==1||result.spreadsheetId!==sheetId||result.environment!=='production'||result.ok!==true)throw new Error('A API respondeu, mas o coordenador não confirmou a leitura: '+String(result?.code||'resposta inválida').slice(0,80)+' (concluído: '+String(data.done)+', resultado: '+(result?'presente':'ausente')+').');
   message('Conexão confirmada. O coordenador respondeu à leitura da planilha principal. Nenhum treino foi enviado.');
  }catch(e){message('Não foi possível concluir a leitura. '+String(e?.message||'Erro de conexão.').split(access||'\u0000').join('[removido]'));}
  finally{access='';button.disabled=false;}
