@@ -93,6 +93,7 @@ props.set('STRAVA_HISTORY_MANUAL_FALLBACK_ENABLED','true');
 props.set('STRAVA_HISTORY_DUPLICATES_REVIEWED','true');
 props.set('STRAVA_HISTORY_ENABLED','false');
 let outboundPosts=0,lookups=0,locked=0;
+let mockError=null;
 ctx.LockService.getScriptLock=()=>({tryLock:()=>{locked++;return true;},releaseLock:()=>{locked--;}});
 ctx.stravaAccessToken_=()=> 'FAKE_TOKEN_FOR_OFFLINE_TEST';
 ctx.stravaResponse_=(url,token,opt={})=>{
@@ -104,13 +105,13 @@ ctx.stravaResponse_=(url,token,opt={})=>{
   assert.equal(opt.payload.sport_type,'WeightTraining');
   assert.equal(opt.payload.elapsed_time,'4500');
   assert.match(opt.payload.description,/HORARIO ESTIMADO/);
-  assert.equal(opt.payload.description.match(/Voador/g).length,7);
+  try{assert.equal(opt.payload.description.match(/Voador/g).length,7);}catch(e){mockError=e.message;throw e;}
   return {status:201,body:{id:'500000001'}};
  }
  throw Error('unexpected endpoint '+url);
 };
 const result=ctx.stravaHistoryPublishFirstManual();
-if(!/PUBLICADO/.test(result))console.log('DEBUG_RECOVERY_RESULT',result,'outboundPosts',outboundPosts,'lookups',lookups);
+if(!/PUBLICADO/.test(result))console.log('DEBUG_RECOVERY_RESULT',result,'outboundPosts',outboundPosts,'lookups',lookups,'mockError',mockError);
 assert.match(result,/PUBLICADO/);
 assert.equal(outboundPosts,1);
 assert.equal(lookups,1);
