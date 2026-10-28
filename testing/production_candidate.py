@@ -50,23 +50,32 @@ coach_module.write_text(replace_once(coach_module.read_text(),
     'Sugestão inicial para testes; ajuste o equipamento antes de registrar.',
     'Sugestão inicial; confira o equipamento antes de registrar.'))
 shutil.copy2(root / 'testing/principal_variety.js', dist / 'principal_variety.js')
+shutil.copy2(root / 'testing/principal_dose.js', dist / 'principal_dose.js')
 app = dist / 'app.js'
 app.write_text(replace_once(app.read_text(),
     "import {balancedPlan,replacementFor,catalogEntities,historySummary} from './balanced_coach.js';",
     "import {balancedPlan,replacementFor} from './principal_variety.js';\nimport {catalogEntities,historySummary} from './balanced_coach.js';"))
 app.write_text(replace_once(app.read_text(), '${draft.group} · ${draft.equipment}',
     '${draft.group} · ${draft.movementLabel||\'Padrão não identificado\'} · ${draft.equipment}'))
+app.write_text(replace_once(app.read_text(), '${draft.equipment} · ${draft.last?',
+    '${draft.equipment} · ${draft.dose?.label||\'\'} · ${draft.dose?.source||\'\'} ${draft.dose?.effort||\'\'} · ${draft.last?'))
+app.write_text(replace_once(app.read_text(), '${q} série(s) registrada(s)`;const controls=',
+    '${q} série(s) registrada(s) · ${active?.planned_guidance?.[id]?.label||\'\'}`;const controls='))
+app.write_text(replace_once(app.read_text(), 'Revise o roteiro: nenhuma série foi criada.',
+    'Revise o roteiro: nenhuma série foi criada. Séries sugeridas não incluem aquecimento. Faixas e limites são pontos de partida do app; não garantem duração nem recuperação. Você registra apenas o que realizar.'))
+app.write_text(replace_once(app.read_text(), "notes:'Sessão iniciada pelo assistente local.',planned_variant_ids:ids,",
+    "notes:'Sessão iniciada pelo assistente local. Sugestões (não realizadas): '+coachPlan.items.filter(x=>x.dose).map(x=>x.name+': '+x.dose.label).join('; '),planned_guidance:Object.fromEntries(coachPlan.items.filter(x=>x.dose).map(x=>[x.variant_id,{...x.dose}])),planned_variant_ids:ids,"))
 for name in ('sw.js', 'integrity.js'):
     file = dist / name
-    file.write_text(replace_once(file.read_text(), "'./balanced_coach.js'", "'./principal_variety.js','./balanced_coach.js'"))
+    file.write_text(replace_once(file.read_text(), "'./balanced_coach.js'", "'./principal_dose.js','./principal_variety.js','./balanced_coach.js'"))
 index = dist / 'index.html'
 index.write_text(replace_once(index.read_text(), "connect-src 'self' https://sheets.googleapis.com https://accounts.google.com;",
                               "connect-src 'self' https://sheets.googleapis.com https://script.googleapis.com https://accounts.google.com;"))
 for name in ('sw.js','integrity.js'):
     p = dist / name
     p.write_text(replace_once(p.read_text(), 'treino-evolucao-android-shell-v112-coach-plan-sync',
-                              'treino-evolucao-android-shell-v114-movement-variety'))
-index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.1.4 Assistente equilibrado'))
+                              'treino-evolucao-android-shell-v115-sets-repetitions'))
+index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.1.5 Séries e repetições'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
 code = replace_once(code, "'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA'", "'15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'")

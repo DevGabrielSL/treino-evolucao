@@ -11,6 +11,7 @@ script = candidate / 'testing/principal_coach_tests.mjs'
 script.write_text(source.replace('../dist/testes/', '../dist/'))
 subprocess.run(['node', str(script)], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_variety_tests.mjs')], check=True)
+subprocess.run(['node', str(candidate / 'testing/principal_dose_tests.mjs')], check=True)
 dist = candidate / 'dist'
 app = (dist / 'app.js').read_text()
 for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 'readinessFields()',
@@ -19,9 +20,10 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js'" in content
-    assert 'shell-v114-movement-variety' in content
+    assert 'shell-v115-sets-repetitions' in content
     assert "'./principal_variety.js'" in content
-assert 'v1.1.4 Assistente equilibrado' in (dist / 'index.html').read_text()
+    assert "'./principal_dose.js'" in content
+assert 'v1.1.5 Séries e repetições' in (dist / 'index.html').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')

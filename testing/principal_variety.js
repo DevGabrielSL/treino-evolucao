@@ -1,4 +1,5 @@
 import {balancedPlan as basePlan} from './balanced_coach.js';
+import {attachDose,doseFor} from './principal_dose.js';
 const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const labels={horizontal:'Remada horizontal',vertical:'Puxada vertical',extension:'Extensão de ombro',press:'Pressão',fly:'Adução de braços',overhead:'Acima da cabeça',lateral:'Elevação lateral',rear:'Ombro posterior',knee:'Dominante de joelho',hip:'Dominante de quadril',curl:'Flexão de joelho',calf:'Panturrilha',anti:'Estabilização do core',flexion:'Flexão do tronco',other:'Padrão não identificado'};
 export function movement(item){
@@ -27,10 +28,12 @@ export function balancedPlan(entities,groups,message,options){
  const completed=(entities.sessions||[]).filter(x=>x.status==='completed'&&x.date<=plan.history.today).sort((a,b)=>b.date.localeCompare(a.date));
  const recent=new Set((entities.sets||[]).filter(x=>x.session_id===completed[0]?.id&&x.set_type!=='warmup').map(x=>x.variant_id));
  const items=[];for(const slot of plan.items){const next=choose(plan.options,items,slot.group,recent);if(next)items.push({...next,movementLabel:labels[movement(next)]});}
- return {...plan,items,recentVariants:[...recent]};
+ return attachDose({...plan,items,recentVariants:[...recent]},entities);
 }
 export function replacementFor(plan,index){
  const current=plan.items[index];if(!current)return null;
  const next=choose(plan.options,plan.items,current.group,new Set(plan.recentVariants||[]));
- return next?{...next,movementLabel:labels[movement(next)]}:null;
+ if(!next)return null;
+ const dose=doseFor(next,plan);dose.sets=Math.min(dose.sets,current.dose?.sets||dose.sets);dose.label=`Sugestão: ${dose.sets} série(s) de ${dose.min}–${dose.max} ${dose.unit}`;
+ return {...next,movementLabel:labels[movement(next)],dose};
 }
