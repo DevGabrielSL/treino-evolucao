@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {collectNewCompletions,showCardCompletion} from '../dist/principal_rpg.js';
+let n=0;const test=(name,fn)=>{fn();n++;console.log('PASS '+name)};
+const card={session_id:'s',variant_id:'a',name:'Rosca',count:0,target:3};
+test('Primeira abertura não inventa celebração retroativa',()=>assert.equal(collectNewCompletions([{...card,count:3}],new Map()).length,0));
+test('Terceira série real dispara conclusão uma única vez',()=>{const seen=new Map();assert.equal(collectNewCompletions([card],seen).length,0);assert.equal(collectNewCompletions([{...card,count:2}],seen).length,0);assert.equal(collectNewCompletions([{...card,count:3}],seen).length,1);assert.equal(collectNewCompletions([{...card,count:3}],seen).length,0)});
+test('Cartas duplicadas no resumo não duplicam celebração',()=>{const seen=new Map();collectNewCompletions([card],seen);assert.equal(collectNewCompletions([{...card,count:3},{...card,count:3}],seen).length,1)});
+test('Novo treino não reutiliza conclusão anterior',()=>{const seen=new Map();collectNewCompletions([card],seen);assert.equal(collectNewCompletions([{...card,session_id:'novo',count:3}],seen).length,0)});
+test('Sem meta válida não oferece conquista',()=>assert.equal(collectNewCompletions([{...card,target:null,count:10}],new Map()).length,0));
+test('Efeito visual não modifica os registros de treino',()=>{const before=JSON.stringify(card);collectNewCompletions([card],new Map());assert.equal(JSON.stringify(card),before)});
+test('Mensagem de conclusão escapa nomes e respeita CSP',()=>{let html='';globalThis.document={createElement:()=>({setAttribute:()=>{},set innerHTML(x){html=x},remove:()=>{}}),body:{append:()=>{}}};const original=globalThis.setTimeout;globalThis.setTimeout=()=>0;showCardCompletion({...card,name:'<script>x</script>',count:3});globalThis.setTimeout=original;delete globalThis.document;assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('style='));assert.ok(!html.includes('<script>'))});
+test('Arte original está em WebP leve e no cache',()=>{const data=fs.readFileSync(new URL('../dist/rpg-training.webp',import.meta.url));assert.equal(data.subarray(0,4).toString(),'RIFF');assert.equal(data.subarray(8,12).toString(),'WEBP');assert.ok(data.length<250000);for(const name of ['sw.js','integrity.js'])assert.ok(fs.readFileSync(new URL('../dist/'+name,import.meta.url),'utf8').includes("'./rpg-training.webp'"))});
+test('Cartas ativas expõem progresso real para os efeitos',()=>{const source=fs.readFileSync(new URL('../dist/principal_cards.js',import.meta.url),'utf8');assert.ok(source.includes('data-card-session'));assert.ok(source.includes('data-card-count'));const css=fs.readFileSync(new URL('../dist/principal_rpg.css',import.meta.url),'utf8');assert.ok(css.includes("url('./rpg-training.webp')"));assert.ok(css.includes('prefers-reduced-motion'))});
+console.log('PRINCIPAL_RPG_TESTS='+n);
