@@ -87,6 +87,7 @@ index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano',
 
 runpy.run_path(str(out / 'testing/principal_entry_patch.py'))
 runpy.run_path(str(out / 'testing/principal_visibility_patch.py'))
+runpy.run_path(str(out / 'testing/principal_planner_patch.py'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
 code = replace_once(code, "'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA'", "'15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'")
