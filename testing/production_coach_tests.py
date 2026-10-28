@@ -15,6 +15,7 @@ subprocess.run(['node', str(candidate / 'testing/principal_dose_tests.mjs')], ch
 subprocess.run(['node', str(candidate / 'testing/principal_live_tests.mjs')], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_tools_tests.mjs')], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_visual_tests.mjs')], check=True)
+subprocess.run(['node', str(candidate / 'testing/principal_intent_tests.mjs')], check=True)
 dist = candidate / 'dist'
 app = (dist / 'app.js').read_text()
 for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 'readinessFields()',
@@ -22,14 +23,14 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
     assert text in app, text
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
-    assert "'./balanced_coach.js'" in content
-    assert 'shell-v120-visual-redesign' in content
-    assert "'./principal_variety.js?v=120r3'" in content
+    assert "'./balanced_coach.js?v=121'" in content
+    assert 'shell-v121-arms-intent' in content
+    assert "'./principal_variety.js?v=121'" in content
     assert "'./principal_dose.js'" in content
     assert "'./principal_live.js'" in content
     assert "'./principal_rest.js'" in content
     assert "'./principal_visual.css'" in content
-assert 'v1.2.0 Visual e navegação' in (dist / 'index.html').read_text()
+assert 'v1.2.1 Braços no assistente' in (dist / 'index.html').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')

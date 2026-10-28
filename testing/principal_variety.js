@@ -1,5 +1,6 @@
 import {balancedPlan as basePlan} from './balanced_coach.js';
 import {attachDose,doseFor} from './principal_dose.js';
+import {expandArmRequest,armSlots} from './principal_intent.js';
 const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const labels={horizontal:'Remada horizontal',vertical:'Puxada vertical',extension:'Extensão de ombro',press:'Pressão',fly:'Adução de braços',overhead:'Acima da cabeça',lateral:'Elevação lateral',rear:'Ombro posterior',knee:'Dominante de joelho',hip:'Dominante de quadril',curl:'Flexão de joelho',calf:'Panturrilha',anti:'Estabilização do core',flexion:'Flexão do tronco',other:'Padrão não identificado'};
 export function movement(item){
@@ -25,11 +26,13 @@ function choose(options,selected,group,recent){
 }
 const movementLabelFor=item=>item.group==='triceps'&&movement(item)==='extension'?'Extensão de cotovelo':labels[movement(item)];
 export function balancedPlan(entities,groups,message,options){
- const plan=basePlan(entities,groups,message,options);
+ const plan=basePlan(entities,groups,expandArmRequest(message),options);
  const completed=(entities.sessions||[]).filter(x=>x.status==='completed'&&x.date<=plan.history.today).sort((a,b)=>b.date.localeCompare(a.date));
  const recent=new Set((entities.sets||[]).filter(x=>x.session_id===completed[0]?.id&&x.set_type!=='warmup').map(x=>x.variant_id));
- const items=[];for(const slot of plan.items){const next=choose(plan.options,items,slot.group,recent);if(next)items.push({...next,movementLabel:movementLabelFor(next)});}
- return attachDose({...plan,items,recentVariants:[...recent]},entities);
+ const armGroups=plan.adjustment.blocked?null:armSlots(message,plan);
+ const slots=armGroups?armGroups.map(group=>({group})):plan.items;
+ const items=[];for(const slot of slots){const next=choose(plan.options,items,slot.group,recent);if(next)items.push({...next,movementLabel:movementLabelFor(next)});}
+ return attachDose({...plan,items,short:armGroups?slots.length-items.length:plan.short,recentVariants:[...recent]},entities);
 }
 export function replacementFor(plan,index){
  const current=plan.items[index];if(!current)return null;
