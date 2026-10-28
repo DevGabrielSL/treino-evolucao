@@ -76,13 +76,14 @@ runpy.run_path(str(out / 'testing/principal_intent_patch.py'))
 runpy.run_path(str(out / 'testing/principal_cards_patch.py'))
 runpy.run_path(str(out / 'testing/principal_premium_patch.py'))
 runpy.run_path(str(out / 'testing/principal_rpg_patch.py'))
+runpy.run_path(str(out / 'testing/principal_world_patch.py'))
 index.write_text(replace_once(index.read_text(), "connect-src 'self' https://sheets.googleapis.com https://accounts.google.com;",
                               "connect-src 'self' https://sheets.googleapis.com https://script.googleapis.com https://accounts.google.com;"))
 for name in ('sw.js','integrity.js'):
     p = dist / name
     p.write_text(replace_once(p.read_text(), 'treino-evolucao-android-shell-v112-coach-plan-sync',
-                              'treino-evolucao-android-shell-v132-rpg-art'))
-index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.3.2 Arena de cartas RPG'))
+                              'treino-evolucao-android-shell-v140-rpg-world'))
+index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.4.0 Mundo RPG'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
 code = replace_once(code, "'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA'", "'15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'")
