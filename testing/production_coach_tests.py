@@ -28,14 +28,14 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v148-manual' in content
+    assert 'shell-v149-assistant' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=131'" in content
     assert "'./principal_rest.js'" in content
     assert "'./principal_visual.css'" in content
     assert "'./principal_cards.css'" in content
-assert 'v1.4.8 Modo manual RPG' in (dist / 'index.html').read_text()
+assert 'v1.4.9 Assistente e modelos' in (dist / 'index.html').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')

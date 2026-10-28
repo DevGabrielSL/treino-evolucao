@@ -14,7 +14,15 @@ s=s.replace(needle,'panel(`<div class="planner-art" aria-hidden="true"></div><di
 needle='Iniciar treino</button></form>`)'
 assert s.count(needle)==1
 s=s.replace(needle,'Iniciar treino</button></form></div>`,\'manual-session-panel\')')
-s=s.replace('Treino & Evolução · v1.4.4','Treino & Evolução · v1.4.8');p.write_text(s)
-p=dist/'index.html';s=p.read_text().replace('app.js?v=144','app.js?v=148').replace('v1.4.4 Cadastro em Mais','v1.4.8 Modo manual RPG').replace('</head>','<link rel="stylesheet" href="./principal_planner.css?v=148">\n</head>');p.write_text(s)
+s=s.replace('function renderWorkout(m){if(coachMode)return renderCoach(m);','function renderWorkout(m){return renderCoach(m);')
+needle="${panel('<button class=\"btn block\" data-coach-action=\"close\">Voltar ao modo manual</button>')}"
+assert s.count(needle)==1
+s=s.replace(needle,'')
+needle='${active?current+renderTrainingTools(active,selected,m)+composer:composer+preview}'
+assert s.count(needle)==1
+s=s.replace(needle,needle+"${!active?renderSavedCoachTemplates():''}")
+s+='''\nfunction renderSavedCoachTemplates(){const templates=getTemplates(doc).filter(t=>t.items.length);return panel(`<h2>Começar com um modelo salvo</h2>${templates.length?templates.map(t=>item(t.name,`${t.items.length} exercícios planejados`,`<button class="btn primary small" data-start-template="${e(t.id)}">Iniciar</button>`)).join(''):'<p class="text-small">Nenhum modelo com exercícios ainda. Organize seus modelos em Mais.</p>'}<button class="btn block mt" data-page="templates">Gerenciar modelos e exercícios</button>`,'saved-coach-models');}\n'''
+s=s.replace('Treino & Evolução · v1.4.4','Treino & Evolução · v1.4.9');p.write_text(s)
+p=dist/'index.html';s=p.read_text().replace('app.js?v=144','app.js?v=149').replace('v1.4.4 Cadastro em Mais','v1.4.9 Assistente e modelos').replace('</head>','<link rel="stylesheet" href="./principal_planner.css?v=149">\n</head>');p.write_text(s)
 for name in ('sw.js','integrity.js'):
- p=dist/name;s=p.read_text().replace('app.js?v=144','app.js?v=148').replace('shell-v144-more','shell-v148-manual').replace("'./principal_visibility.css?v=144'","'./principal_planner.css?v=148','./rpg-planner.webp','./principal_visibility.css?v=144'");p.write_text(s)
+ p=dist/name;s=p.read_text().replace('app.js?v=144','app.js?v=149').replace('shell-v144-more','shell-v149-assistant').replace("'./principal_visibility.css?v=144'","'./principal_planner.css?v=149','./rpg-planner.webp','./principal_visibility.css?v=144'");p.write_text(s)
