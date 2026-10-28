@@ -15,6 +15,7 @@ test('Respeita exclusão de ombro singular',()=>assert.ok(plan('costas sem ombro
 test('Tempo curto reduz a quantidade e mantém core',()=>{let p=plan('costas 30 minutos');assert.equal(p.items.length,4);assert.ok(p.items.some(x=>x.group==='core'))});
 test('Tempo inválido não produz proposta',()=>assert.throws(()=>plan('costas 300 minutos'),/tempo/));
 test('Dois grupos explícitos são respeitados',()=>{let p=plan('apenas costas e peito');assert.ok(p.items.every(x=>['costas','peito'].includes(x.group)));assert.ok(p.items.some(x=>x.group==='peito'))});
+test('Primeiro grupo escrito tem prioridade',()=>assert.equal(plan('costas e peito').groups[0],'costas'));
 test('Voador inverso classificado como ombro',()=>assert.equal(classifyExercise({name:'Voador inverso'}),'ombros'));
 test('Desconhecido não é atribuído por suposição',()=>assert.equal(classifyExercise({name:'Exercício desconhecido'}),null));
 test('Sem histórico não inventa carga',()=>assert.ok(plan('costas').items.every(x=>x.last===null)));

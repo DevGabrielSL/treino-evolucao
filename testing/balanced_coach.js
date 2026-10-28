@@ -26,7 +26,9 @@ export function classifyExercise(ex){
 export function balancedPlan(entities,requested,message='',{ranker=null}={}){
  const input=normalize(message),excluded=new Set();
  for(const [id,word] of Object.entries(label)){const term=id==='ombros'?'ombros?':id==='pernas'?'pernas?':normalize(word);if(new RegExp('\\b(?:sem|nao quero|nao treinar)\\s+(?:o\\s+|os\\s+)?'+term+'\\b').test(input))excluded.add(id);}
+ const groupWords={costas:/\b(?:costas|dorsais?|back)\b/,peito:/\b(?:peito|peitoral|chest)\b/,pernas:/\b(?:pernas?|quadriceps|posterior|inferior|coxa)\b/,ombros:/\b(?:ombros?|deltoides?)\b/,biceps:/\b(?:biceps|bicep)\b/,triceps:/\b(?:triceps|tricep)\b/,core:/\b(?:core|abdomen|abdominal|abdome)\b/};
  const groups=[...new Set(requested)].filter(g=>label[g]&&!excluded.has(g));
+ groups.sort((a,b)=>{const ai=input.search(groupWords[a]),bi=input.search(groupWords[b]);return (ai<0?Infinity:ai)-(bi<0?Infinity:bi)});
  if(!groups.length)throw new Error('Informe pelo menos um grupo que deseja treinar.');
  const only=/\b(?:so|somente|apenas)\s+(?:(?:quero|vou)\s+)?(?:treinar\s+)?(?:costas|peito|pernas|ombros?|biceps|triceps|core)\b/.test(input);
  const tm=input.match(/\b(\d{1,3})\s*(?:min(?:utos?)?|m)\b/);const mins=tm?Number(tm[1]):null;
