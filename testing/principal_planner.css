@@ -9,3 +9,10 @@
 
 /* Backup controls remain available in Data; suppress the repeated banner. */
 .backup-note{display:none!important}
+
+/* A form gap keeps collapsed details separated despite global margin resets. */
+#coach-form{display:flex;flex-direction:column;gap:16px}
+#coach-form>.field,#coach-form>.planner-readiness,#coach-form>.planner-readiness:not([open]){margin:0}
+#coach-form>.btn[type=submit]{margin:0;flex-shrink:0}
+#coach-form>.planner-readiness[open]{padding-bottom:14px}
+#coach-form .planner-readiness .field{margin-bottom:12px}
