@@ -810,7 +810,7 @@ jobs:
           rm -rf dist/tests
           env -u SANDBOX_ENGINE_TEST_MODE python3 testing/build_sandbox.py
           node --experimental-default-type=module testing/balanced_coach_tests.mjs | tee /tmp/balanced-coach.log
-          grep -qx 'BALANCED_COACH_TESTS=31' /tmp/balanced-coach.log
+          grep -qx 'BALANCED_COACH_TESTS=42' /tmp/balanced-coach.log
           node --experimental-default-type=module testing/concurrency_gate_tests.mjs | tee /tmp/concurrency-gate.log
           grep -qx 'CONCURRENCY_GATE_TESTS=14' /tmp/concurrency-gate.log
           node --experimental-default-type=module testing/coordinator_client_tests.mjs | tee /tmp/coordinator-client.log

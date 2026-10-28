@@ -7,7 +7,7 @@ for name in ('sw.js','integrity.js'):
  p=dest/name;s=p.read_text();assert s.count("'./app.js'")==1;s=s.replace("'./app.js'","'./balanced_coach.js','./app.js'");p.write_text(s)
 p=dest/'app.js';s=p.read_text();s="import {balancedPlan,replacementFor,catalogEntities,historySummary} from './balanced_coach.js';\n"+s
 old="const items=suggestExercises(m.entities,groups,{limit:groups.length>1?6:5,ranker:policy.evaluate});"
-new="const proposal=balancedPlan(m.entities,groups,input,{ranker:policy.evaluate,today:dateLocal()});const items=proposal.items;"
+new="coachPlan=null;const proposal=balancedPlan(m.entities,groups,input,{ranker:policy.evaluate,today:dateLocal(),readiness:coachReadiness});const items=proposal.items;if(proposal.adjustment.blocked){coachSay('assistant',proposal.adjustment.summary);render();return;}"
 assert s.count(old)==1;s=s.replace(old,new)
 old="coachPlan={groups,items,notes:policy.notes};coachSelected=items[0].variant_id;"
 new="coachPlan={...proposal,notes:policy.notes};coachSelected=items[0].variant_id;"
@@ -43,5 +43,21 @@ p.write_text(s)
 needle='${list||\'<p>Não encontrei exercícios compatíveis no histórico.</p>\'}'
 assert s.count(needle)==1
 s=s.replace(needle,'<details><summary>Análise do histórico e dos grupos musculares</summary><p class="text-small">${e(historySummary(coachPlan.history))}</p></details>'+needle)
+p.write_text(s)
+needle="let coachMode=false,coachPlan=null,coachSelected='',coachMessages=[];"
+assert s.count(needle)==1
+s=s.replace(needle,needle+"\nlet coachReadiness={};\nfunction readinessFields(){const select=(key,title,options)=>`<label class=\"field\"><span>${title}</span><select class=\"input\" name=\"readiness_${key}\">${options.map(([value,text])=>`<option value=\"${value}\" ${String(coachReadiness[key]||'unknown')===value?'selected':''}>${text}</option>`).join('')}</select></label>`;return `<fieldset><legend>Como você está hoje?</legend><p class=\"text-small\">Use estes campos para ajustar a próxima sugestão. Relatos temporários desta tela; não são uma avaliação médica. Ao mudar, envie novamente seu pedido para refazer a prévia.</p>${select('fatigue','Cansaço',[['unknown','Não informado'],['low','Baixo'],['moderate','Moderado'],['high','Alto']])}${select('recovery','Recuperação percebida',[['unknown','Não informada'],['good','Boa'],['partial','Parcial'],['poor','Ruim']])}${select('area','Região com cansaço ou recuperação incompleta',[['all','Geral / nenhuma região específica'],['costas','Costas'],['peito','Peito'],['ombros','Ombros'],['biceps','Bíceps'],['triceps','Tríceps'],['pernas','Pernas'],['core','Core']])}${select('pain','Dor ou desconforto durante o movimento?',[['unknown','Não informado'],['no','Não'],['yes','Sim']])}</fieldset>`;}\n")
+needle='<form id="coach-form">'
+assert s.count(needle)==1
+s=s.replace(needle,needle+"${!active?readinessFields():''}")
+needle="try{await handleCoachMessage(new FormData(f).get('message'));}"
+assert s.count(needle)==1
+s=s.replace(needle,"try{const values=new FormData(f);if(!coachActive()){coachPlan=null;coachReadiness=Object.fromEntries(['fatigue','recovery','area','pain'].map(key=>[key,values.get('readiness_'+key)|| (key==='area'?'all':'unknown')]));}await handleCoachMessage(values.get('message'));}")
+needle='${e(historySummary(coachPlan.history))}'
+assert s.count(needle)==1
+s=s.replace(needle,needle+'<br>${e(coachPlan.adjustment.summary)}')
+needle="if(!coachPlan?.items?.length)throw new Error('Peça um grupo muscular primeiro.');"
+assert s.count(needle)==1
+s=s.replace(needle,needle+"if(coachPlan.adjustment?.blocked)throw new Error('Montagem suspensa pelo relato de dor.');const readinessForm=document.getElementById('coach-form');if(readinessForm){const values=new FormData(readinessForm);if(['fatigue','recovery','area','pain'].some(key=>(values.get('readiness_'+key)||(key==='area'?'all':'unknown'))!==(coachReadiness[key]||(key==='area'?'all':'unknown'))))throw new Error('Seu relato mudou. Envie o pedido novamente para atualizar a sugestão.');}")
 p.write_text(s)
 print('BALANCED_COACH_TEST_APP=APPLIED')

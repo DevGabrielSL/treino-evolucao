@@ -57,7 +57,19 @@ export function historySummary(h){
   (h.recent.length?'Treinados hoje ou ontem: '+h.recent.map(g=>label[g]).join(', ')+'. Confira como se sente antes de repetir. ':'')+
   ` ${h.unknown} séries sem classificação; ${h.invalid} registros inconsistentes ignorados. Participação secundária não equivale a série direta. O histórico disponível neste aparelho não comprova recuperação nem ausência de treino.`;
 }
-export function balancedPlan(entities,requested,message='',{ranker=null,today}={}){
+export function readinessAdjustment(report={}){
+ const fatigue=report.fatigue??'unknown',recovery=report.recovery??'unknown',pain=report.pain??'unknown';
+ if(!['unknown','low','moderate','high'].includes(fatigue)||!['unknown','good','partial','poor'].includes(recovery)||!['unknown','no','yes'].includes(pain))throw new Error('Relato de recuperação inválido.');
+ const area=report.area??'all';if(area!=='all'&&!label[area])throw new Error('Grupo do relato inválido.');
+ const blocked=pain==='yes';const reduced=fatigue==='moderate'||fatigue==='high'||recovery==='partial'||recovery==='poor';
+ const cap=fatigue==='high'||recovery==='poor'?4:reduced?6:8;
+ const summary=blocked?'Você informou dor ou desconforto durante o movimento. Não vou montar um treino para contornar esse sintoma. Interrompa o movimento doloroso e procure orientação profissional.':
+  reduced?'Seu relato pediu uma proposta mais curta: limite de '+cap+' exercícios. É uma regra conservadora do app, não uma medida de recuperação. Ajuste o esforço durante o treino; a carga anterior é apenas referência.':
+  fatigue==='unknown'&&recovery==='unknown'?'Cansaço e recuperação não informados: não presumi que você esteja recuperado.':'Mantive a quantidade padrão conforme seu relato, sem aumentar carga ou presumir recuperação completa.';
+ return {fatigue,recovery,pain,area,blocked,reduced,cap,summary};
+}
+export function balancedPlan(entities,requested,message='',{ranker=null,today,readiness={}}={}){
+ const adjustment=readinessAdjustment(readiness);
  const input=normalize(message),excluded=new Set();
  for(const [id,word] of Object.entries(label)){const term=id==='ombros'?'ombros?':id==='pernas'?'pernas?':normalize(word);if(new RegExp('\\b(?:sem|nao quero|nao treinar)\\s+(?:o\\s+|os\\s+)?'+term+'\\b').test(input))excluded.add(id);}
  const groupWords={costas:/\b(?:costas|dorsais?|back)\b/,peito:/\b(?:peito|peitoral|chest)\b/,pernas:/\b(?:pernas?|quadriceps|posterior|inferior|coxa)\b/,ombros:/\b(?:ombros?|deltoides?)\b/,biceps:/\b(?:biceps|bicep)\b/,triceps:/\b(?:triceps|tricep)\b/,core:/\b(?:core|abdomen|abdominal|abdome)\b/};
@@ -67,11 +79,13 @@ export function balancedPlan(entities,requested,message='',{ranker=null,today}={
  const only=/\b(?:so|somente|apenas)\s+(?:(?:quero|vou)\s+)?(?:treinar\s+)?(?:costas|peito|pernas|ombros?|biceps|triceps|core)\b/.test(input);
  const tm=input.match(/\b(\d{1,3})\s*(?:min(?:utos?)?|m)\b/);const mins=tm?Number(tm[1]):null;
  if(mins!==null&&(mins<10||mins>240))throw new Error('Informe um tempo entre 10 e 240 minutos.');
- const budget=mins===null?8:mins<=30?4:mins<=45?5:mins<=60?6:8;
+ const budget=Math.min(adjustment.cap,mins===null?8:mins<=30?4:mins<=45?5:mins<=60?6:8);
  const history=analyzeHistory(entities,today);
  const focus=groups[0],complements=[...(complementary[focus]||[])];
  if(history.total)complements.sort((a,b)=>history.groups[a].direct-history.groups[b].direct);
  const pool=only?[...groups]:[...groups,...complements,'core'];
+ // A specific poorly recovered area is omitted as a complement, never silently replaces the requested focus.
+ if(adjustment.reduced&&adjustment.area!=='all'&&!groups.includes(adjustment.area))excluded.add(adjustment.area);
  const order=[...new Set(pool)].filter(x=>!excluded.has(x));
  let slots=[];
  if(groups.length===1&&!only&&focus==='costas'&&budget===8&&!excluded.has('triceps')&&!excluded.has('ombros')&&!excluded.has('core'))slots=['costas','costas','costas','costas',complements[0],complements[0],complements[1],'core'];
@@ -83,8 +97,9 @@ export function balancedPlan(entities,requested,message='',{ranker=null,today}={
  const known=[];for(const v of entities.exercise_variants||[]){let ex=exMap.get(v.exercise_id),group=classifyExercise(ex);if(!ex||!group)continue;let verdict=typeof ranker==='function'?ranker(ex,v):null;if(verdict?.blocked)continue;let recent=last.get(v.id);known.push({group,name:ex.name,equipment:v.equipment_or_variation||'',unit:v.unit||'',exercise_id:ex.id,variant_id:v.id,is_catalog:false,last:recent?{load_value:recent.load_value,repetitions:recent.repetitions,rir:recent.rir,date:recent.date}:null,bonus:Number(verdict?.bonus)||0});}
  known.sort((a,b)=>b.bonus-a.bonus||String(b.last?.date||'').localeCompare(String(a.last?.date||''))||a.name.localeCompare(b.name,'pt-BR'));
  const candidates=[...known,...catalog.filter(x=>{let verdict=typeof ranker==='function'?ranker({name:x.name},{equipment_or_variation:x.equipment,unit:x.unit}):null;return !verdict?.blocked;})];
+ if(adjustment.blocked)return {groups,items:[],minutes:mins,budget:0,only,excluded:[...excluded],short:0,options:[],history,adjustment};
  const used=new Set(),items=[];for(const group of slots){const c=candidates.find(x=>x.group===group&&!used.has(normalize(x.name)));if(c){items.push({...c});used.add(normalize(c.name));}}
- const short=slots.length-items.length;return {groups,items,minutes:mins,budget,only,excluded:[...excluded],short,options:candidates,history};
+ const short=slots.length-items.length;return {groups,items,minutes:mins,budget,only,excluded:[...excluded],short,options:candidates,history,adjustment};
 }
 export function replacementFor(plan,index){
  const current=plan.items[index];if(!current)return null;

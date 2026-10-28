@@ -31,6 +31,7 @@ const app=fs.readFileSync(new URL('../dist/testes/app.js',import.meta.url),'utf8
 const start=app.indexOf('async function handleCoachAction('),end=app.indexOf('function renderWorkout(',start);assert.ok(start>=0&&end>start);
 const d=emptyDocument(),p=plan('costas');let seq=0;
 const ctx=vm.createContext({doc:d,coachPlan:p,coachSelected:p.items[0].variant_id,activeSessionId:'',coachActive:()=>null,catalogEntities,replacementFor,groupLabel:x=>x.join(' + '),makeId:()=>`id_${++seq}`,dateLocal:()=>'2026-10-28',perform:async fn=>{fn(d);validateDocument(d);return true},coachSay:()=>{},render:()=>{},window:{scrollTo:()=>{}},Error});
+ctx.document={getElementById:()=>null};ctx.coachReadiness={};
 vm.runInContext(app.slice(start,end),ctx);
 await ctx.handleCoachAction({dataset:{coachAction:'replace-preview',coachVariant:p.items[0].variant_id}});
 assert.equal(ctx.coachPlan.items[0].group,'costas');assert.equal(ctx.coachPlan.items.length,8);
@@ -54,4 +55,20 @@ test('Desconhecidos e inconsistências ficam explícitos',()=>{assert.equal(hist
 test('Recência usa dia do treino e não presume recuperação',()=>{assert.deepEqual(hist(fixture()).recent,['peito']);assert.match(historySummary(hist(fixture())),/não comprova recuperação/)});
 test('Complemento menos treinado ganha espaço sem mudar foco',()=>{const p=plan('costas',fixture('Tríceps testa'),{today});assert.deepEqual(counts(p.items),{costas:4,ombros:2,triceps:1,core:1});assert.equal(p.groups[0],'costas')});
 test('Histórico não supera exclusões e não altera entidades',()=>{const f=fixture('Tríceps testa'),before=JSON.stringify(f);const p=plan('costas sem ombro',f,{today});assert.ok(!p.items.some(x=>x.group==='ombros'));assert.equal(JSON.stringify(f),before);assert.ok(app.includes('historySummary(coachPlan.history)'))});
+test('Cansaço moderado reduz para seis exercícios',()=>assert.equal(plan('costas',empty,{readiness:{fatigue:'moderate'}}).items.length,6));
+test('Cansaço alto reduz para quatro exercícios',()=>assert.equal(plan('costas',empty,{readiness:{fatigue:'high'}}).items.length,4));
+test('Recuperação ruim reduz mesmo com pouco cansaço',()=>assert.equal(plan('costas',empty,{readiness:{fatigue:'low',recovery:'poor'}}).budget,4));
+test('Tempo curto continua prevalecendo',()=>assert.equal(plan('costas 30 min',empty,{readiness:{fatigue:'moderate'}}).budget,4));
+test('Boa recuperação não aumenta a quantidade nem carga',()=>{const p=plan('costas',empty,{readiness:{recovery:'good'}});assert.equal(p.budget,8);assert.ok(p.items.every(x=>x.last===null))});
+test('Relato ausente não presume recuperação',()=>assert.match(plan('costas').adjustment.summary,/não presumi/));
+test('Dor suspende montagem e não oferece alternativas',()=>{const p=plan('costas',empty,{readiness:{pain:'yes'}});assert.equal(p.items.length,0);assert.equal(p.options.length,0);assert.equal(p.adjustment.blocked,true)});
+test('Região cansada é retirada dos complementos',()=>{const p=plan('costas',empty,{readiness:{fatigue:'moderate',area:'triceps'}});assert.ok(p.items.every(x=>x.group!=='triceps'));assert.equal(p.groups[0],'costas')});
+test('Foco cansado permanece explícito em roteiro reduzido',()=>{const p=plan('só costas',empty,{readiness:{recovery:'poor',area:'costas'}});assert.equal(p.items.length,4);assert.ok(p.items.every(x=>x.group==='costas'))});
+test('Relato inválido é rejeitado',()=>assert.throws(()=>plan('costas',empty,{readiness:{fatigue:'ótimo'}}),/inválido/));
+test('Prévia antiga não pode iniciar após mudança no relato',()=>{ctx.document={getElementById:()=>({})};ctx.FormData=class{get(key){return {readiness_fatigue:'high',readiness_area:'all'}[key]||'unknown'}};assert.ok(app.includes('Seu relato mudou'));assert.ok(app.includes('readinessFields()'))});
+ctx.coachPlan=plan('costas');
+await assert.rejects(ctx.handleCoachAction({dataset:{coachAction:'start'}}),/Seu relato mudou/);
+assert.equal(d.overlay.sessions.length,1);
+ctx.coachPlan={...plan('costas'),adjustment:{blocked:true}};
+await assert.rejects(ctx.handleCoachAction({dataset:{coachAction:'start'}}),/suspensa/);
 console.log('BALANCED_COACH_TESTS='+n);
