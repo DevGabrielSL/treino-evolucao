@@ -16,6 +16,7 @@ subprocess.run(['node', str(candidate / 'testing/principal_live_tests.mjs')], ch
 subprocess.run(['node', str(candidate / 'testing/principal_tools_tests.mjs')], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_visual_tests.mjs')], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_intent_tests.mjs')], check=True)
+subprocess.run(['node', str(candidate / 'testing/principal_cards_tests.mjs')], check=True)
 dist = candidate / 'dist'
 app = (dist / 'app.js').read_text()
 for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 'readinessFields()',
@@ -24,13 +25,14 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v121-arms-intent' in content
+    assert 'shell-v130-sport-cards' in content
     assert "'./principal_variety.js?v=121'" in content
     assert "'./principal_dose.js'" in content
     assert "'./principal_live.js'" in content
     assert "'./principal_rest.js'" in content
     assert "'./principal_visual.css'" in content
-assert 'v1.2.1 Braços no assistente' in (dist / 'index.html').read_text()
+    assert "'./principal_cards.css'" in content
+assert 'v1.3.0 Cartas esportivas' in (dist / 'index.html').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')
