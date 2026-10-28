@@ -24,3 +24,4 @@ jobs:
 
       - run: node testing/strava/historical_import_tests.mjs
       - run: node testing/strava/historical_hours_tests.mjs
+      - run: node testing/strava/chat_workout_publisher_tests.mjs
