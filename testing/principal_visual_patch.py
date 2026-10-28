@@ -7,6 +7,7 @@ for name in ('principal_visual.js','principal_visual.css'):
 p=dist/'index.html';html=p.read_text()
 html=html.replace('<link rel="stylesheet" href="./styles.css">','<link rel="stylesheet" href="./styles.css">\n<link rel="stylesheet" href="./principal_visual.css">')
 html=html.replace('PERSONAL · OFFLINE-FIRST','Seu treino, sua evolução')
+html=html.replace('src="./app.js"','src="./app.js?v=120"')
 html=html.replace('<span id="conn-status" class="status">Verificando…</span>','<button id="conn-status" class="status sync-shortcut" data-page="data" aria-label="Ver sincronização">Verificando…</button>')
 icons={'home':'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>','workout':'<path d="m4 6 3-3m-4 9 9-9m0 18 9-9m-4 9 4-4M7 7l10 10"/>','history':'<path d="M4 4v5h5"/><path d="M4 9a8 8 0 1 1-1 6M12 7v5l3 2"/>','progress':'<path d="M4 20V4m0 16h16M7 15l4-5 4 2 5-7"/>','more':'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'}
 nav='<nav class="bottom-nav" aria-label="Menu principal">'+''.join(f'<button data-page="{key}"><span aria-hidden="true"><svg viewBox="0 0 24 24">{icons[key]}</svg></span><small>{label}</small></button>' for key,label in [('home','Início'),('workout','Treinar'),('history','Histórico'),('progress','Evolução'),('more','Mais')])+'</nav>'
@@ -63,5 +64,5 @@ replace('Enviar mensagem</button></form>`);', 'Enviar mensagem</button></form>${
 replace('<h2>Sincronização com Google Sheets</h2>', '<h2>Seus dados no Google</h2>')
 p.write_text(s)
 for name in ('sw.js','integrity.js'):
- p=dist/name;s=p.read_text();assert s.count("'./principal_rest.js'")==1;p.write_text(s.replace("'./principal_rest.js'", "'./principal_visual.js','./principal_visual.css','./principal_rest.js'"))
+ p=dist/name;s=p.read_text();assert s.count("'./principal_rest.js'")==1;s=s.replace("'./app.js'","'./app.js?v=120'");p.write_text(s.replace("'./principal_rest.js'", "'./principal_visual.js','./principal_visual.css','./principal_rest.js'"))
 print('PRINCIPAL_VISUAL_REDESIGN=APPLIED')
