@@ -5,9 +5,9 @@ dest=root/'dist/testes'
 (dest/'balanced_coach.js').write_text((root/'testing/balanced_coach.js').read_text())
 for name in ('sw.js','integrity.js'):
  p=dest/name;s=p.read_text();assert s.count("'./app.js'")==1;s=s.replace("'./app.js'","'./balanced_coach.js','./app.js'");p.write_text(s)
-p=dest/'app.js';s=p.read_text();s="import {balancedPlan,replacementFor,catalogEntities} from './balanced_coach.js';\n"+s
+p=dest/'app.js';s=p.read_text();s="import {balancedPlan,replacementFor,catalogEntities,historySummary} from './balanced_coach.js';\n"+s
 old="const items=suggestExercises(m.entities,groups,{limit:groups.length>1?6:5,ranker:policy.evaluate});"
-new="const proposal=balancedPlan(m.entities,groups,input,{ranker:policy.evaluate});const items=proposal.items;"
+new="const proposal=balancedPlan(m.entities,groups,input,{ranker:policy.evaluate,today:dateLocal()});const items=proposal.items;"
 assert s.count(old)==1;s=s.replace(old,new)
 old="coachPlan={groups,items,notes:policy.notes};coachSelected=items[0].variant_id;"
 new="coachPlan={...proposal,notes:policy.notes};coachSelected=items[0].variant_id;"
@@ -39,5 +39,9 @@ insert="""   const catalog=catalogEntities(coachPlan.items);
    for(const v of catalog.variants){const existing=allVar.find(x=>x.id===v.id);if(existing&&existing.exercise_id!==v.exercise_id)throw new Error('Identificador de variação já está em uso.');if(!existing)d.overlay.exercise_variants.push(v);}
 """
 assert s.count(needle)==1;s=s.replace(needle,insert+needle)
+p.write_text(s)
+needle='${list||\'<p>Não encontrei exercícios compatíveis no histórico.</p>\'}'
+assert s.count(needle)==1
+s=s.replace(needle,'<details><summary>Análise do histórico e dos grupos musculares</summary><p class="text-small">${e(historySummary(coachPlan.history))}</p></details>'+needle)
 p.write_text(s)
 print('BALANCED_COACH_TEST_APP=APPLIED')

@@ -23,7 +23,41 @@ export function classifyExercise(ex){
  const verified=normalize(ex?.muscle_group);if(ex?.classification_verified&&label[verified])return verified;
  return rules.find(([,pattern])=>pattern.test(n))?.[0]||null;
 }
-export function balancedPlan(entities,requested,message='',{ranker=null}={}){
+// Calendar-day windows avoid UTC shifts and do not infer physiological recovery.
+export function analyzeHistory(entities,today=new Date().toLocaleDateString('en-CA')){
+ const day=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return NaN;const t=Date.parse(value+'T12:00:00Z');return Number.isFinite(t)&&new Date(t).toISOString().slice(0,10)===value?t/86400000:NaN};
+ const now=day(today);if(!Number.isFinite(now))throw new Error('Data de análise inválida.');
+ const groups=Object.fromEntries(Object.keys(label).map(g=>[g,{direct:0,indirect:0,last:null,sessions:0}]));
+ const sessions=new Map((entities.sessions||[]).filter(s=>s.status==='completed').map(s=>[s.id,s]));
+ const variants=new Map((entities.exercise_variants||[]).map(v=>[v.id,v]));
+ const exercises=new Map((entities.exercises||[]).map(e=>[e.id,e]));
+ const seen=new Set(),visits=new Set();let unknown=0,invalid=0,total=0;
+ for(const s of entities.sets||[]){
+  const session=sessions.get(s.session_id);if(!session||s.set_type==='warmup')continue;
+  const age=now-day(session.date);if(!Number.isFinite(age)||s.date!==session.date){invalid++;continue;}if(age<0||age>=7)continue;
+  if(s.id&&seen.has(s.id))continue;if(s.id)seen.add(s.id);
+  const v=variants.get(s.variant_id),ex=exercises.get(v?.exercise_id);if(!ex||s.exercise_id!==ex.id){invalid++;continue;}
+  const group=classifyExercise(ex);if(!group){unknown++;continue;}
+  total++;const g=groups[group];g.direct++;g.last=!g.last||session.date>g.last?session.date:g.last;
+  const key=session.id+':'+group;if(!visits.has(key)){visits.add(key);g.sessions++;}
+  // Secondary participation is kept separate: never converted into effective sets.
+  const name=normalize(ex.name);let secondary=[];
+  if(group==='costas'&&/remada|puxad|barra fixa/.test(name))secondary=['biceps'];
+  if(group==='peito'&&/supino|chest press/.test(name))secondary=['triceps','ombros'];
+  if(group==='ombros'&&/desenvolvimento/.test(name))secondary=['triceps'];
+  for(const x of secondary)groups[x].indirect++;
+ }
+ const recent=Object.keys(groups).filter(g=>groups[g].last&&now-day(groups[g].last)<=1);
+ return {today,groups,total,unknown,invalid,recent};
+}
+export function historySummary(h){
+ const rows=Object.entries(h.groups).map(([g,x])=>`${label[g]}: ${x.direct} diretas, ${x.indirect} participações secundárias${x.last?', último '+x.last:''}`).join('; ');
+ return `Últimos 7 dias (incluindo hoje), séries registradas sem aquecimento: ${rows}. `+
+  (h.total?'Complementos ordenados por menor quantidade de séries diretas; isso não define uma meta de volume. ':'Sem séries classificadas nesse período; mantive a composição padrão. ')+
+  (h.recent.length?'Treinados hoje ou ontem: '+h.recent.map(g=>label[g]).join(', ')+'. Confira como se sente antes de repetir. ':'')+
+  ` ${h.unknown} séries sem classificação; ${h.invalid} registros inconsistentes ignorados. Participação secundária não equivale a série direta. O histórico disponível neste aparelho não comprova recuperação nem ausência de treino.`;
+}
+export function balancedPlan(entities,requested,message='',{ranker=null,today}={}){
  const input=normalize(message),excluded=new Set();
  for(const [id,word] of Object.entries(label)){const term=id==='ombros'?'ombros?':id==='pernas'?'pernas?':normalize(word);if(new RegExp('\\b(?:sem|nao quero|nao treinar)\\s+(?:o\\s+|os\\s+)?'+term+'\\b').test(input))excluded.add(id);}
  const groupWords={costas:/\b(?:costas|dorsais?|back)\b/,peito:/\b(?:peito|peitoral|chest)\b/,pernas:/\b(?:pernas?|quadriceps|posterior|inferior|coxa)\b/,ombros:/\b(?:ombros?|deltoides?)\b/,biceps:/\b(?:biceps|bicep)\b/,triceps:/\b(?:triceps|tricep)\b/,core:/\b(?:core|abdomen|abdominal|abdome)\b/};
@@ -34,10 +68,13 @@ export function balancedPlan(entities,requested,message='',{ranker=null}={}){
  const tm=input.match(/\b(\d{1,3})\s*(?:min(?:utos?)?|m)\b/);const mins=tm?Number(tm[1]):null;
  if(mins!==null&&(mins<10||mins>240))throw new Error('Informe um tempo entre 10 e 240 minutos.');
  const budget=mins===null?8:mins<=30?4:mins<=45?5:mins<=60?6:8;
- const focus=groups[0],pool=only?[...groups]:[...groups,...(complementary[focus]||[]),'core'];
+ const history=analyzeHistory(entities,today);
+ const focus=groups[0],complements=[...(complementary[focus]||[])];
+ if(history.total)complements.sort((a,b)=>history.groups[a].direct-history.groups[b].direct);
+ const pool=only?[...groups]:[...groups,...complements,'core'];
  const order=[...new Set(pool)].filter(x=>!excluded.has(x));
  let slots=[];
- if(groups.length===1&&!only&&focus==='costas'&&budget===8&&!excluded.has('triceps')&&!excluded.has('ombros')&&!excluded.has('core'))slots=['costas','costas','costas','costas','triceps','triceps','ombros','core'];
+ if(groups.length===1&&!only&&focus==='costas'&&budget===8&&!excluded.has('triceps')&&!excluded.has('ombros')&&!excluded.has('core'))slots=['costas','costas','costas','costas',complements[0],complements[0],complements[1],'core'];
  else if(only)slots=Array.from({length:budget},(_,i)=>groups[i%groups.length]);
  else {const core=order.includes('core')&&focus!=='core';const target=core?budget-1:budget;const primary=Math.min(target,Math.max(1,Math.ceil(target/2)));slots=Array(primary).fill(focus);let others=order.filter(g=>g!==focus&&g!=='core');for(let i=slots.length;i<target;i++)slots.push(others.length?others[(i-primary)%others.length]:focus);if(core)slots.push('core');}
  const exMap=new Map((entities.exercises||[]).map(e=>[e.id,e]));
@@ -47,7 +84,7 @@ export function balancedPlan(entities,requested,message='',{ranker=null}={}){
  known.sort((a,b)=>b.bonus-a.bonus||String(b.last?.date||'').localeCompare(String(a.last?.date||''))||a.name.localeCompare(b.name,'pt-BR'));
  const candidates=[...known,...catalog.filter(x=>{let verdict=typeof ranker==='function'?ranker({name:x.name},{equipment_or_variation:x.equipment,unit:x.unit}):null;return !verdict?.blocked;})];
  const used=new Set(),items=[];for(const group of slots){const c=candidates.find(x=>x.group===group&&!used.has(normalize(x.name)));if(c){items.push({...c});used.add(normalize(c.name));}}
- const short=slots.length-items.length;return {groups,items,minutes:mins,budget,only,excluded:[...excluded],short,options:candidates};
+ const short=slots.length-items.length;return {groups,items,minutes:mins,budget,only,excluded:[...excluded],short,options:candidates,history};
 }
 export function replacementFor(plan,index){
  const current=plan.items[index];if(!current)return null;
