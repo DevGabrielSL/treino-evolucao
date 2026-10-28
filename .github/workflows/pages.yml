@@ -836,6 +836,7 @@ jobs:
           python3 testing/production_candidate.py /tmp/treino-production-candidate
           node --experimental-default-type=module testing/production_candidate_tests.mjs /tmp/treino-production-candidate
           node --experimental-default-type=module testing/production_session_tests.mjs /tmp/treino-production-candidate
+          python3 testing/production_coach_tests.py /tmp/treino-production-candidate
           (cd /tmp/treino-production-candidate && node --experimental-default-type=module testing/coordinator_tests.mjs)
           cp -a /tmp/treino-production-candidate/dist/. dist/
           python3 - <<'PY'
