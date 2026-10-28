@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {playCard} from '../dist/principal_motion.js';
+import {balancedPlan,replacementFor} from '../dist/principal_variety.js';
+import {parseGoal} from '../dist/coach_logic.js';
+import {liveGuidance} from '../dist/principal_live.js';
+const empty={exercises:[],exercise_variants:[],sessions:[],sets:[]};let n=0;
+async function test(name,fn){await fn();n++;console.log('PASS '+name)}
+await test('Todo exercício proposto tem no mínimo três séries',()=>{for(const text of ['costas','braços','peito','pernas','somente bíceps','costas 30 minutos']){const p=balancedPlan(empty,parseGoal(text),text,{today:'2026-10-28'});assert.ok(p.items.every(x=>x.dose.sets>=3))}});
+await test('Cansaço e recuperação ruim não contornam mínimo',()=>{for(const readiness of [{fatigue:'high'},{recovery:'poor'},{fatigue:'moderate'}]){const p=balancedPlan(empty,['costas'],'costas',{today:'2026-10-28',readiness});assert.ok(p.items.every(x=>x.dose.sets>=3))}});
+await test('Trocar carta mantém mínimo de três',()=>{const p=balancedPlan(empty,['costas'],'costas',{today:'2026-10-28'});p.items[0].dose.sets=1;assert.equal(replacementFor(p,0).dose.sets,3)});
+const session={id:'s',status:'in_progress',date:'2026-10-28',planned_variant_ids:['a'],planned_guidance:{a:{sets:2,min:8,max:12,unit:'repetições'}}};
+await test('Meta em andamento se ajusta sem alterar séries realizadas',()=>{const e={sessions:[session],sets:[]},before=JSON.stringify(e);const state=liveGuidance(session,'a',e);assert.equal(state.target,3);assert.equal(state.dose.sets,3);assert.match(state.dose.label,/3 série/);assert.equal(JSON.stringify(e),before)});
+await test('Histórico concluído mantém meta antiga',()=>assert.equal(liveGuidance({...session,status:'completed'},'a',empty).target,2));
+await test('Preferência de movimento reduzido evita animação',async()=>{globalThis.matchMedia=()=>({matches:true});let calls=0;await playCard({closest:()=>({animate:()=>{calls++}})});assert.equal(calls,0)});
+await test('Animação de escolha aguarda término sem alterar registros',async()=>{globalThis.matchMedia=()=>({matches:false});let release,played=0;const finished=new Promise(r=>release=r);const result=playCard({closest:()=>({animate:()=>{played++;return {finished}}})});assert.equal(played,1);release();assert.equal(await result,true)});
+await test('Animação cancelada não bloqueia seleção',async()=>assert.equal(await playCard({closest:()=>({animate:()=>({finished:Promise.reject(Error('cancelada'))})})}),true));
+await test('Ausência de suporte a animação mantém fluxo funcional',async()=>assert.equal(await playCard({closest:()=>null}),false));
+await test('Efeitos e arquivos atualizados pertencem ao cache',()=>{const css=fs.readFileSync(new URL('../dist/principal_cards_premium.css',import.meta.url),'utf8');assert.ok(css.includes('@keyframes card-deal'));assert.ok(css.includes('@keyframes foil-sweep'));assert.ok(css.includes('prefers-reduced-motion'));const sw=fs.readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');assert.ok(sw.includes('principal_cards_premium.css'));assert.ok(sw.includes('principal_motion.js'))});
+delete globalThis.matchMedia;
+console.log('PRINCIPAL_PREMIUM_TESTS='+n);

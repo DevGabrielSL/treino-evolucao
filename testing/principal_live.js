@@ -1,10 +1,11 @@
 const working=new Set(['effective','core','back_off']);
 const unique=sets=>{const seen=new Set();return sets.filter(s=>{if(s.id&&seen.has(s.id))return false;if(s.id)seen.add(s.id);return true;});};
-const targetFor=(session,id)=>{const n=session.planned_guidance?.[id]?.sets;return Number.isInteger(n)&&n>0&&n<=20?n:null;};
+const targetFor=(session,id)=>{const n=session.planned_guidance?.[id]?.sets;return Number.isInteger(n)&&n>0&&n<=20?(session.status==='in_progress'?Math.max(3,n):n):null;};
 export function liveGuidance(session,variantId,entities){
  const all=unique((entities.sets||[]).filter(s=>s.session_id===session.id));
  const current=all.filter(s=>s.variant_id===variantId),count=current.filter(s=>working.has(s.set_type)).length;
- const target=targetFor(session,variantId),dose=session.planned_guidance?.[variantId]||null;
+ const target=targetFor(session,variantId),saved=session.planned_guidance?.[variantId]||null;
+ const dose=saved&&target!==null?{...saved,sets:target,label:`Sugestão: ${target} série(s) de ${saved.min}–${saved.max} ${saved.unit}`} :saved;
  const ids=[...new Set(session.planned_variant_ids||[])];
  const reached=ids.filter(id=>{const target=targetFor(session,id);return target!==null&&all.filter(s=>s.variant_id===id&&working.has(s.set_type)).length>=target;}).length;
  const latest=[...current].sort((a,b)=>(b.set_number||0)-(a.set_number||0)).find(s=>working.has(s.set_type))||null;

@@ -38,6 +38,6 @@ export function replacementFor(plan,index){
  const current=plan.items[index];if(!current)return null;
  const next=choose(plan.options,plan.items,current.group,new Set(plan.recentVariants||[]));
  if(!next)return null;
- const dose=doseFor(next,plan);dose.sets=Math.min(dose.sets,current.dose?.sets||dose.sets);dose.label=`Sugestão: ${dose.sets} série(s) de ${dose.min}–${dose.max} ${dose.unit}`;
+ const dose=doseFor(next,plan);dose.sets=Math.max(3,Math.min(dose.sets,current.dose?.sets||dose.sets));dose.label=`Sugestão: ${dose.sets} série(s) de ${dose.min}–${dose.max} ${dose.unit}`;
  return {...next,movementLabel:movementLabelFor(next),dose};
 }

@@ -11,8 +11,8 @@ export function doseHistory(entities,today){
 }
 export function doseFor(item,plan){
  const h=plan.doseHistory?.[item.variant_id];const reduced=plan.adjustment?.reduced;
- let sets=h?Math.min(3,h.count):2;if(reduced)sets=Math.min(sets,2);
- if(plan.adjustment?.fatigue==='high'||plan.adjustment?.recovery==='poor')sets=1;
+ // User preference: a proposed exercise always has at least three working sets.
+ const sets=3;
  const timed=item.group==='core'&&/prancha/.test(normal(item.name));
  const isolation=['biceps','triceps','ombros','core'].includes(item.group)||/extensora|flexora|pullover|voador|crucifixo|panturrilha/.test(normal(item.name));
  let min=isolation?10:8,max=isolation?15:12,source='Faixa inicial do app; ajuste à sua técnica e objetivo.';
@@ -24,9 +24,9 @@ export function doseFor(item,plan){
 export function attachDose(plan,entities){
  const next={...plan,doseHistory:doseHistory(entities,plan.history.today)};
  next.items=plan.items.map(x=>({...x,dose:doseFor(x,next)}));
- const cap=plan.minutes===null?20:plan.minutes<=30?8:plan.minutes<=45?12:plan.minutes<=60?16:20;
+ const cap=Math.max(next.items.length*3,plan.minutes===null?20:plan.minutes<=30?8:plan.minutes<=45?12:plan.minutes<=60?16:20);
  let total=next.items.reduce((sum,x)=>sum+x.dose.sets,0);
- // Retain at least one proposed set per exercise; never create recorded sets.
- for(let i=next.items.length-1;total>cap&&i>=0;i--){const x=next.items[i];while(total>cap&&x.dose.sets>1){x.dose.sets--;total--;}x.dose.label=`Sugestão: ${x.dose.sets} série(s) de ${x.dose.min}–${x.dose.max} ${x.dose.unit}`;}
+ // Time limits may shorten the exercise list upstream; never lower this minimum.
+ for(let i=next.items.length-1;total>cap&&i>=0;i--){const x=next.items[i];while(total>cap&&x.dose.sets>3){x.dose.sets--;total--;}x.dose.label=`Sugestão: ${x.dose.sets} série(s) de ${x.dose.min}–${x.dose.max} ${x.dose.unit}`;}
  return next;
 }
