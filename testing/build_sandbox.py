@@ -35,7 +35,7 @@ config = DEST / 'sheets_config.js'
 config.write_text(config.read_text().replace(FORBIDDEN[0], TEST_SHEET))
 edit('store.js', "const DB_NAME='treino-evolucao-local-android-v1';", "const DB_NAME='treino-evolucao-sandbox-local-v1';")
 old_cache = 'treino-evolucao-android-shell-v112-coach-plan-sync'
-cache = 'treino-evolucao-sandbox-shell-v112-test7'
+cache = 'treino-evolucao-sandbox-shell-v112-test8-balanced'
 edit('sw.js', old_cache, cache)
 edit('integrity.js', old_cache, cache)
 edit('sw.js', "k.startsWith('treino-evolucao-android-shell-')", "k.startsWith('treino-evolucao-sandbox-shell-')")
@@ -67,7 +67,7 @@ for old, new in [
 ]:
     edit('app.js', old, new)
 
-edit('index.html', '<title>Treino & Evolução · Android · v1.1.2 beta Assistente Plano</title>', '<title>TESTES · Treino & Evolução · v1.1.2-test.7</title>')
+edit('index.html', '<title>Treino & Evolução · Android · v1.1.2 beta Assistente Plano</title>', '<title>TESTES · Treino & Evolução · v1.1.2-test.8</title>')
 edit('index.html', '<b>Treino & Evolução</b>', '<b>TESTES · Treino & Evolução</b>')
 edit('index.html', 'PERSONAL · OFFLINE-FIRST', 'DADOS FICTÍCIOS · AMBIENTE SEPARADO')
 edit('index.html', '<main id="app"', '<aside class="sandbox-notice" role="note"><strong>AMBIENTE DE TESTES — DADOS FICTÍCIOS</strong><p>Use esta versão para experimentar. O destino é uma planilha separada e o banco local é exclusivo dos testes.</p></aside>\n<main id="app"')
@@ -86,6 +86,7 @@ runpy.run_path(str(ROOT / 'testing/patch_grid_read.py'))
 runpy.run_path(str(ROOT / 'testing/patch_missing_ids.py'))
 if os.environ.get('SANDBOX_ENGINE_TEST_MODE') != '1':
     runpy.run_path(str(ROOT / 'testing/patch_concurrency_gate.py'))
+    runpy.run_path(str(ROOT / 'testing/patch_balanced_coach.py'))
 assert hashes() == before, 'Production files changed'
 (ROOT / 'sandbox-build-summary.json').write_text(json.dumps({'production_unchanged': True, 'production_files': len(before), 'test_path': 'testes/', 'test_sheet_id': TEST_SHEET}, indent=2))
 print('SANDBOX_BUILD=PASS; PRODUCTION_FILES_UNCHANGED=28')
