@@ -24,7 +24,7 @@ function choose(options,selected,group,recent){
   (Number(b.x.bonus)||0)-(Number(a.x.bonus)||0)||
   Number(recent.has(a.x.variant_id))-Number(recent.has(b.x.variant_id))||a.index-b.index)[0]?.x||null;
 }
-const movementLabelFor=item=>item.group==='triceps'&&movement(item)==='extension'?'Extensão de cotovelo':labels[movement(item)];
+const movementLabelFor=item=>item.group==='biceps'&&/rosca|biceps/.test(norm(item.name))?'Flexão de cotovelo':item.group==='triceps'&&movement(item)==='extension'?'Extensão de cotovelo':labels[movement(item)];
 export function balancedPlan(entities,groups,message,options){
  const plan=basePlan(entities,groups,expandArmRequest(message),options);
  const completed=(entities.sessions||[]).filter(x=>x.status==='completed'&&x.date<=plan.history.today).sort((a,b)=>b.date.localeCompare(a.date));
