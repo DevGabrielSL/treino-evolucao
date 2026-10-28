@@ -20,4 +20,5 @@ const e={exercises:[{id:'e',name:'Remada baixa'}],exercise_variants:[{id:'v',exe
 const before=JSON.stringify(e),known=balancedPlan(e,['costas'],'costas',{today:'2026-10-28'}).items.find(x=>x.variant_id==='v');assert.equal(known.last.load_value,25);assert.equal(JSON.stringify(e),before);
 assert.equal(movement({group:'costas',name:'Exercício desconhecido'}),'other');
 assert.ok(plan('só costas').items.every(x=>x.group==='costas'));
-console.log('PRINCIPAL_VARIETY_ASSERTIONS=18');
+assert.equal(p.items.find(x=>x.name==='Tríceps na polia').movementLabel,'Extensão de cotovelo');
+console.log('PRINCIPAL_VARIETY_ASSERTIONS=19');

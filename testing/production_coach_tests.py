@@ -24,7 +24,7 @@ for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js'" in content
     assert 'shell-v120-visual-redesign' in content
-    assert "'./principal_variety.js'" in content
+    assert "'./principal_variety.js?v=120r3'" in content
     assert "'./principal_dose.js'" in content
     assert "'./principal_live.js'" in content
     assert "'./principal_rest.js'" in content

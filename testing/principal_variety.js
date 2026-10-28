@@ -23,11 +23,12 @@ function choose(options,selected,group,recent){
   (Number(b.x.bonus)||0)-(Number(a.x.bonus)||0)||
   Number(recent.has(a.x.variant_id))-Number(recent.has(b.x.variant_id))||a.index-b.index)[0]?.x||null;
 }
+const movementLabelFor=item=>item.group==='triceps'&&movement(item)==='extension'?'Extensão de cotovelo':labels[movement(item)];
 export function balancedPlan(entities,groups,message,options){
  const plan=basePlan(entities,groups,message,options);
  const completed=(entities.sessions||[]).filter(x=>x.status==='completed'&&x.date<=plan.history.today).sort((a,b)=>b.date.localeCompare(a.date));
  const recent=new Set((entities.sets||[]).filter(x=>x.session_id===completed[0]?.id&&x.set_type!=='warmup').map(x=>x.variant_id));
- const items=[];for(const slot of plan.items){const next=choose(plan.options,items,slot.group,recent);if(next)items.push({...next,movementLabel:labels[movement(next)]});}
+ const items=[];for(const slot of plan.items){const next=choose(plan.options,items,slot.group,recent);if(next)items.push({...next,movementLabel:movementLabelFor(next)});}
  return attachDose({...plan,items,recentVariants:[...recent]},entities);
 }
 export function replacementFor(plan,index){
@@ -35,5 +36,5 @@ export function replacementFor(plan,index){
  const next=choose(plan.options,plan.items,current.group,new Set(plan.recentVariants||[]));
  if(!next)return null;
  const dose=doseFor(next,plan);dose.sets=Math.min(dose.sets,current.dose?.sets||dose.sets);dose.label=`Sugestão: ${dose.sets} série(s) de ${dose.min}–${dose.max} ${dose.unit}`;
- return {...next,movementLabel:labels[movement(next)],dose};
+ return {...next,movementLabel:movementLabelFor(next),dose};
 }
