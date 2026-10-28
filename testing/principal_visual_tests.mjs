@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {visualSyncState,renderPlanSummary} from '../dist/principal_visual.js';
+let n=0;function test(name,fn){fn();n++;console.log('PASS '+name)}
+test('Pendências prevalecem sobre confirmação antiga',()=>assert.equal(visualSyncState({pending:{a:1},last:'2026-10-27',online:true}).tone,'pending'));
+test('Treino em andamento é identificado como local',()=>assert.equal(visualSyncState({pending:{},last:'2026-10-27',online:true,active:true}).tone,'local'));
+test('Falha e execução em andamento têm estados distintos',()=>{assert.equal(visualSyncState({error:'Falha'}).tone,'error');assert.equal(visualSyncState({busy:true}).text,'Sincronizando…')});
+test('Nenhuma confirmação é inventada sem histórico',()=>assert.equal(visualSyncState({online:true}).text,'Conferência pendente'));
+test('Confirmação anterior não implica conferência atual',()=>assert.match(visualSyncState({online:true,last:'2026-10-27'}).detail,/não substitui/));
+test('Resumo calcula quantidades reais da proposta',()=>{const html=renderPlanSummary({items:[{group:'costas',dose:{sets:2}},{group:'core',dose:{sets:1}}]});assert.match(html,/2 exercícios · 3 séries/);assert.match(html,/Costas/)});
+test('Nome de grupo desconhecido é escapado',()=>assert.ok(!renderPlanSummary({items:[{group:'<script>x</script>'}]}).includes('<script>')));
+const app=fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'),css=fs.readFileSync(new URL('../dist/principal_visual.css',import.meta.url),'utf8');
+test('Menu inferior oferece cinco destinos preservando Dados em Mais',()=>{const nav=html.slice(html.indexOf('<nav'),html.indexOf('</nav>'));assert.equal((nav.match(/<button/g)||[]).length,5);for(const page of ['home','workout','history','progress','more'])assert.ok(nav.includes(`data-page="${page}"`));assert.ok(app.includes('more:renderMore'));assert.ok(app.includes("['data','body','templates'].includes(page)"))});
+test('Mais mantém acesso a modelos, corpo e dados',()=>{const start=app.indexOf('function renderMore('),end=app.indexOf('function renderProposalItem(',start),ctx=vm.createContext({title:()=>'',panel:x=>x});vm.runInContext(app.slice(start,end),ctx);const more=ctx.renderMore();for(const page of ['templates','body','data'])assert.ok(more.includes(`data-page="${page}"`))});
+test('Cabeçalho oferece atalho real para sincronização',()=>{assert.match(html,/id="conn-status"[^>]*data-page="data"/);assert.ok(!html.includes('OFFLINE-FIRST'))});
+test('Campos e handlers essenciais do registro foram preservados',()=>{for(const id of ['quick-set-form','coach-form','rest-settings-form','new-set-form'])assert.ok(app.includes(id));assert.ok(app.includes('if(quickSaving||busy)return'));assert.ok(app.includes("automaticSheets.request('save')"))});
+test('Interface recolhe explicações e prioriza registro rápido',()=>{assert.ok(app.includes('Por que este treino?'));assert.ok(app.includes('Conversa e ajuda'));assert.ok(app.indexOf("'training-entry')+panel")>=0);assert.ok(css.includes('min-height:48px'));assert.ok(css.includes('prefers-reduced-motion'))});
+const lum=hex=>{const rgb=hex.replace('#','').match(/../g).map(x=>parseInt(x,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722};
+test('Pares principais de texto atingem contraste mínimo de 4,5',()=>{for(const [a,b] of [['#172F48','#FFFFFF'],['#526479','#FFFFFF'],['#FFFFFF','#00796F'],['#075D51','#E1F1EB'],['#87500D','#FFF8EA'],['#526479','#E9EEF2'],['#C5D8E5','#10243D']]){const ratio=(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);assert.ok(ratio>=4.5,`${a}/${b}=${ratio}`)}});
+test('Novos arquivos visuais fazem parte do cache e integridade',()=>{for(const name of ['sw.js','integrity.js']){const data=fs.readFileSync(new URL('../dist/'+name,import.meta.url),'utf8');for(const asset of ['principal_visual.css','principal_visual.js'])assert.ok(data.includes("'./"+asset+"'"))}});
+console.log('PRINCIPAL_VISUAL_TESTS='+n);

@@ -71,13 +71,14 @@ for name in ('sw.js', 'integrity.js'):
 index = dist / 'index.html'
 runpy.run_path(str(out / 'testing/principal_live_patch.py'))
 runpy.run_path(str(out / 'testing/principal_tools_patch.py'))
+runpy.run_path(str(out / 'testing/principal_visual_patch.py'))
 index.write_text(replace_once(index.read_text(), "connect-src 'self' https://sheets.googleapis.com https://accounts.google.com;",
                               "connect-src 'self' https://sheets.googleapis.com https://script.googleapis.com https://accounts.google.com;"))
 for name in ('sw.js','integrity.js'):
     p = dist / name
     p.write_text(replace_once(p.read_text(), 'treino-evolucao-android-shell-v112-coach-plan-sync',
-                              'treino-evolucao-android-shell-v117-training-tools'))
-index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.1.7 Descanso e registro rápido'))
+                              'treino-evolucao-android-shell-v120-visual-redesign'))
+index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.2.0 Visual e navegação'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
 code = replace_once(code, "'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA'", "'15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'")
