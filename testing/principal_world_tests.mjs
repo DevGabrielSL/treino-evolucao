@@ -9,7 +9,7 @@ for(const name of ['citadel','arena','archive']){
 const css=read('principal_world.css'),app=read('app.js');
 assert.ok(app.includes('document.body.dataset.realm=page;'));
 assert.ok(app.includes('header class="realm-banner"'));
-assert.ok(read('index.html').includes('app.js?v=140'));
+assert.ok(read('index.html').includes('app.js?v=141'));
 assert.ok(read('index.html').includes('principal_world.css?v=140'));
 for(const p of ['workout','history','progress','more','templates','body','data'])assert.ok(css.includes('data-page='+p));
 assert.ok(css.includes('prefers-reduced-motion'));
