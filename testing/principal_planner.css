@@ -6,3 +6,6 @@
 #coach-form>.btn[type=submit]{min-height:52px;font-size:16px;border-radius:10px}.planner-examples{margin-top:14px;border-top:1px solid #66705e55}.planner-examples summary{font-size:13px;color:#d2d8d0;min-height:44px;padding:12px 0}.planner-storage-note{font-size:12px;line-height:1.5;color:#b8c7c8;margin:8px 0 0}.planner-messages{border-top:1px solid #69735e66;margin-top:12px;padding-top:8px}.planner-messages .item-title{font-size:14px;line-height:1.5;font-weight:500}.planner-messages .item-sub{color:#a4e3cd;font-size:12px}.planner-messages .list-item{padding:12px 0}.planner-panel>details>summary{padding:14px 20px}
 @media(min-width:760px){.planner-art{height:215px}.planner-content{padding:0 28px 26px}.planner-content h2{font-size:31px}}
 @media(max-width:350px){.planner-content{padding-inline:16px}.planner-content h2{font-size:25px}.planner-art{height:135px}.planner-readiness .form-grid{grid-template-columns:1fr}}
+
+/* Backup controls remain available in Data; suppress the repeated banner. */
+.backup-note{display:none!important}
