@@ -16,3 +16,16 @@
 #coach-form>.btn[type=submit]{margin:0;flex-shrink:0}
 #coach-form>.planner-readiness[open]{padding-bottom:14px}
 #coach-form .planner-readiness .field{margin-bottom:12px}
+
+.manual-session-panel{padding:0!important;overflow:clip;border-color:#b79a57;background:#14212b!important}
+.manual-session-panel .planner-content{padding-top:4px}
+#app[data-page=workout]>.btn[data-coach-action=open]{margin:0 0 18px;min-height:52px;padding:14px 18px;line-height:1.4}
+#new-session-form{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+#new-session-form>.field,#new-session-form .form-grid>.field{margin:0;min-width:0}
+#new-session-form .form-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+#new-session-form .span2{grid-column:auto}
+#new-session-form .input{height:56px;min-height:56px;font-size:16px;line-height:1.4;width:100%;padding:12px 14px}
+#new-session-form .field>span{font-size:14px;margin-bottom:8px}
+#new-session-form>.btn{margin:4px 0 0;min-height:52px;font-size:16px}
+#app[data-page=workout] .surface>.btn[data-page=templates]{margin-top:18px}
+#app[data-page=workout] .inline-actions{gap:12px}
