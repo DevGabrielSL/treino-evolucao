@@ -80,7 +80,7 @@ index.write_text(replace_once(index.read_text(), "connect-src 'self' https://she
 for name in ('sw.js','integrity.js'):
     p = dist / name
     p.write_text(replace_once(p.read_text(), 'treino-evolucao-android-shell-v112-coach-plan-sync',
-                              'treino-evolucao-android-shell-v131-premium-motion'))
+                              'treino-evolucao-android-shell-v131-premium-motion-r2'))
 index.write_text(replace_once(index.read_text(), 'v1.1.2 beta Assistente Plano', 'v1.3.1 Cartas em movimento'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
