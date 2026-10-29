@@ -91,6 +91,7 @@ runpy.run_path(str(out / 'testing/principal_planner_patch.py'))
 runpy.run_path(str(out / 'testing/principal_launch_patch.py'))
 runpy.run_path(str(out / 'testing/principal_install_patch.py'))
 runpy.run_path(str(out / 'testing/principal_cancel_patch.py'))
+runpy.run_path(str(out / 'testing/principal_unit_patch.py'))
 
 code = (root / 'testing/coordinator/Code.gs').read_text()
 code = replace_once(code, "'1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA'", "'15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'")
