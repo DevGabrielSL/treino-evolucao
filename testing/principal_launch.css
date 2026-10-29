@@ -1,0 +1,13 @@
+html,body{background-color:#10171e;color-scheme:dark}
+.rpg-launch{position:fixed;inset:0;z-index:30;display:grid;place-items:center;min-height:100svh;padding:32px 24px;background:linear-gradient(#0c151e88,#0c151eeb 75%),url('./rpg-citadel.webp') center/cover no-repeat;text-align:center;color:#f7ebc9}
+.launch-content{width:min(100%,380px);padding:32px 20px;border-block:1px solid #b29555a8;background:radial-gradient(ellipse,#10252bd9,transparent 75%)}
+.launch-emblem{width:144px;height:144px;margin:0 auto 26px;border:1px solid #bca05b;border-radius:50%;padding:7px;background:#10171e;box-shadow:0 0 35px #4dd5ac30,inset 0 0 18px #c8a75a22}
+.launch-emblem img{display:block;width:128px;height:128px;border-radius:50%;object-fit:cover}
+.launch-kicker{color:#88dfc7;font-size:11px;letter-spacing:.19em;font-weight:700;margin:0 0 12px}
+.rpg-launch h1{font-family:Georgia,serif;font-size:clamp(28px,7vw,38px);line-height:1.2;letter-spacing:0;color:#f7e3ad;margin:0 0 16px}
+.launch-rule{display:flex;align-items:center;gap:14px;color:#c9aa61;margin:20px auto;width:80%;font-size:12px}.launch-rule::before,.launch-rule::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,transparent,#bca05b)}.launch-rule::after{transform:rotate(180deg)}
+.launch-status{font-size:15px;color:#e6e8df;margin:0 0 18px}.launch-note{font-size:12px;line-height:1.6;color:#b9c7c9;margin:18px 0 0}
+.launch-loader{width:28px;height:28px;border:2px solid #71807160;border-top-color:#8ee8c9;border-right-color:#d1b36d;border-radius:50%;margin:auto;animation:launch-spin 1.2s linear infinite}
+@keyframes launch-spin{to{transform:rotate(360deg)}}
+body:has(.rpg-launch) .bottom-nav{visibility:hidden}
+@media(prefers-reduced-motion:reduce){.launch-loader{animation:none}}
