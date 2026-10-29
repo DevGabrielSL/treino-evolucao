@@ -29,10 +29,10 @@ for name in ('sw.js','integrity.js'):
  p=dist/name;s=p.read_text().replace('app.js?v=155','app.js?v=160').replace('shell-v155-unit','shell-v160-presets').replace("'./principal_unit.js?v=155'","'./principal_presets.js?v=160','./principal_presets.css?v=160','./principal_unit.js?v=155'");p.write_text(s)
 
 # Temporarily hide the rest controls in the principal app; retain timer settings.
-p=dist/'index.html';s=p.read_text().replace('app.js?v=160','app.js?v=162').replace('v1.6.0 Quinze decks prontos','v1.6.2 Treino simplificado').replace('</head>','<style>.rest-card,.session-outline,.conversation-panel.session-help{display:none!important}</style>\n</head>');p.write_text(s)
-p=dist/'app.js';p.write_text(p.read_text().replace('Treino & Evolução · v1.6.0','Treino & Evolução · v1.6.2'))
+p=dist/'index.html';s=p.read_text().replace('app.js?v=160','app.js?v=163').replace('v1.6.0 Quinze decks prontos','v1.6.3 Ocultação corrigida');p.write_text(s)
+p=dist/'app.js';p.write_text(p.read_text().replace('Treino & Evolução · v1.6.0','Treino & Evolução · v1.6.3'))
 for name in ('sw.js','integrity.js'):
- p=dist/name;p.write_text(p.read_text().replace('app.js?v=160','app.js?v=162').replace('shell-v160-presets','shell-v162-panels-hidden'))
+ p=dist/name;p.write_text(p.read_text().replace('app.js?v=160','app.js?v=163').replace('shell-v160-presets','shell-v163-panels-css'))
 
 p=dist/'app.js';s=p.read_text()
 needle="panel(`<details><summary>Resumo do roteiro</summary>${overview}</details>`)"
@@ -42,3 +42,8 @@ needle="'conversation-panel planner-panel');"
 assert s.count(needle)==1
 s=s.replace(needle,"'conversation-panel planner-panel'+(active?' session-help':''));")
 p.write_text(s)
+
+# Use the external stylesheet allowed by CSP; inline styles are blocked.
+p=dist/'principal_presets.css';p.write_text(p.read_text()+'\n.rest-card,.session-outline,.conversation-panel.session-help{display:none!important}\n')
+for name in ('index.html','sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('principal_presets.css?v=160','principal_presets.css?v=163'))
