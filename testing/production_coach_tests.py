@@ -24,6 +24,7 @@ subprocess.run(['node', str(candidate / 'testing/principal_launch_tests.mjs')], 
 subprocess.run(['node', str(candidate / 'testing/principal_cancel_tests.mjs')], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_unit_tests.mjs')], check=True)
 subprocess.run(['node', str(candidate / 'testing/principal_presets_tests.mjs')], check=True)
+subprocess.run(['node', str(candidate / 'testing/principal_focus_tests.mjs')], check=True)
 dist = candidate / 'dist'
 app = (dist / 'app.js').read_text()
 for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 'readinessFields()',
@@ -32,14 +33,14 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v163-panels-css' in content
+    assert 'shell-v164-focus' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=131'" in content
     assert "'./principal_rest.js'" in content
     assert "'./principal_visual.css'" in content
     assert "'./principal_cards.css'" in content
-assert 'v1.6.3 Ocultação corrigida' in (dist / 'index.html').read_text()
+assert 'v1.6.4 Painel de treino' in (dist / 'index.html').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')
