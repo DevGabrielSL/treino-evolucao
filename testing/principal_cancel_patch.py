@@ -20,7 +20,7 @@ s=s.replace(needle,needle+'''
 ''')
 needle='<div class="proposal-list">';assert s.count(needle)==1
 s=s.replace(needle,'<p class="deck-scroll-hint">Deslize para os lados para ver as cartas →</p><div class="proposal-list" tabindex="0" role="region" aria-label="Cartas do deck sugerido">')
-s=s.replace('Treino & Evolução · v1.5.1','Treino & Evolução · v1.5.3');p.write_text(s)
-p=dist/'index.html';s=p.read_text().replace('app.js?v=151','app.js?v=153').replace('v1.5.1 Instalar em Mais','v1.5.3 Deck lado a lado').replace('</head>','<link rel="stylesheet" href="./principal_deckrow.css?v=153">\n</head>');p.write_text(s)
+s=s.replace('Treino & Evolução · v1.5.1','Treino & Evolução · v1.5.4');p.write_text(s)
+p=dist/'index.html';s=p.read_text().replace('app.js?v=151','app.js?v=154').replace('v1.5.1 Instalar em Mais','v1.5.4 Cartas proporcionais').replace('</head>','<link rel="stylesheet" href="./principal_deckrow.css?v=154">\n</head>');p.write_text(s)
 for name in ('sw.js','integrity.js'):
- p=dist/name;s=p.read_text().replace('app.js?v=151','app.js?v=153').replace('shell-v151-install','shell-v153-deckrow').replace("'./principal_install.js?v=151'","'./principal_deckrow.css?v=153','./principal_cancel.js?v=152','./principal_install.js?v=151'");p.write_text(s)
+ p=dist/name;s=p.read_text().replace('app.js?v=151','app.js?v=154').replace('shell-v151-install','shell-v154-cards').replace("'./principal_install.js?v=151'","'./principal_deckrow.css?v=154','./principal_cancel.js?v=152','./principal_install.js?v=151'");p.write_text(s)

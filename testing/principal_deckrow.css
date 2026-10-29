@@ -6,3 +6,18 @@
  .proposal-list:focus-visible{outline:3px solid #8df4d7;outline-offset:3px}
 }
 @media(prefers-reduced-motion:reduce){.proposal-list{scroll-snap-type:none;scroll-behavior:auto}}
+/* Consistent preview card proportions, including long exercise names. */
+.proposal-list{align-items:stretch}
+.proposal-list>.sport-card{display:flex;flex-direction:column}
+.proposal-list .sport-card-body{display:flex;flex-direction:column;flex:1;padding:14px}
+.proposal-list .sport-card-art{height:180px;flex:0 0 180px}
+.proposal-list .sport-card h3{font-size:21px;line-height:1.2;min-height:76px;margin:8px 0;overflow-wrap:break-word}
+.proposal-list .card-equipment{min-height:40px;margin:6px 0 10px;font-size:13px}
+.proposal-list .card-attributes{gap:8px;margin:10px 0}
+.proposal-list .card-attributes>div{padding:10px 8px}
+.proposal-list .card-attributes span{font-size:10px;line-height:1.3;min-height:28px;letter-spacing:0}
+.proposal-list .card-attributes strong{font-size:23px;line-height:1.2;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.proposal-list .card-reference{font-size:12px;line-height:1.5;margin:12px 0}
+.proposal-list .card-actions{margin-top:auto;padding-top:12px;gap:8px}
+.proposal-list .card-actions .btn{min-width:0;flex:1 1 0;padding:10px 8px;font-size:13px}
+@media(max-width:700px){.proposal-list{grid-auto-columns:min(88%,330px)}.proposal-list .sport-card-top{padding:10px 12px;font-size:12px}.proposal-list .sport-card-art{height:170px;flex-basis:170px}.proposal-list .sport-card-body{padding:12px}}
