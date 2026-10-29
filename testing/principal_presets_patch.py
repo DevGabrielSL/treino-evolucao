@@ -27,3 +27,9 @@ s=s.replace('Treino & Evolução · v1.5.5','Treino & Evolução · v1.6.0');p.w
 p=dist/'index.html';s=p.read_text().replace('app.js?v=155','app.js?v=160').replace('v1.5.5 Registro de séries','v1.6.0 Quinze decks prontos').replace('</head>','<link rel="stylesheet" href="./principal_presets.css?v=160">\n</head>');p.write_text(s)
 for name in ('sw.js','integrity.js'):
  p=dist/name;s=p.read_text().replace('app.js?v=155','app.js?v=160').replace('shell-v155-unit','shell-v160-presets').replace("'./principal_unit.js?v=155'","'./principal_presets.js?v=160','./principal_presets.css?v=160','./principal_unit.js?v=155'");p.write_text(s)
+
+# Temporarily hide the rest controls in the principal app; retain timer settings.
+p=dist/'index.html';s=p.read_text().replace('app.js?v=160','app.js?v=161').replace('v1.6.0 Quinze decks prontos','v1.6.1 Descanso oculto').replace('</head>','<style>.rest-card{display:none!important}</style>\n</head>');p.write_text(s)
+p=dist/'app.js';p.write_text(p.read_text().replace('Treino & Evolução · v1.6.0','Treino & Evolução · v1.6.1'))
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('app.js?v=160','app.js?v=161').replace('shell-v160-presets','shell-v161-rest-hidden'))
