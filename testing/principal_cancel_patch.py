@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 root=Path(__file__).resolve().parents[1];dist=root/'dist'
 shutil.copy2(root/'testing/principal_cancel.js',dist/'principal_cancel.js')
+shutil.copy2(root/'testing/principal_deckrow.css',dist/'principal_deckrow.css')
 p=dist/'app.js';s=p.read_text();s="import {cancelLocalSession} from './principal_cancel.js?v=152';\n"+s
 needle='<button class="btn" data-coach-action="finish">Concluir treino</button>'
 assert s.count(needle)==1
@@ -17,7 +18,9 @@ s=s.replace(needle,needle+'''
   if(ok){restTimer.stop(id);activeSessionId='';coachSelected='';coachPlan=null;deckRecap='';for(const key of quickDrafts.keys())if(key.startsWith(id+':'))quickDrafts.delete(key);coachSay('assistant','Treino cancelado. Você pode montar outro treino ou escolher um modelo salvo.');render();window.scrollTo(0,0);}return;
  }
 ''')
-s=s.replace('Treino & Evolução · v1.5.1','Treino & Evolução · v1.5.2');p.write_text(s)
-p=dist/'index.html';s=p.read_text().replace('app.js?v=151','app.js?v=152').replace('v1.5.1 Instalar em Mais','v1.5.2 Cancelar treino');p.write_text(s)
+needle='<div class="proposal-list">';assert s.count(needle)==1
+s=s.replace(needle,'<p class="deck-scroll-hint">Deslize para os lados para ver as cartas →</p><div class="proposal-list" tabindex="0" role="region" aria-label="Cartas do deck sugerido">')
+s=s.replace('Treino & Evolução · v1.5.1','Treino & Evolução · v1.5.3');p.write_text(s)
+p=dist/'index.html';s=p.read_text().replace('app.js?v=151','app.js?v=153').replace('v1.5.1 Instalar em Mais','v1.5.3 Deck lado a lado').replace('</head>','<link rel="stylesheet" href="./principal_deckrow.css?v=153">\n</head>');p.write_text(s)
 for name in ('sw.js','integrity.js'):
- p=dist/name;s=p.read_text().replace('app.js?v=151','app.js?v=152').replace('shell-v151-install','shell-v152-cancel').replace("'./principal_install.js?v=151'","'./principal_cancel.js?v=152','./principal_install.js?v=151'");p.write_text(s)
+ p=dist/name;s=p.read_text().replace('app.js?v=151','app.js?v=153').replace('shell-v151-install','shell-v153-deckrow').replace("'./principal_install.js?v=151'","'./principal_deckrow.css?v=153','./principal_cancel.js?v=152','./principal_install.js?v=151'");p.write_text(s)
