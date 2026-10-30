@@ -115,3 +115,25 @@ p.write_text(p.read_text().replace('principal_deckrow.css?v=154','principal_deck
 for name in ('sw.js','integrity.js'):
  p=dist/name
  p.write_text(p.read_text().replace('principal_deckrow.css?v=154','principal_deckrow.css?v=165').replace('shell-v164-focus','shell-v165-compact-cards'))
+
+# Hide the requested secondary panels without changing their data or handlers.
+p=dist/'app.js'
+s=p.read_text()
+headings=('Armazenamento','Importar / restaurar','Backup privado','Recuperação de segurança','Preferências','Instalação Android')
+lines=s.splitlines(keepends=True)
+for heading in headings:
+ matches=[i for i,line in enumerate(lines) if '${panel(`<h2>'+heading+'</h2>' in line or '${recoveryAvailable?panel(`<h2>'+heading+'</h2>' in line]
+ assert len(matches)==1,heading
+ i=matches[0]
+ if heading=='Recuperação de segurança':
+  lines[i]=lines[i].replace("`,'warn')", "`,'warn more-hidden-detail')")
+ else:
+  lines[i]=lines[i].replace('`)}',"`,'more-hidden-detail')}")
+p.write_text(''.join(lines))
+p=dist/'principal_focus.css'
+p.write_text(p.read_text()+'\n.more-hidden-detail{display:none!important}\n')
+p=dist/'index.html'
+p.write_text(p.read_text().replace('app.js?v=164','app.js?v=166').replace('principal_focus.css?v=164','principal_focus.css?v=166').replace('v1.6.5 Cartas compactas','v1.6.6 Mais simplificado'))
+for name in ('sw.js','integrity.js'):
+ p=dist/name
+ p.write_text(p.read_text().replace('app.js?v=164','app.js?v=166').replace('principal_focus.css?v=164','principal_focus.css?v=166').replace('shell-v165-compact-cards','shell-v166-more-simple'))
