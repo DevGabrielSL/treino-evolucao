@@ -155,3 +155,38 @@ p.write_text(s)
 p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=166','app.js?v=167').replace('v1.6.6 Mais simplificado','v1.6.7 Registro completo'))
 for name in ('sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace('app.js?v=166','app.js?v=167').replace('shell-v166-more-simple','shell-v167-required-set'))
+
+# Persist session start and display a wall-clock based HH:MM:SS timer.
+p=dist/'app.js';s=p.read_text()
+s=s.replace("status:'in_progress',duration_minutes:null", "status:'in_progress',started_at:new Date().toISOString(),duration_minutes:null")
+needle='<small>${liveGuidance(active,selected,m.entities).reached} / ${planIds.length} metas atingidas</small>'
+assert s.count(needle)==1;s=s.replace(needle,needle+'${renderSessionClock(active)}')
+needle=" const a=btn.dataset.action;if(!a)return;";assert s.count(needle)==1
+s=s.replace(needle,needle+"\n if(a==='start-session-clock'){const active=coachActive();if(!active||active.id!==btn.dataset.session)return;await perform(d=>{const session=d.overlay.sessions.find(x=>x.id===active.id&&x.status==='in_progress');if(session&&!session.started_at&&!session.clock_started_at)session.clock_started_at=new Date().toISOString();},'Contagem iniciada agora. O início original não foi informado.');return;}\n")
+s+='''
+function sessionClockSeconds(start,now=Date.now()){
+ const ms=typeof start==='string'?Date.parse(start):NaN;
+ return Number.isFinite(ms)?Math.max(0,Math.floor((now-ms)/1000)):null;
+}
+function sessionClockLabel(seconds){
+ if(seconds===null)return '—';
+ return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(x=>String(x).padStart(2,'0')).join(':');
+}
+function renderSessionClock(session){
+ const start=session.started_at||session.clock_started_at,seconds=sessionClockSeconds(start);
+ if(seconds===null)return '<div class="session-clock"><small>Início não registrado</small><button class="btn small" data-action="start-session-clock" data-session="'+e(session.id)+'">Contar a partir de agora</button></div>';
+ const time=new Date(start).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ return '<div class="session-clock"><small>'+(session.started_at?'Início do treino: ':'Contagem iniciada: ')+e(time)+'</small><strong role="timer" aria-label="Tempo decorrido" data-session-clock="'+e(start)+'">'+sessionClockLabel(seconds)+'</strong></div>';
+}
+function updateSessionClock(){
+ document.querySelectorAll('[data-session-clock]').forEach(el=>{el.textContent=sessionClockLabel(sessionClockSeconds(el.dataset.sessionClock));});
+}
+setInterval(updateSessionClock,1000);
+document.addEventListener('visibilitychange',updateSessionClock);
+'''
+s=s.replace('Treino & Evolução · v1.6.7','Treino & Evolução · v1.6.8');p.write_text(s)
+p=dist/'template_ops.js';p.write_text(p.read_text().replace("status:'in_progress',duration_minutes:null", "status:'in_progress',started_at:new Date().toISOString(),duration_minutes:null"))
+p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n.session-clock{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:10px}.session-clock small{display:block;font-size:12px}.session-clock strong{font:700 25px/1.2 system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#f2dfac;white-space:nowrap;letter-spacing:.04em}\n')
+p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=167','app.js?v=168').replace('principal_focus.css?v=166','principal_focus.css?v=168').replace('v1.6.7 Registro completo','v1.6.8 Tempo do treino'))
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('app.js?v=167','app.js?v=168').replace('principal_focus.css?v=166','principal_focus.css?v=168').replace('shell-v167-required-set','shell-v168-session-clock'))
