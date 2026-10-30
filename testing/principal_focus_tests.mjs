@@ -19,8 +19,13 @@ assert.equal((html.match(/Supino reto/g)||[]).length,2); // heading and compact 
 assert.ok(html.includes('Série 1 de 3'));
 assert.ok(html.includes('id="quick-set-form"'));
 assert.ok(!html.includes('rest-card'));assert.ok(!html.includes('Resumo do roteiro'));
-assert.ok(html.indexOf('name="load"')<html.indexOf('focus-options'));
-assert.ok(html.indexOf('name="rir"')>html.indexOf('focus-options'));
+assert.ok(!html.includes('<details class="focus-options">'));
+assert.ok(html.includes('name="rir" required'));
+assert.ok(html.includes('name="kind" class="input" required'));
+assert.ok(html.includes('Selecione o tipo'));
+assert.ok(!html.includes('opcional · 0 a 10'));
+assert.ok(app.includes("rir=numeric(values.get('rir'))"));
+assert.ok(app.includes("effective:'Trabalho',warmup:'Aquecimento'"));
 assert.ok(html.includes('aria-pressed="true"'));
 v.unit='a confirmar';const setup=ctx.renderTrainingTools(active,'v',m);
 assert.ok(setup.includes('value="Barra livre"'));
@@ -28,3 +33,14 @@ assert.ok(setup.includes('<option value="">Selecione a unidade</option>'));
 assert.ok(!setup.includes('id="quick-set-form"'));
 assert.equal(entities.sets.length,0);
 console.log('FOCUS_RENDER_COMPACT_DECK_EXPLICIT_UNIT_NO_WRITES=PASS');
+// Exercise the actual submit validation before any storage operation.
+const validation=app.slice(app.indexOf('   const numeric='),app.indexOf('   const count=doc.overlay.sets.length;'));
+function validate(fields){return vm.runInNewContext('(()=>{'+validation+';return {load,reps,rir,kind};})()', {values:{get:key=>fields[key]}});}
+const valid={load:'30',reps:'10',rir:'2',kind:'effective'};
+for(const key of ['load','reps','rir','kind'])assert.throws(()=>validate({...valid,[key]:''}),key+' must be required');
+assert.equal(validate({...valid,load:'0',rir:'0',kind:'warmup'}).kind,'warmup');
+assert.equal(validate({...valid,rir:'0'}).rir,0);
+assert.throws(()=>validate({...valid,rir:'11'}));
+assert.throws(()=>validate({...valid,reps:'1.5'}));
+assert.throws(()=>validate({...valid,kind:'other'}));
+console.log('REQUIRED_SET_FIELDS_BLANK_ZERO_WARMUP_RANGES=PASS');

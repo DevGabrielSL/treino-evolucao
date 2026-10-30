@@ -137,3 +137,21 @@ p.write_text(p.read_text().replace('app.js?v=164','app.js?v=166').replace('princ
 for name in ('sw.js','integrity.js'):
  p=dist/name
  p.write_text(p.read_text().replace('app.js?v=164','app.js?v=166').replace('principal_focus.css?v=164','principal_focus.css?v=166').replace('shell-v165-compact-cards','shell-v166-more-simple'))
+
+# Required, visible set fields and explicit set type (v1.6.7).
+p=dist/'app.js';s=p.read_text()
+s=s.replace('<details class="focus-options"><summary>Mais opções · RIR e aquecimento</summary><div class="quick-grid">','<div class="quick-grid required-set-fields">')
+s=s.replace('<p id="entry-rir-help"','<p id="entry-rir-help"',1)
+s=s.replace('</p></details><button class="btn primary block" type="submit">Salvar série','</p><button class="btn primary block" type="submit">Salvar série')
+s=s.replace('RIR <small>opcional · 0 a 10</small>','RIR <small>obrigatório · 0 a 10</small>')
+s=s.replace('name="rir" inputmode="decimal"','name="rir" required inputmode="decimal"')
+s=s.replace('<select name="kind" class="input"><option value="effective">Trabalho</option>','<select name="kind" class="input" required><option value="" ${!draft.kind?\'selected\':\'\'} disabled>Selecione o tipo</option><option value="effective" ${draft.kind===\'effective\'?\'selected\':\'\'}>Trabalho</option>')
+s=s.replace("rir=numeric(values.get('rir'),true)","rir=numeric(values.get('rir'))")
+old="`${s.load_value??'—'} ${m.variantMap.get(s.variant_id)?.unit||''} · ${s.repetitions??'—'} reps · RIR ${s.rir??'não informado'}`"
+new="`${({effective:'Trabalho',warmup:'Aquecimento',core:'Core',drop_set:'Drop set',other:'Outra'})[s.set_type]||'Tipo não informado'} · ${s.load_value??'—'} ${m.variantMap.get(s.variant_id)?.unit||''} · ${s.repetitions??'—'} reps · RIR ${s.rir??'não informado'}`"
+assert s.count(old)==1;s=s.replace(old,new)
+s=s.replace('Treino & Evolução · v1.6.4','Treino & Evolução · v1.6.7')
+p.write_text(s)
+p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=166','app.js?v=167').replace('v1.6.6 Mais simplificado','v1.6.7 Registro completo'))
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('app.js?v=166','app.js?v=167').replace('shell-v166-more-simple','shell-v167-required-set'))
