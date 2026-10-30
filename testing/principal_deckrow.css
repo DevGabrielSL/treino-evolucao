@@ -7,17 +7,31 @@
 }
 @media(prefers-reduced-motion:reduce){.proposal-list{scroll-snap-type:none;scroll-behavior:auto}}
 /* Consistent preview card proportions, including long exercise names. */
-.proposal-list{align-items:stretch}
+.proposal-list{align-items:start}
 .proposal-list>.sport-card{display:flex;flex-direction:column}
-.proposal-list .sport-card-body{display:flex;flex-direction:column;flex:1;padding:14px}
-.proposal-list .sport-card-art{height:180px;flex:0 0 180px}
-.proposal-list .sport-card h3{font-size:21px;line-height:1.2;min-height:76px;margin:8px 0;overflow-wrap:break-word}
-.proposal-list .card-equipment{min-height:40px;margin:6px 0 10px;font-size:13px}
+.proposal-list .sport-card-body{display:flex;flex-direction:column;flex:0 0 auto;padding:14px}
+.proposal-list .sport-card-art{height:128px;flex:0 0 128px}
+.proposal-list .sport-card h3{font-size:21px;line-height:1.2;min-height:0;margin:8px 0;overflow-wrap:break-word}
+.proposal-list .card-equipment{min-height:0;margin:0 0 8px;font-size:13px}
 .proposal-list .card-attributes{gap:8px;margin:10px 0}
 .proposal-list .card-attributes>div{padding:10px 8px}
-.proposal-list .card-attributes span{font-size:10px;line-height:1.3;min-height:28px;letter-spacing:0}
+.proposal-list .card-attributes span{font-size:10px;line-height:1.3;min-height:0;letter-spacing:0}
 .proposal-list .card-attributes strong{font-size:23px;line-height:1.2;white-space:nowrap;overflow-wrap:normal;word-break:normal}
 .proposal-list .card-reference{font-size:12px;line-height:1.5;margin:12px 0}
-.proposal-list .card-actions{margin-top:auto;padding-top:12px;gap:8px}
+.proposal-list .card-actions{margin-top:8px;padding-top:8px;gap:8px}
 .proposal-list .card-actions .btn{min-width:0;flex:1 1 0;padding:10px 8px;font-size:13px}
-@media(max-width:700px){.proposal-list{grid-auto-columns:min(88%,330px)}.proposal-list .sport-card-top{padding:10px 12px;font-size:12px}.proposal-list .sport-card-art{height:170px;flex-basis:170px}.proposal-list .sport-card-body{padding:12px}}
+@media(max-width:700px){.proposal-list{grid-auto-columns:min(88%,330px)}.proposal-list .sport-card-top{padding:10px 12px;font-size:12px}.proposal-list .sport-card-art{height:120px;flex-basis:120px}.proposal-list .sport-card-body{padding:12px}}
+
+/* Keep preview content together even beside a longer card. */
+.proposal-list>.sport-card{height:auto;min-height:0;align-self:start}
+.proposal-list .sport-card-body{gap:0;justify-content:flex-start}
+.proposal-list .sport-card h3{margin:6px 0 8px}
+.proposal-list .card-state{font-size:11px}
+.proposal-list .sport-card .card-attributes{margin:8px 0;gap:8px}
+.proposal-list .sport-card .card-attributes>div{padding:8px 10px}
+.proposal-list .sport-card .card-attributes strong{margin-top:3px}
+.proposal-list .sport-card .card-reference{margin:8px 0;padding:8px 10px;line-height:1.4}
+.proposal-list .sport-card details{margin:4px 0}
+.proposal-list .sport-card summary{min-height:36px;font-size:12px;display:flex;align-items:center}
+.proposal-list .sport-card .card-actions{margin-top:8px;padding-top:8px}
+.proposal-list .card-actions .btn{min-height:44px}

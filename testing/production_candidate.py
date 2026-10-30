@@ -108,3 +108,10 @@ mock = out / 'testing/coordinator/mock_service.mjs'
 mock.write_text(replace_once(mock.read_text(), '1ZWow3SHWxgy-j7s3GWTJd1AxYXQb-E-ca_GTgK2_5CA',
                              '15Nntilky9pyv1OrQMyOd6k97DsE_tU7I4aJtISQdL2M'))
 print('PRODUCTION_CANDIDATE_BUILT; COORDINATOR_DISABLED; NOT_DEPLOYED')
+
+# Compact preview cards and refresh their offline cache (v1.6.5).
+p=dist/'index.html'
+p.write_text(p.read_text().replace('principal_deckrow.css?v=154','principal_deckrow.css?v=165').replace('v1.6.4 Painel de treino','v1.6.5 Cartas compactas'))
+for name in ('sw.js','integrity.js'):
+ p=dist/name
+ p.write_text(p.read_text().replace('principal_deckrow.css?v=154','principal_deckrow.css?v=165').replace('shell-v164-focus','shell-v165-compact-cards'))
