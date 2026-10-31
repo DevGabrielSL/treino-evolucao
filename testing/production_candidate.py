@@ -190,3 +190,6 @@ p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n.session-clock{displa
 p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=167','app.js?v=168').replace('principal_focus.css?v=166','principal_focus.css?v=168').replace('v1.6.7 Registro completo','v1.6.8 Tempo do treino'))
 for name in ('sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace('app.js?v=167','app.js?v=168').replace('principal_focus.css?v=166','principal_focus.css?v=168').replace('shell-v167-required-set','shell-v168-session-clock'))
+
+# Direção artística aprovada: apenas camada visual.
+runpy.run_path(str(out / 'testing/principal_relics_patch.py'))

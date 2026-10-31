@@ -1,0 +1,55 @@
+/* Relíquias da Forja — camada visual principal v1.6.9; não altera dados nem sincronização. */
+:root{--relic-gold:#c5a66a;--relic-gold-light:#f0d9a1;--relic-emerald:#66e5bf;--relic-ink:#0d1721;--relic-stone:#172630;}
+body{background:#0d1721;}
+body[data-realm=workout]::before{background-image:linear-gradient(180deg,#0d1721b8 0%,#0d1721ec 60%,#0d1721 100%),url('./rpg-arena.webp');background-position:center top;background-size:cover;}
+/* Usabilidade primeiro: cabeçalho compacto, tempo legível e campos nativos preservados. */
+.focus-session,.focus-entry,.focus-deck{border:1px solid #9b824f!important;box-shadow:0 8px 26px #0207106b,inset 0 1px #e9c87920!important;background:#15232eeb!important;}
+.focus-session{border-top:2px solid var(--relic-gold)!important;}
+.focus-session-label,.focus-exercise-kicker,.planner-kicker{color:#8debd0!important;letter-spacing:.12em;}
+.focus-exercise-name{color:#ffe5ad!important;text-shadow:0 2px 10px #0005;}
+.session-clock{padding:9px 12px;background:#0d1c26;border:1px solid #846f49;border-radius:9px;}
+.session-clock small{color:#d6d0bb;}
+.session-clock strong{font-variant-numeric:tabular-nums;color:#f4d99d!important;}
+.focus-entry #quick-set-form .input{background:#0d1b25!important;border-color:#839a96;color:#fff6e5;}
+.focus-entry #quick-set-form .input:focus{border-color:var(--relic-emerald);box-shadow:0 0 0 2px #66e5bf35;}
+.focus-entry #quick-set-form .btn.primary{background:linear-gradient(180deg,#eed49b,#c7a15b)!important;color:#101a22!important;border-color:#f0d9a1!important;}
+.focus-entry .focus-pip.filled{background:#67e5be;border-color:#d6f9e8;}
+/* Deck de relíquias: miniaturas realmente compactas, sem a mesma foto de atleta em cada exercício. */
+.focus-deck{padding:14px!important;}
+.focus-deck-heading h2{font-family:Georgia,serif;color:#f0d8a3;font-size:20px!important;}
+.focus-deck-row{grid-auto-columns:136px;gap:10px;align-items:stretch;padding:10px 2px 12px;}
+.focus-mini{min-height:154px;border:1px solid #83734f!important;background:linear-gradient(155deg,#1e3038,#101a26 78%)!important;border-radius:10px!important;box-shadow:inset 0 1px #e4bd6f24;color:#f1e7d0;overflow:hidden;}
+.focus-mini.selected{border:2px solid #84ebc7!important;box-shadow:0 0 0 2px #66e5bf24,0 6px 16px #0006;}
+.focus-mini.reached{border-color:#bba46b!important;}
+.focus-mini-art{height:64px!important;border-radius:7px!important;border:1px solid #a48c5777;background:radial-gradient(ellipse at center,#183c35a8,#101b29e8),url('./relic-emblem.svg') center/58px 58px no-repeat!important;display:flex;justify-content:flex-end;align-items:flex-start;}
+.focus-mini-art .muscle-symbol{width:29px!important;height:36px!important;padding:3px!important;color:#f2dca7!important;background:#0c1b28d9!important;border:1px solid #b69856aa;border-radius:6px;}
+.focus-mini-name{color:#f6e7be!important;font-size:13px!important;line-height:1.32!important;margin:9px 0 6px!important;}
+.focus-mini>span:last-child{font-size:11px;color:#c9ddcf;}
+.focus-mini.card--costas{--relic-card-color:#8dc6e9}.focus-mini.card--peito{--relic-card-color:#e6b58e}.focus-mini.card--ombros{--relic-card-color:#e6d18f}.focus-mini.card--pernas{--relic-card-color:#91d4a7}.focus-mini.card--biceps,.focus-mini.card--triceps{--relic-card-color:#c7b4e7}.focus-mini.card--core{--relic-card-color:#9cd7da}
+.focus-mini .focus-mini-art .muscle-symbol{color:var(--relic-card-color,#f2dca7)!important;}
+/* Cartas do planejador: gravura ambiental própria, dados continuam em HTML. */
+.proposal-list{gap:12px!important;}
+.proposal-list>.sport-card,.deck-grid>.sport-card,.card-hand>.sport-card{border-image:none!important;border:1px solid #b79b60!important;border-radius:12px!important;background:linear-gradient(180deg,#1c2a33,#0c1723)!important;box-shadow:0 10px 24px #050d16a8,inset 0 0 0 1px #e9cd8720!important;overflow:hidden;}
+.sport-card::after{display:none!important;}
+.sport-card .sport-card-top{background:#101c28eb!important;color:#e8cf96!important;border-bottom:1px solid #ad8c5278!important;}
+.sport-card .sport-card-art{height:142px!important;background:linear-gradient(0deg,#0c1729c9,#132a33a8),url('./rpg-arena.webp') center 52%/cover no-repeat!important;border-bottom:1px solid #c6a46499!important;}
+.sport-card .sport-card-art::after{content:none!important;}
+.sport-card .sport-card-art .muscle-symbol{position:absolute;top:50%;left:50%;right:auto;transform:translate(-50%,-50%);width:80px!important;height:98px!important;color:#ddc48d!important;background:radial-gradient(circle,#0b1722e8,#0b1722b8 64%,transparent 75%)!important;border:none!important;filter:drop-shadow(0 0 8px #58d9ae45)!important;}
+.sport-card .card-art-label{right:8px;left:auto;top:8px;bottom:auto;background:#10242ad9;color:#d9f5e3;border:1px solid #7fb99c99;}
+.sport-card .sport-card-body{background:#101d2af2!important;}
+.sport-card h3{color:#f7e5b7!important;font-size:22px!important;line-height:1.22;}
+.sport-card .card-reference{border-left:3px solid #aa9466;background:#1c2a34;color:#e1e5dd;}
+.sport-card .card-attributes>div{background:#1a2a34!important;border-color:#826e48!important;}
+.sport-card .card-attributes strong{color:#f8e1a7!important;}
+.sport-card .btn.primary{color:#111a21!important;background:linear-gradient(#f5dca4,#c5a05c)!important;border-color:#e9cd8f!important;}
+.sport-card .card-actions{margin-top:9px;padding-top:6px;}
+.sport-card.is-selected{border-color:#80e6be!important;}
+/* Reduz desperdício de altura nas cartas de preview. */
+.proposal-list>.sport-card{height:auto;min-height:0;align-self:start;}
+.proposal-list .sport-card-art{height:116px!important;flex-basis:116px!important;}
+.proposal-list .sport-card-body{padding:12px!important;}
+.proposal-list .sport-card .card-reference{margin:7px 0!important;}
+.proposal-list .sport-card .card-attributes{margin:8px 0!important;}
+.proposal-list .sport-card h3{font-size:20px!important;margin:7px 0;}
+@media(max-width:700px){.proposal-list{grid-auto-columns:min(82vw,305px)!important;}.focus-deck-row{grid-auto-columns:132px;}.sport-card .sport-card-art{height:132px!important;}}
+@media(prefers-reduced-motion:reduce){.sport-card,.focus-mini{animation:none!important;transition:none!important;}}
