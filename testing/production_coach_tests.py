@@ -33,14 +33,18 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v168-session-clock' in content
+    assert 'shell-v169-relics' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=131'" in content
     assert "'./principal_rest.js'" in content
     assert "'./principal_visual.css'" in content
     assert "'./principal_cards.css'" in content
-assert 'v1.6.8 Tempo do treino' in (dist / 'index.html').read_text()
+    assert "'./principal_relics.css?v=169'" in content
+    assert "'./relic-emblem.svg'" in content
+assert 'v1.6.9 Relíquias da Forja' in (dist / 'index.html').read_text()
+assert 'principal_relics.css?v=169' in (dist / 'index.html').read_text()
+assert (dist / 'relic-emblem.svg').is_file()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')
