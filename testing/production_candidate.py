@@ -193,3 +193,6 @@ for name in ('sw.js','integrity.js'):
 
 # Direção artística aprovada: apenas camada visual.
 runpy.run_path(str(out / 'testing/principal_relics_patch.py'))
+
+# v1.6.10 — integrar as imagens aprovadas na distribuição principal.
+runpy.run_path(str(out / 'testing/principal_relics_art_patch.py'))

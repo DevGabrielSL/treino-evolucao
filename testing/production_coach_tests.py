@@ -33,7 +33,7 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v169-relics' in content
+    assert 'shell-v170-relic-art' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=131'" in content
@@ -42,9 +42,18 @@ for name in ('sw.js', 'integrity.js'):
     assert "'./principal_cards.css'" in content
     assert "'./principal_relics.css?v=169'" in content
     assert "'./relic-emblem.svg'" in content
-assert 'v1.6.9 Relíquias da Forja' in (dist / 'index.html').read_text()
+    assert "'./relic-group-scenes.webp'" in content
+    assert "'./relic-supino-card.webp'" in content
+    assert "'./principal_relics_art.css?v=170'" in content
+assert 'v1.6.10 Relíquias ilustradas' in (dist / 'index.html').read_text()
 assert 'principal_relics.css?v=169' in (dist / 'index.html').read_text()
 assert (dist / 'relic-emblem.svg').is_file()
+assert (dist / 'relic-group-scenes.webp').is_file()
+assert (dist / 'relic-supino-card.webp').is_file()
+assert 'relic-group-scenes.webp' in (dist / 'principal_relics_art.css').read_text()
+assert 'app.js?v=170' in (dist / 'index.html').read_text()
+assert 'relic-ex-supino' in app
+assert 'relic-ex-supino' in (dist / 'principal_cards.js').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')

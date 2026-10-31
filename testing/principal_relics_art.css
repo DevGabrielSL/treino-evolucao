@@ -1,0 +1,36 @@
+/* v1.6.10 — Artes reais da direção 3. Imagens decorativas e separadas dos dados do treino. */
+.focus-mini.card--peito,.sport-card.card--peito{--relic-scene-y:0%}
+.focus-mini.card--costas,.sport-card.card--costas{--relic-scene-y:16.6667%}
+.focus-mini.card--ombros,.sport-card.card--ombros{--relic-scene-y:33.3333%}
+.focus-mini.card--biceps,.sport-card.card--biceps{--relic-scene-y:50%}
+.focus-mini.card--triceps,.sport-card.card--triceps{--relic-scene-y:66.6667%}
+.focus-mini.card--pernas,.sport-card.card--pernas{--relic-scene-y:83.3333%}
+.focus-mini.card--core,.sport-card.card--core{--relic-scene-y:100%}
+.focus-mini .focus-mini-art,.sport-card .sport-card-art{
+ background-color:#0e1a24!important;
+ background-image:linear-gradient(90deg,#0d17204d,#07151e0a 45%,#0d172055),url('./relic-group-scenes.webp')!important;
+ background-position:center,center var(--relic-scene-y,50%)!important;
+ background-size:100% 100%,auto 700%!important;
+ background-repeat:no-repeat!important;
+}
+.focus-mini.relic-ex-supino .focus-mini-art,.sport-card.relic-ex-supino .sport-card-art{
+ background-image:linear-gradient(90deg,#0d17204d,#07151e00 40%,#0d17204d),url('./relic-supino-card.webp')!important;
+ background-position:center,center 48%!important;
+ background-size:100% 100%,cover!important;
+ background-repeat:no-repeat!important;
+}
+.sport-card .sport-card-art{position:relative;overflow:hidden!important;}
+.sport-card .sport-card-art .muscle-symbol{
+ position:absolute!important;left:auto!important;right:9px!important;top:9px!important;
+ width:36px!important;height:46px!important;transform:none!important;
+ color:#f2dfa6!important;filter:none!important;padding:3px!important;
+ background:#071821dc!important;border:1px solid #c1a56b99!important;border-radius:7px!important;
+}
+.sport-card .sport-card-art .card-art-label{
+ position:absolute;left:9px!important;right:auto!important;top:9px!important;bottom:auto!important;
+ background:#081924cb!important;color:#f3dfab!important;border:1px solid #b9a16c90!important;
+}
+.focus-mini .focus-mini-art .muscle-symbol{
+ background:#071821d8!important;border:1px solid #c1a56b91!important;
+}
+@media(prefers-reduced-motion:reduce){.focus-mini .focus-mini-art,.sport-card .sport-card-art{transition:none!important;}}
