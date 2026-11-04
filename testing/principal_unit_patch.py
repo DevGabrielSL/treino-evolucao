@@ -25,3 +25,30 @@ s=s.replace('Treino & Evolução · v1.5.4','Treino & Evolução · v1.5.5');p.w
 p=dist/'index.html';s=p.read_text().replace('app.js?v=154','app.js?v=155').replace('v1.5.4 Cartas proporcionais','v1.5.5 Registro de séries');p.write_text(s)
 for name in ('sw.js','integrity.js'):
  p=dist/name;s=p.read_text().replace('app.js?v=154','app.js?v=155').replace('shell-v154-cards','shell-v155-unit').replace("'./principal_cancel.js?v=152'","'./principal_unit.js?v=155','./principal_cancel.js?v=152'");p.write_text(s)
+
+p=dist/'app.js';s=p.read_text()
+def replace_once(old,new):
+ global s
+ assert s.count(old)==1,old
+ s=s.replace(old,new)
+
+replace_once('import {confirmSessionVariant}', 'import {confirmSessionVariant,correctLocalSetUnit,loadUnits}')
+start=s.index('  const v=g().variantMap.get(latest.variant_id);',s.index("if(action==='edit-last')"))
+end=s.index('\n }',start)
+s=s[:start]+"""  if(!doc.overlay.sets.some(row=>row.id===latest.id))throw new Error('Esta série não é editável.');
+  editSetId=latest.id;
+  render();
+  $('#edit-set-form')?.scrollIntoView({behavior:'smooth',block:'center'});
+  return;"""+s[end:]
+replace_once('Somente séries criadas no celular são editáveis; a variante é preservada.', 'Se a unidade estava errada, escolha a correta e informe a carga correspondente.')
+start=s.index('function renderSetEditor(')
+pos=s.index('<span>Carga</span>',start)
+s=s[:pos]+'''<span>Unidade da carga</span><select class="input" name="load_unit" required>${[...new Set([s.load_unit_original||v?.unit,...loadUnits].filter(Boolean))].map(unit=>`<option value="${e(unit)}" ${unit===(s.load_unit_original||v?.unit)?'selected':''}>${e(unit)}</option>`).join('')}</select></label><label class="field">'''+s[pos:]
+replace_once('d=>mutateLocalSet(d,x.set_id,{load_value:load,repetitions:reps,rir,set_type:x.type})', 'd=>correctLocalSetUnit(d,x.set_id,x.load_unit,makeId(\'variant\'),{load_value:load,repetitions:reps,rir,set_type:x.type},mutateLocalSet)')
+replace_once('function onChange(event){const el=event.target;', """function onChange(event){const el=event.target;
+ if(el.form?.id==='edit-set-form'&&el.name==='load_unit'){
+  const field=el.form.elements.namedItem('load');
+  if(field){field.value='';field.focus();}
+  return;
+ }""")
+p.write_text(s)

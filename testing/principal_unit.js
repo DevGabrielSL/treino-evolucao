@@ -24,3 +24,31 @@ export function confirmSessionVariant(doc,{sessionId,sourceId,newId,equipment,un
  if(session.planned_guidance?.[sourceId])session.planned_guidance={...session.planned_guidance,[variant.id]:{...session.planned_guidance[sourceId]}};
  return variant;
 }
+
+export const loadUnits = ['kg', 'kg/lado', 'kg/halter', 'plaquetas', 'peso corporal'];
+
+export function correctLocalSetUnit(doc, setId, unit, newId, changes, mutateSet) {
+ const row = doc.overlay.sets.find(s => s.id === setId);
+ const variants = [...(doc.base?.entities?.exercise_variants || []), ...doc.overlay.exercise_variants];
+ const source = row && variants.find(v => v.id === row.variant_id);
+ if (!source) throw new Error('Esta série local não está disponível.');
+ if (unit === (row.load_unit_original || source.unit) && unit === source.unit) {
+  mutateSet(doc, setId, changes);
+  return;
+ }
+ if (!loadUnits.includes(unit) || changes.load_value == null) {
+  throw new Error('Informe a unidade e o valor correto da carga.');
+ }
+ const candidate = {
+  ...source, id: newId, unit, unit_confirmed: true, comparison_group_id: newId,
+  comparison_policy: 'match_same_variant_only', provenance: {source: 'android_local'}
+ };
+ const existing = variants.find(v => sameLoadVariant(v, candidate));
+ if (!existing && (!newId || variants.some(v => v.id === newId))) {
+  throw new Error('Identificador de variante inválido.');
+ }
+ mutateSet(doc, setId, changes);
+ if (!existing) doc.overlay.exercise_variants.push(candidate);
+ row.variant_id = (existing || candidate).id;
+ row.load_unit_original = unit;
+}
