@@ -7,3 +7,8 @@ assert.equal(v.unit,'kg/lado');assert.equal(v.unit_confirmed,true);assert.equal(
 for(const changes of [{unit:''},{unit:'kg desconhecido'},{equipment:''},{sourceId:'missing'},{sessionId:'missing'},{newId:'old'}]){const doc=make(),before=JSON.stringify(doc);assert.throws(()=>confirmSessionVariant(doc,{...args,...changes}));assert.equal(JSON.stringify(doc),before);}
 const stopped=make();stopped.overlay.sessions[0].status='cancelled';assert.throws(()=>confirmSessionVariant(stopped,args));
 console.log('UNIT_CONFIRM_PRESERVE_HISTORY_EXPLICIT_CHOICE_STALE=PASS');
+const reused=make();
+reused.overlay.exercise_variants.push({...v,id:'saved',equipment_or_variation:' barra  livre '});
+assert.equal(confirmSessionVariant(reused,args).id,'saved');
+assert.deepEqual(reused.overlay.sessions[0].planned_variant_ids,['saved']);
+assert.equal(reused.overlay.exercise_variants.length,1);

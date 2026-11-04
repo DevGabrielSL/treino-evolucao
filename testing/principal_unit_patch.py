@@ -15,8 +15,9 @@ s=s.replace(needle,needle+'''
   const values=new FormData(event.target),active=coachActive();
   if(!active||values.get('session_id')!==active.id||values.get('source_id')!==coachSelected)throw new Error('Treino ou exercício mudou. Confira a seleção.');
   const id=makeId('variant');
-  const ok=await perform(d=>confirmSessionVariant(d,{sessionId:active.id,sourceId:coachSelected,newId:id,equipment:values.get('equipment'),unit:values.get('unit')}),'Equipamento e unidade confirmados neste aparelho.');
-  if(ok){coachSelected=id;variantSelected=id;render();document.querySelector('#quick-set-form')?.scrollIntoView({block:'center',behavior:'smooth'});}return;
+  let confirmedId;
+  const ok=await perform(d=>{confirmedId=confirmSessionVariant(d,{sessionId:active.id,sourceId:coachSelected,newId:id,equipment:values.get('equipment'),unit:values.get('unit')}).id;},'Equipamento e unidade confirmados neste aparelho.');
+  if(ok){coachSelected=confirmedId;variantSelected=confirmedId;render();document.querySelector('#quick-set-form')?.scrollIntoView({block:'center',behavior:'smooth'});}return;
  }
 ''')
 s=s.replace('Use a conversa ou o modo manual para registrar na unidade cadastrada.','Confirme o equipamento e a unidade acima para registrar a série.')

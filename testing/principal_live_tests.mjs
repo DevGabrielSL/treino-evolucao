@@ -19,3 +19,10 @@ test('Reabertura mantém progresso e aplica mínimo três à meta',()=>{const e=
 const app=fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 test('Tela atual renderiza orientação escapada e fica antes da conversa',()=>{const start=app.indexOf('function renderLiveGuidance('),end=app.indexOf('function renderCoach(',start);const ctx=vm.createContext({liveGuidance,e:x=>String(x).replaceAll('<','&lt;').replaceAll('>','&gt;')});vm.runInContext(app.slice(start,end),ctx);const html=ctx.renderLiveGuidance({...session,planned_guidance:{a:{...session.planned_guidance.a,min:'<script>teste</script>'}}},'a',{entities:empty,variantMap:new Map([['a',{unit:'kg'}]])});assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));assert.ok(app.includes('active?current+renderTrainingTools(active,selected,m)+composer:composer+preview'))});
 console.log('PRINCIPAL_LIVE_TESTS='+n);
+{
+ const variant={id:'a',exercise_id:'ex',equipment_or_variation:'Barra livre',unit:'kg/lado',unit_confirmed:true};
+ const old={id:'old',status:'completed',date:'2026-10-27'};
+ const record={...set('2','legacy'),session_id:old.id,date:old.date,load_value:15,load_unit_original:'kg/lado'};
+ const entities={sessions:[session,old],exercise_variants:[variant,{...variant,id:'legacy'},{...variant,id:'machine',equipment_or_variation:'Máquina'}],sets:[record,{...record,id:'3',variant_id:'machine',set_number:3,load_value:90},{...record,id:'4',set_number:4,load_unit_original:'plaquetas',load_value:9}]};
+ assert.equal(liveGuidance(session,'a',entities).reference.load_value,15);
+}
