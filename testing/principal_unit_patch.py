@@ -52,3 +52,21 @@ replace_once('function onChange(event){const el=event.target;', """function onCh
   return;
  }""")
 p.write_text(s)
+
+# Session controls are rendered by the focus patch later in the build.
+p=dist/'app.js';s=p.read_text()
+replace_once('import {liveGuidance,nextPending}', 'import {liveGuidance,nextPending,changeWorkoutPlan}')
+needle=" if(action==='next'){"
+idx=s.index(needle)
+s=s[:idx]+''' if(['skip','undo-skip','swap'].includes(action)){
+  if(busy||quickSaving)return;
+  const active=coachActive(),current=coachSelected;
+  if(!active)return;
+  const replacement=btn.closest('details')?.querySelector('select')?.value;
+  const ok=await perform(d=>changeWorkoutPlan(d,{sessionId:active.id,current,replacement,action}),
+   action==='swap'?'Exercício trocado. Séries anteriores preservadas.':action==='skip'?'Série pulada.':'Série devolvida ao roteiro.');
+  if(ok&&action==='swap'){coachSelected=replacement;variantSelected=replacement;render();}
+  return;
+ }
+'''+s[idx:]
+p.write_text(s)

@@ -39,3 +39,23 @@ shutil.copy2(root/'testing/principal_focus.css',dist/'principal_focus.css')
 p=dist/'index.html';s=p.read_text().replace('app.js?v=163','app.js?v=164').replace('v1.6.3 Ocultação corrigida','v1.6.4 Painel de treino').replace('</head>','<link rel="stylesheet" href="./principal_focus.css?v=164">\n</head>');p.write_text(s)
 for name in ('sw.js','integrity.js'):
  p=dist/name;s=p.read_text().replace('app.js?v=163','app.js?v=164').replace('shell-v163-panels-css','shell-v164-focus').replace("'./principal_presets.css?v=163'","'./principal_presets.css?v=163','./principal_focus.css?v=164'");p.write_text(s)
+
+p=dist/'app.js';s=p.read_text()
+s=s.replace("state.count>=state.target?'Meta de séries atingida':'Série '+(state.count+1)", "state.resolved>=state.target?'Roteiro de séries finalizado':'Série '+(state.resolved+1)")
+s=s.replace("${renderLiveGuidance(active,selected,m)}${entry}", "${renderLiveGuidance(active,selected,m)}${entry}${renderPlanControls(active,selected,m)}")
+controls='''
+function renderPlanControls(active,selected,m){
+ const state=liveGuidance(active,selected,m.entities);
+ const pending=state.target===null||state.resolved<state.target;
+ const occupied=new Set(active.planned_variant_ids.flatMap(id=>[id,...(active.prior_planned_variants?.[id]||[])]));
+ const options=[...m.variantMap.values()].filter(v=>!occupied.has(v.id)&&m.exerciseMap.has(v.exercise_id))
+  .map(v=>({id:v.id,label:m.exerciseMap.get(v.exercise_id).name+' · '+(v.equipment_or_variation||v.unit||'')}));
+ options.sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+ return `<div class="mt"><p class="text-small">${state.count} realizadas · ${state.skipped} puladas</p><div class="inline-actions">
+ ${pending&&state.target!==null?'<button class="btn" data-coach-action="skip">Pular série</button>':''}
+ ${state.skipped?'<button class="btn" data-coach-action="undo-skip">Desfazer pulo</button>':''}</div>
+ ${pending&&options.length?`<details class="mt"><summary>Trocar exercício</summary><label class="field"><span>Substituto para as séries restantes</span><select class="input"><option value="">Selecione</option>${options.map(o=>`<option value="${e(o.id)}">${e(o.label)}</option>`).join('')}</select></label><button class="btn" data-coach-action="swap">Confirmar troca</button></details>`:''}</div>`;
+}
+'''
+s=s.replace('function renderCoach(', controls+'\nfunction renderCoach(',1)
+p.write_text(s)

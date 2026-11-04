@@ -21,6 +21,10 @@ export function confirmSessionVariant(doc,{sessionId,sourceId,newId,equipment,un
  if (variant.id === sourceId) return variant;
  if (!existing) doc.overlay.exercise_variants.push(variant);
  session.planned_variant_ids=session.planned_variant_ids.map(x=>x===sourceId?variant.id:x);
+ if(session.prior_planned_variants?.[sourceId] || session.skipped_series?.[sourceId]){
+  session.prior_planned_variants={...session.prior_planned_variants,[variant.id]:[sourceId,...(session.prior_planned_variants?.[sourceId]||[])]};
+  session.skipped_series={...session.skipped_series,[variant.id]:session.skipped_series?.[sourceId]||0};
+ }
  if(session.planned_guidance?.[sourceId])session.planned_guidance={...session.planned_guidance,[variant.id]:{...session.planned_guidance[sourceId]}};
  return variant;
 }
@@ -49,6 +53,7 @@ export function correctLocalSetUnit(doc, setId, unit, newId, changes, mutateSet)
  }
  mutateSet(doc, setId, changes);
  if (!existing) doc.overlay.exercise_variants.push(candidate);
+ row.planned_variant_id ??= row.variant_id;
  row.variant_id = (existing || candidate).id;
  row.load_unit_original = unit;
 }
