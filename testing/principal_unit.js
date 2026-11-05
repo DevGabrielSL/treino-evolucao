@@ -31,11 +31,29 @@ export function confirmSessionVariant(doc,{sessionId,sourceId,newId,equipment,un
 
 export const loadUnits = ['kg', 'kg/lado', 'kg/halter', 'plaquetas', 'peso corporal'];
 
+function validateDropCorrection(rows, row, unit, originalUnit, changes) {
+ const parent = row.set_type === 'drop_set'
+  ? rows.find(s => s.session_id === row.session_id && s.set_type === 'effective' && row.notes === 'Drop de ' + s.id)
+  : row;
+ if (!parent) return;
+ const parts = rows.filter(s => s.session_id === parent.session_id && s.set_type === 'drop_set' &&
+  s.notes === 'Drop de ' + parent.id).sort((a, b) => a.set_number - b.set_number);
+ if (!parts.length) return;
+ if (unit !== originalUnit || changes.set_type !== row.set_type) {
+  throw new Error('A unidade e o tipo fazem parte do drop set. Corrija a carga, as repetições ou o RIR.');
+ }
+ const loads = [parent, ...parts].map(s => s.id === row.id ? changes.load_value : s.load_value);
+ if (loads.some((load, i) => !Number.isFinite(load) || (i > 0 && load >= loads[i - 1]))) {
+  throw new Error('Cada redução precisa ter carga menor que a etapa anterior.');
+ }
+}
+
 export function correctLocalSetUnit(doc, setId, unit, newId, changes, mutateSet) {
  const row = doc.overlay.sets.find(s => s.id === setId);
  const variants = [...(doc.base?.entities?.exercise_variants || []), ...doc.overlay.exercise_variants];
  const source = row && variants.find(v => v.id === row.variant_id);
  if (!source) throw new Error('Esta série local não está disponível.');
+ validateDropCorrection(doc.overlay.sets, row, unit, row.load_unit_original || source.unit, changes);
  if (unit === (row.load_unit_original || source.unit) && unit === source.unit) {
   mutateSet(doc, setId, changes);
   return;
