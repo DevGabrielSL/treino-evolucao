@@ -124,3 +124,20 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  assert.ok(empty.includes('Sem carga anterior confirmada'));
  assert.ok(!empty.includes('data-coach-action'));
 }
+
+{
+ const active={id:'s',date:'2026-11-05',name:'Treino',status:'in_progress',planned_variant_ids:['v'],planned_guidance:{v:{sets:3}},skipped_series:{v:1}};
+ const primary={id:'p',session_id:'s',variant_id:'v',set_type:'effective'};
+ const data={sessions:[active],exercise_variants:[{id:'v',exercise_id:'ex'}],exercises:[{id:'ex',name:'Supino'}],sets:[primary,{...primary,id:'w',set_type:'warmup'},{...primary,id:'d',set_type:'drop_set',notes:'Drop de p'}]};
+ vm.runInContext(clockSource,ctx);
+ const summary=ctx.workoutCompletionSummary(active,data);
+ assert.equal(summary.work,1);
+ assert.equal(summary.warmup,1);
+ assert.equal(summary.drops,1);
+ assert.equal(summary.skipped,1);
+ assert.equal(summary.pending[0].remaining,1);
+ const saved={...active,status:'completed',started_at:'2026-11-05T12:00:00Z',finished_at:'2026-11-05T13:02:03Z'};
+ const html=ctx.renderFinishSummary(saved,data);
+ assert.ok(html.includes('01:02:03'));
+ assert.ok(html.includes('1 redução(ões) de drop'));
+}

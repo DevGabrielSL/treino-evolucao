@@ -298,3 +298,57 @@ p.write_text(p.read_text()+'\n.load-reference{padding:12px;margin:12px 0 16px;bo
 for name in ('sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace('shell-v175-series-edit','shell-v176-load-reference').replace('principal_focus.css?v=168','principal_focus.css?v=176'))
 p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=168','principal_focus.css?v=176'))
+
+# Review actual work and pending plan before finishing, then show a useful recap.
+p=dist/'app.js';s=p.read_text()
+old="  if(!confirm('Concluir treino com '+sets.length+' séries registradas? Revise se deseja encerrar. A sincronização automática tentará enviar quando habilitada.'))return;"
+new="""  const summary=workoutCompletionSummary(active,g().entities);
+  const pending=summary.pending.length?'\\n\\nPendências:\\n'+summary.pending.map(item=>item.name+' — '+item.remaining+' série(s)').join('\\n'):'';
+  const review=summary.work+' série(s) de trabalho · '+summary.warmup+' aquecimento(s) · '+summary.drops+' redução(ões) de drop · '+summary.skipped+' pulada(s)';
+  if(!confirm('Concluir este treino?\\n\\n'+review+pending+'\\n\\nCancelar volta ao treino. Confirmar encerra com os registros atuais.'))return;"""
+assert s.count(old)==1
+s=s.replace(old,new)
+old="s.status='completed';},'Treino concluído no celular."
+new="""s.finished_at=new Date().toISOString();
+   const start=Date.parse(s.started_at||s.clock_started_at||'');
+   if(Number.isFinite(start))s.duration_minutes=Math.max(0,Math.round((Date.parse(s.finished_at)-start)/60000));
+   s.status='completed';},'Treino concluído no celular."""
+assert s.count(old)==1
+s=s.replace(old,new)
+s=s.replace('deckRecap=renderDeckRecap(active,g().entities);','deckRecap=renderFinishSummary(doc.overlay.sessions.find(s=>s.id===id),g().entities);')
+helper='''
+function workoutCompletionSummary(session,entities){
+ const sets=entities.sets.filter(row=>row.session_id===session.id);
+ const variants=new Map(entities.exercise_variants.map(row=>[row.id,row]));
+ const exercises=new Map((entities.exercises||[]).map(row=>[row.id,row]));
+ const ids=[...new Set(session.planned_variant_ids||[])];
+ const pending=ids.flatMap(id=>{
+  const state=liveGuidance(session,id,entities);
+  const remaining=state.target===null?0:Math.max(0,state.target-state.resolved);
+  return remaining?[{name:exercises.get(variants.get(id)?.exercise_id)?.name||'Exercício',remaining}]:[];
+ });
+ return {
+  work:sets.filter(row=>['effective','core','back_off'].includes(row.set_type)).length,
+  warmup:sets.filter(row=>row.set_type==='warmup').length,
+  drops:sets.filter(row=>row.set_type==='drop_set').length,
+  skipped:ids.reduce((n,id)=>n+(session.skipped_series?.[id]||0),0),
+  pending
+ };
+}
+function renderFinishSummary(session,entities){
+ const summary=workoutCompletionSummary(session,entities);
+ const start=Date.parse(session.started_at||session.clock_started_at||'');
+ const end=Date.parse(session.finished_at||'');
+ const duration=Number.isFinite(start)&&Number.isFinite(end)?sessionClockLabel(Math.max(0,Math.floor((end-start)/1000))):'Tempo não registrado';
+ return panel('<h2>Treino concluído</h2><p>'+e(session.name)+'</p><p><strong>'+e(duration)+'</strong></p>'+
+ '<p>'+summary.work+' série(s) de trabalho · '+summary.warmup+' aquecimento(s)</p>'+
+ '<p>'+summary.drops+' redução(ões) de drop · '+summary.skipped+' série(s) pulada(s)</p>'+
+ (summary.pending.length?'<p>'+summary.pending.reduce((n,item)=>n+item.remaining,0)+' série(s) planejada(s) ficaram pendentes.</p>':'')+
+ '<p class="text-small">Treino salvo no aparelho. Confira a confirmação de envio ao Google Sheets.</p>'+
+ '<button class="btn block" data-page="data">Ver sincronização</button>','deck-recap');
+}
+'''
+s=s.replace('function renderCoach(',helper+'\nfunction renderCoach(',1)
+p.write_text(s)
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('shell-v176-load-reference','shell-v177-finish-review'))
