@@ -196,3 +196,8 @@ runpy.run_path(str(out / 'testing/principal_relics_patch.py'))
 
 # v1.6.10 — integrar as imagens aprovadas na distribuição principal.
 runpy.run_path(str(out / 'testing/principal_relics_art_patch.py'))
+
+# Refresh cached training assets for the revised series flow.
+for name in ('sw.js','integrity.js'):
+ p=dist/name
+ p.write_text(p.read_text().replace('shell-v170-relic-art','shell-v171-series-flow'))
