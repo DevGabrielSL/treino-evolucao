@@ -108,3 +108,19 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  assert.ok(html.includes('Corrigir redução 1'));
  assert.ok(!ctx.renderSeriesEditActions(main,[main,drop],new Set()).includes('<button'));
 }
+
+{
+ const active={id:'current',date:'2026-11-05'};
+ const old={id:'old',date:'2026-10-30',status:'completed'};
+ const v={id:'v',unit:'kg/lado'};
+ const reference={id:'r',session_id:'old',variant_id:'v',date:old.date,set_type:'effective',set_number:2,load_value:30,repetitions:10,rir:0};
+ const m={entities:{sessions:[old],exercise_variants:[v],sets:[{...reference,id:'first',set_number:1},reference]},variantMap:new Map([['v',v]])};
+ const html=ctx.renderLoadReference(active,'v',m);
+ assert.ok(html.includes('30 kg/lado × 10 · RIR 0'));
+ assert.ok(html.includes('Ver séries daquele treino'));
+ assert.ok(html.includes('data-reference-session="current"'));
+ assert.ok(html.includes('Usar carga e repetições'));
+ const empty=ctx.renderLoadReference(active,'v',{...m,entities:{...m.entities,sets:[]}});
+ assert.ok(empty.includes('Sem carga anterior confirmada'));
+ assert.ok(!empty.includes('data-coach-action'));
+}

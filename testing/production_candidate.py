@@ -251,3 +251,50 @@ function renderSeriesEditActions(row,sets,editable){
 p.write_text(s)
 for name in ('sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace('shell-v174-deck-progress','shell-v175-series-edit'))
+
+# Keep the previous comparable load beside the entry fields.
+p=dist/'app.js';s=p.read_text()
+needle='${renderLiveGuidance(active,selected,m)}${entry}'
+assert s.count(needle)==1
+s=s.replace(needle,'${renderLiveGuidance(active,selected,m)}${renderLoadReference(active,selected,m)}${entry}')
+helper='''
+function renderLoadReference(active,selected,m){
+ const reference=liveGuidance(active,selected,m.entities).reference;
+ if(!reference)return '<div class="load-reference"><span>Último treino compatível</span><p>Sem carga anterior confirmada para este equipamento e unidade.</p></div>';
+ const unit=m.variantMap.get(selected)?.unit||'';
+ const rows=m.entities.sets.filter(s=>s.session_id===reference.session_id&&s.variant_id===reference.variant_id&&['effective','core','back_off'].includes(s.set_type))
+  .sort((a,b)=>(a.set_number||0)-(b.set_number||0));
+ const label=row=>e(row.load_value??'—')+' '+e(unit)+' × '+e(row.repetitions??'—')+' · RIR '+e(row.rir??'não informado');
+ return '<div class="load-reference"><span>Último treino compatível · '+e(reference.date)+'</span><p><strong>'+label(reference)+'</strong></p>'+
+ '<button type="button" class="btn small" data-coach-action="use-reference" data-reference-session="'+e(active.id)+'" data-reference-variant="'+e(selected)+'">Usar carga e repetições</button>'+
+ (rows.length>1?'<details><summary>Ver séries daquele treino</summary>'+rows.map(row=>'<p>'+label(row)+'</p>').join('')+'</details>':'')+
+ '<p class="text-small" data-reference-feedback role="status"></p></div>';
+}
+'''
+s=s.replace('function renderCoach(',helper+'\nfunction renderCoach(',1)
+needle=" if(action==='next'){"
+assert s.count(needle)==1
+s=s.replace(needle,''' if(action==='use-reference'){
+  const active=coachActive();
+  if(!active||active.id!==btn.dataset.referenceSession||coachSelected!==btn.dataset.referenceVariant)
+   throw new Error('A seleção mudou. Confira o exercício atual.');
+  const reference=liveGuidance(active,coachSelected,g().entities).reference;
+  const form=document.querySelector('#quick-set-form');
+  if(!reference||!form||String(form.elements.namedItem('variant_id').value)!==coachSelected)
+   throw new Error('Confirme o equipamento e a unidade antes de usar a referência.');
+  const load=form.elements.namedItem('load'),reps=form.elements.namedItem('reps');
+  load.value=String(reference.load_value??'');
+  reps.value=String(reference.repetitions??'');
+  onInput({target:load});
+  const feedback=btn.closest('.load-reference').querySelector('[data-reference-feedback]');
+  feedback.textContent='Carga e repetições preenchidas. Informe o RIR e o tipo da série realizada.';
+  load.focus();
+  return;
+ }
+'''+needle)
+p.write_text(s)
+p=dist/'principal_focus.css'
+p.write_text(p.read_text()+'\n.load-reference{padding:12px;margin:12px 0 16px;border:1px solid #6b9586;border-radius:12px;background:#102f2c}.load-reference>span{font:600 12px/1.4 system-ui;color:#b9ddd0}.load-reference p{margin:6px 0;line-height:1.5}.load-reference strong{font:650 16px/1.5 system-ui;color:#f5e5bd}.load-reference details{margin-top:10px}.load-reference summary{font-size:13px}\n')
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('shell-v175-series-edit','shell-v176-load-reference').replace('principal_focus.css?v=168','principal_focus.css?v=176'))
+p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=168','principal_focus.css?v=176'))
