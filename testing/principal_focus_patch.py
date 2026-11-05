@@ -59,3 +59,91 @@ function renderPlanControls(active,selected,m){
 '''
 s=s.replace('function renderCoach(', controls+'\nfunction renderCoach(',1)
 p.write_text(s)
+
+# Drop sets use normal Sheets rows, with the parent ID preserved in Observações.
+p=dist/'app.js';s=p.read_text()
+s=s.replace('async function handleCoachMessage(message){','async function handleCoachMessage(message,reductions=[]){')
+anchor=s.index(' const parsed=parseSeriesMessage(input,chosen.unit);')
+start=s.index('  d.overlay.sets.push({',anchor)
+end=s.index('\n',start)
+line=s[start:end]
+assert line.endswith('});')
+s=s[:start]+line.replace('d.overlay.sets.push({','const row={',1)[:-2]+''';
+  if(reductions.length && parsed.set_type!=='effective')throw new Error('Use Trabalho para registrar um drop set.');
+  d.overlay.sets.push(row,...reductions.map((part,i)=>({
+   ...row,id:makeId('set'),set_type:'drop_set',set_number:number+i+1,
+   load_value:part.load,repetitions:part.reps,rir:part.rir,notes:'Drop de '+row.id
+  })));'''+s[end:]
+needle='   const count=doc.overlay.sets.length;'
+assert s.count(needle)==1
+s=s.replace(needle,'''   const reductionLoads=values.getAll?.('drop_load')||[];
+   let previous=load;
+   const reductions=reductionLoads.map((raw,i)=>{
+    const load=numeric(raw),reps=numeric(values.getAll('drop_reps')[i]),rir=numeric(values.getAll('drop_rir')[i]);
+    if(kind!=='effective'||load>=previous||!Number.isInteger(reps)||reps<1||reps>500||rir>10)
+     throw new Error('Cada redução exige carga menor que a anterior, 1 a 500 repetições e RIR de 0 a 10. Selecione Trabalho.');
+    previous=load;
+    return {load,reps,rir};
+   });
+'''+needle)
+s=s.replace("+(kind==='warmup'?' aquecimento':''));","+(kind==='warmup'?' aquecimento':''),reductions);")
+s=s.replace('doc.overlay.sets.length===count+1','doc.overlay.sets.length===count+1+reductions.length')
+needle='<button class="btn primary block" type="submit">Salvar série</button>'
+assert s.count(needle)==1
+s=s.replace(needle,'<div data-drop-parts></div><button class="btn small" type="button" data-coach-action="add-drop">Adicionar redução</button>'+needle)
+idx=s.index(" if(action==='next'){")
+s=s[:idx]+''' if(action==='add-drop'){
+  const parts=btn.form?.querySelector('[data-drop-parts]');
+  if(!parts)return;
+  if(parts.childElementCount>=8)throw new Error('Limite de oito reduções por série.');
+  const field=document.createElement('fieldset');
+  field.className='quick-grid mt';
+  field.innerHTML='<legend>Redução de carga</legend><label class="field"><span>Carga</span><input class="input" inputmode="decimal" name="drop_load" required></label><label class="field"><span>Repetições</span><input class="input" inputmode="numeric" name="drop_reps" required></label><label class="field"><span>RIR</span><input class="input" inputmode="decimal" name="drop_rir" required></label>';
+  const remove=document.createElement('button');
+  remove.type='button';remove.className='btn small';remove.textContent='Remover redução';
+  remove.addEventListener('click',()=>field.remove());
+  field.append(remove);parts.append(field);field.querySelector('input').focus();
+  return;
+ }
+'''+s[idx:]
+idx=s.index('function sessionDetail(')
+s=s[:idx]+'''function dropSequence(row,sets,unit){
+ const drops=sets.filter(s=>s.set_type==='drop_set'&&s.notes==='Drop de '+row.id)
+  .sort((a,b)=>a.set_number-b.set_number);
+ if(!drops.length)return '';
+ return ' · Drop: '+drops.map(s=>fmt(s.load_value)+' '+(s.load_unit_original||unit)+' × '+fmt(s.repetitions,0)+' (RIR '+fmt(s.rir)+')').join(' → ');
+}
+function isGroupedDrop(row,sets){
+ return row.set_type==='drop_set'&&sets.some(parent=>row.notes==='Drop de '+parent.id);
+}
+'''+s[idx:]
+s=s.replace("activeSets.slice(-6).reverse()", "activeSets.filter(s=>!isGroupedDrop(s,activeSets)).slice(-6).reverse()")
+s=s.replace("RIR ${s.rir??'não informado'}`)).join", "RIR ${s.rir??'não informado'}${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}`)).join")
+s=s.replace("${sets.length} séries</div>${session.notes", "${sets.filter(s=>!isGroupedDrop(s,sets)).length} séries</div>${session.notes")
+s=s.replace("${sets.length?sets.map(s=>{const v=m.variantMap", "${sets.length?sets.filter(s=>!isGroupedDrop(s,sets)).map(s=>{const v=m.variantMap")
+s=s.replace("[s.set_type]||e(s.set_type)}`);}).join", "[s.set_type]||e(s.set_type)}${dropSequence(s,sets,v?.unit||'')}`);}).join")
+p.write_text(s)
+
+p=dist/'coach_commands.js';s=p.read_text()
+s=s.replace(" return [...doc.overlay.sets].reverse().find(s=>s.session_id===sessionId&&s.provenance?.source==='android_local')||null;", """ const rows=doc.overlay.sets;
+ const last=[...rows].reverse().find(s=>s.session_id===sessionId&&s.provenance?.source==='android_local');
+ if(last?.set_type==='drop_set'){
+  return rows.find(s=>s.session_id===sessionId&&last.notes==='Drop de '+s.id)||last;
+ }
+ return last||null;""")
+s=s.replace(' doc.overlay.sets.splice(index,1);',""" doc.overlay.sets=doc.overlay.sets.filter(row=>row.id!==s.id&&
+  !(row.session_id===sessionId&&row.set_type==='drop_set'&&row.notes==='Drop de '+s.id));""")
+p.write_text(s)
+
+p=dist/'insights.js';s=p.read_text()
+needle='   item.valid++;item.volume+=set.load_value*set.repetitions;item.volumeAvailable=true;'
+assert s.count(needle)==1
+s=s.replace(needle,needle+'''
+   for(const part of m.sets||[]){
+    if(part.set_type==='drop_set'&&part.notes==='Drop de '+set.id&&
+       part.session_id===set.session_id&&part.variant_id===variantId&&
+       finite(part.load_value)&&part.load_value>=0&&Number.isInteger(part.repetitions)&&part.repetitions>0){
+     item.volume+=part.load_value*part.repetitions;
+    }
+   }''')
+p.write_text(s)
