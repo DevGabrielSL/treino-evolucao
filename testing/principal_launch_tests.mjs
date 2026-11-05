@@ -15,7 +15,8 @@ assert.ok(html.includes('class="rpg-launch"'));assert.ok(html.includes('role="st
 assert.ok(html.includes('manifest.webmanifest?v=150'));assert.ok(html.includes('principal_launch.css?v=150'));
 assert.ok(css.includes('prefers-reduced-motion'));assert.ok(!html.includes('Preparando seus dados locais'));
 // Existing successful render replaces the initial main content; initialization remains asynchronous.
-assert.ok(app.includes("$('#app').innerHTML=pages[page](m)"));assert.ok(app.includes('const snap=await readSnapshot()'));
+assert.ok(app.includes("$('#app').innerHTML=(editSetId&&"));
+assert.ok(app.includes("renderSetEditor(m,editSetId):pages[page](m)"));assert.ok(app.includes('const snap=await readSnapshot()'));
 assert.ok(app.includes('Erro ao abrir dados locais'));
 for(const cache of ['sw.js','integrity.js'])assert.ok(read(cache).includes("'./manifest.webmanifest?v=150'"));
 console.log('PRINCIPAL_LAUNCH_ICONS_MANIFEST_CACHE_BOOT=PASS');
