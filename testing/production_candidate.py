@@ -352,3 +352,45 @@ s=s.replace('function renderCoach(',helper+'\nfunction renderCoach(',1)
 p.write_text(s)
 for name in ('sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace('shell-v176-load-reference','shell-v177-finish-review'))
+
+# Give corrections their own view and keep mobile controls usable.
+p=dist/'app.js';s=p.read_text()
+old="pages[page](m)+(editSetId&&doc.overlay.sets.some(s=>s.id===editSetId)?renderSetEditor(m,editSetId):'')"
+new="(editSetId&&doc.overlay.sets.some(s=>s.id===editSetId)?renderSetEditor(m,editSetId):pages[page](m))"
+assert s.count(old)==1
+s=s.replace(old,new)
+old="$('#edit-set-form')?.scrollIntoView({behavior:'smooth',block:'center'});"
+assert s.count(old)>=1
+s=s.replace(old,"focusSetEditor();")
+s+='''
+function focusSetEditor(){
+ const form=document.querySelector('#edit-set-form');
+ if(!form)return;
+ form.scrollIntoView({block:'start',behavior:'auto'});
+ form.elements.namedItem('load')?.focus({preventScroll:true});
+}
+'''
+p.write_text(s)
+p=dist/'principal_focus.css'
+p.write_text(p.read_text()+"""
+/* Mobile registration and correction layout. */
+#quick-set-form,#edit-set-form{min-width:0;scroll-margin-top:20px}
+#quick-set-form .quick-grid,#edit-set-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#quick-set-form .field,#edit-set-form .field{min-width:0;margin:8px 0}
+#quick-set-form .input,#edit-set-form .input{width:100%;min-width:0;min-height:50px;font-size:16px;box-sizing:border-box}
+#quick-set-form input[name=load],#quick-set-form input[name=reps],#edit-set-form input[name=load],#edit-set-form input[name=reps]{font-size:24px;font-variant-numeric:tabular-nums}
+#quick-set-form .field>span,#edit-set-form .field>span{min-height:0;line-height:1.4;margin-bottom:6px}
+#quick-set-form .btn,#edit-set-form .btn,.training-entry+.inline-actions .btn{min-height:44px;white-space:normal}
+#quick-set-form fieldset{min-width:0;margin:12px 0;padding:12px;border:1px solid #78958a;border-radius:10px}
+#quick-set-form fieldset legend{padding:0 5px;font-size:13px}
+#quick-set-form fieldset .btn{align-self:end}
+#edit-set-form .inline-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+#edit-set-form .inline-actions>.btn{flex:1 1 130px;min-height:48px}
+.surface:has(>#edit-set-form){padding:18px!important;max-width:680px;margin-inline:auto}
+#app:has(#edit-set-form){padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+@media(max-width:360px){#edit-set-form .form-grid,#quick-set-form fieldset.quick-grid{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){#edit-set-form{scroll-behavior:auto}}
+""")
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('shell-v177-finish-review','shell-v178-mobile-edit').replace('principal_focus.css?v=176','principal_focus.css?v=178'))
+p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=176','principal_focus.css?v=178'))
