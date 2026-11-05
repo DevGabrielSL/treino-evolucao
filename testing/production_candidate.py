@@ -219,8 +219,8 @@ p.write_text(s.replace(old,new))
 
 # Direct editing for every recent series and each drop segment.
 p=dist/'app.js';s=p.read_text()
-needle="\${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}\`)).join"
-replacement="\${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}\`,renderSeriesEditActions(s,activeSets,new Set(doc.overlay.sets.map(row=>row.id))))).join"
+needle="${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}`)).join"
+replacement="${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}`,renderSeriesEditActions(s,activeSets,new Set(doc.overlay.sets.map(row=>row.id))))).join"
 assert s.count(needle)==1
 s=s.replace(needle,replacement)
 start=s.index('function renderSetEditor(');end=s.index('function sessionDetail(',start)
@@ -233,7 +233,7 @@ editor=editor.replace('min="0" max="500"','min="1" max="500"')
 editor=editor.replace('max="30"','max="10"')
 editor=editor.replace('<div class="inline-actions"><button class="btn primary" type="submit">Salvar correção',
  '<div class="inline-actions"><button class="btn primary" type="submit">Salvar correção')
-editor=editor.replace("</form>\`,'tinted');", "</form>\${renderSeriesEditActions(s,m.sets,new Set(doc.overlay.sets.map(row=>row.id)))}\`,'tinted');")
+editor=editor.replace("</form>`,'tinted');", "</form>${renderSeriesEditActions(s,m.sets,new Set(doc.overlay.sets.map(row=>row.id)))}`,'tinted');")
 s=s[:start]+editor+s[end:]
 start=s.index(" if(f.id==='edit-set-form'){");end=s.index(" if(f.id==='edit-session-form'){",start)
 handler=s[start:end].replace("parseNumber(x.load,{max:10000})","parseNumber(x.load,{allowEmpty:false,max:10000})").replace("parseNumber(x.reps,{max:500})","parseNumber(x.reps,{allowEmpty:false,min:1,max:500})").replace("parseNumber(x.rir,{max:30})","parseNumber(x.rir,{allowEmpty:false,max:10})")
