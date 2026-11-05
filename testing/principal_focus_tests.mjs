@@ -92,3 +92,19 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  assert.match(resolved,/1 feita\(s\) · 2 pulada\(s\) · 0 restante\(s\)/);
  assert.match(resolved,/1\/1 exercícios sem pendências/);
 }
+
+{
+ const at=app.indexOf('function renderSeriesEditActions(');
+ const end=app.indexOf('\n}',at)+2;
+ assert.ok(at>=0);
+ vm.runInContext(app.slice(at,end),ctx);
+ const main={id:'main',session_id:'s',set_type:'effective'};
+ const drop={id:'drop',session_id:'s',set_type:'drop_set',notes:'Drop de main',set_number:2};
+ const other={...drop,id:'other',session_id:'other'};
+ const html=ctx.renderSeriesEditActions(drop,[main,drop,other],new Set(['main','drop','other']));
+ assert.ok(html.includes('data-edit-set="main"'));
+ assert.ok(html.includes('data-edit-set="drop"'));
+ assert.ok(!html.includes('data-edit-set="other"'));
+ assert.ok(html.includes('Corrigir redução 1'));
+ assert.ok(!ctx.renderSeriesEditActions(main,[main,drop],new Set()).includes('<button'));
+}

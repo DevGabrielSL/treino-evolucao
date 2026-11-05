@@ -216,3 +216,38 @@ old="${models.filter(x=>x.reached).length}/${models.length} metas atingidas"
 new="${models.filter(x=>x.target!==null&&x.resolved>=x.target).length}/${models.length} exercícios sem pendências"
 assert s.count(old)==1
 p.write_text(s.replace(old,new))
+
+# Direct editing for every recent series and each drop segment.
+p=dist/'app.js';s=p.read_text()
+needle="\${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}\`)).join"
+replacement="\${dropSequence(s,activeSets,m.variantMap.get(s.variant_id)?.unit||'')}\`,renderSeriesEditActions(s,activeSets,new Set(doc.overlay.sets.map(row=>row.id))))).join"
+assert s.count(needle)==1
+s=s.replace(needle,replacement)
+start=s.index('function renderSetEditor(');end=s.index('function sessionDetail(',start)
+editor=s[start:end]
+editor=editor.replace('RIR (opcional)','RIR')
+editor=editor.replace('name="load" type=', 'name="load" required type=')
+editor=editor.replace('name="reps" type=', 'name="reps" required type=')
+editor=editor.replace('name="rir" type=', 'name="rir" required type=')
+editor=editor.replace('min="0" max="500"','min="1" max="500"')
+editor=editor.replace('max="30"','max="10"')
+editor=editor.replace('<div class="inline-actions"><button class="btn primary" type="submit">Salvar correção',
+ '<div class="inline-actions"><button class="btn primary" type="submit">Salvar correção')
+editor=editor.replace("</form>\`,'tinted');", "</form>\${renderSeriesEditActions(s,m.sets,new Set(doc.overlay.sets.map(row=>row.id)))}\`,'tinted');")
+s=s[:start]+editor+s[end:]
+start=s.index(" if(f.id==='edit-set-form'){");end=s.index(" if(f.id==='edit-session-form'){",start)
+handler=s[start:end].replace("parseNumber(x.load,{max:10000})","parseNumber(x.load,{allowEmpty:false,max:10000})").replace("parseNumber(x.reps,{max:500})","parseNumber(x.reps,{allowEmpty:false,min:1,max:500})").replace("parseNumber(x.rir,{max:30})","parseNumber(x.rir,{allowEmpty:false,max:10})")
+s=s[:start]+handler+s[end:]
+s+='''
+function renderSeriesEditActions(row,sets,editable){
+ const parent=row.set_type==='drop_set'?sets.find(s=>s.session_id===row.session_id&&row.notes==='Drop de '+s.id)||row:row;
+ const drops=sets.filter(s=>s.session_id===parent.session_id&&s.set_type==='drop_set'&&s.notes==='Drop de '+parent.id).sort((a,b)=>a.set_number-b.set_number);
+ const rows=[parent,...drops];
+ return '<div class="inline-actions mt">'+rows.filter(s=>editable.has(s.id)).map((s,i)=>
+  '<button type="button" class="btn small" data-edit-set="'+e(s.id)+'">'+(drops.length?(i===0?'Corrigir série inicial':'Corrigir redução '+i):'Corrigir série')+'</button>'
+ ).join('')+'</div>';
+}
+'''
+p.write_text(s)
+for name in ('sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace('shell-v174-deck-progress','shell-v175-series-edit'))
