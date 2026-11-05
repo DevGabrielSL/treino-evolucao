@@ -58,3 +58,26 @@ assert.match(clock.renderSessionClock({id:'s'}),/Início não registrado/);
 assert.match(clock.renderSessionClock({id:'s',clock_started_at:began}),/Contagem iniciada/);
 assert.match(clock.renderSessionClock({id:'s',started_at:began}),/Início do treino/);
 console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
+
+{
+ const start=app.indexOf('const swapOptionCache =');
+ const end=app.indexOf('\n}',app.indexOf('function filterSwapOptions(',start))+2;
+ assert.ok(start>=0&&end>start);
+ vm.runInContext(app.slice(start,end),ctx);
+ const placeholder={value:'',textContent:'Selecione'};
+ const scott={value:'scott',textContent:'Rosca Scott · Máquina'};
+ const cable={value:'cable',textContent:'Rosca direta · Polia'};
+ const select={options:[placeholder,scott,cable],value:'cable',replaceChildren(...options){this.options=options;}};
+ const status={textContent:''};
+ const input={value:'MAQUINA scott',closest:()=>({querySelector:q=>q==='select'?select:status})};
+ ctx.filterSwapOptions(input);
+ assert.deepEqual(select.options,[placeholder,scott]);
+ assert.equal(select.value,'');
+ input.value='inexistente';
+ ctx.filterSwapOptions(input);
+ assert.deepEqual(select.options,[placeholder]);
+ assert.match(status.textContent,/Nenhum/);
+ input.value='';
+ ctx.filterSwapOptions(input);
+ assert.deepEqual(select.options,[placeholder,scott,cable]);
+}

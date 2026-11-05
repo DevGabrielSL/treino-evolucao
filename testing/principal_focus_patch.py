@@ -54,7 +54,7 @@ function renderPlanControls(active,selected,m){
  return `<div class="mt"><p class="text-small">${state.count} realizadas · ${state.skipped} puladas</p><div class="inline-actions">
  ${pending&&state.target!==null?'<button class="btn" data-coach-action="skip">Pular série</button>':''}
  ${state.skipped?'<button class="btn" data-coach-action="undo-skip">Desfazer pulo</button>':''}</div>
- ${pending&&options.length?`<details class="mt"><summary>Trocar exercício</summary><label class="field"><span>Substituto para as séries restantes</span><select class="input"><option value="">Selecione</option>${options.map(o=>`<option value="${e(o.id)}">${e(o.label)}</option>`).join('')}</select></label><button class="btn" data-coach-action="swap">Confirmar troca</button></details>`:''}</div>`;
+ ${pending&&options.length?`<details class="mt"><summary>Trocar exercício</summary><p class="text-small">${state.target===null?'Sem meta de séries definida.':(state.target-state.resolved)+' série(s) restante(s) neste exercício.'}</p><label class="field"><span>Buscar exercício ou equipamento</span><input class="input" type="search" data-swap-search placeholder="Ex.: rosca Scott ou máquina"></label><p class="text-small" data-swap-results role="status">${options.length} opções</p><label class="field"><span>Substituto para as séries restantes</span><select class="input"><option value="">Selecione</option>${options.map(o=>`<option value="${e(o.id)}">${e(o.label)}</option>`).join('')}</select></label><button class="btn" data-coach-action="swap">Confirmar troca</button></details>`:''}</div>`;
 }
 '''
 s=s.replace('function renderCoach(', controls+'\nfunction renderCoach(',1)
@@ -146,4 +146,28 @@ s=s.replace(needle,needle+'''
      item.volume+=part.load_value*part.repetitions;
     }
    }''')
+p.write_text(s)
+
+p=dist/'app.js';s=p.read_text()
+needle='function onInput(event){'
+assert s.count(needle)==1
+s=s.replace(needle,needle+"if(event.target.matches?.('[data-swap-search]')){filterSwapOptions(event.target);return;}")
+s+='''
+const swapOptionCache = new WeakMap();
+function filterSwapOptions(input){
+ const details=input.closest('details');
+ const select=details?.querySelector('select');
+ if(!select)return;
+ if(!swapOptionCache.has(select))swapOptionCache.set(select,Array.from(select.options));
+ const [placeholder,...options]=swapOptionCache.get(select);
+ const key=value=>value.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR');
+ const terms=key(input.value).trim().split(/ +/).filter(Boolean);
+ const matches=options.filter(option=>terms.every(term=>key(option.textContent).includes(term)));
+ const previous=select.value;
+ select.replaceChildren(placeholder,...matches);
+ select.value=matches.some(option=>option.value===previous)?previous:'';
+ details.querySelector('[data-swap-results]').textContent=matches.length?
+  matches.length+' opção(ões) encontrada(s)':'Nenhum exercício encontrado.';
+}
+'''
 p.write_text(s)
