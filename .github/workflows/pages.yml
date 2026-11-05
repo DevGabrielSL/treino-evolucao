@@ -100,7 +100,7 @@ jobs:
           python3 patches/v051_apply.py dist
           mkdir -p dist/tests
           cp tests/v051_regression.mjs dist/tests/regression.mjs
-          node --experimental-default-type=module dist/tests/regression.mjs
+          node dist/tests/regression.mjs
           rm -rf dist/tests
           node --check dist/app.js
           node --check dist/store.js
@@ -124,7 +124,7 @@ jobs:
           python3 /tmp/treino-v06-upgrade/apply_v06.py dist /tmp/treino-v06-upgrade
           mkdir -p dist/tests
           sed 's@../public/@../@g' /tmp/treino-v06-upgrade/tests/insights_v06.mjs > dist/tests/insights_v06.mjs
-          node --experimental-default-type=module dist/tests/insights_v06.mjs | tee /tmp/treino-v06-tests.log
+          node dist/tests/insights_v06.mjs | tee /tmp/treino-v06-tests.log
           grep -qx 'TOTAL_INSIGHTS_TESTS=35' /tmp/treino-v06-tests.log
           rm -rf dist/tests
           node --check dist/app.js
@@ -145,7 +145,7 @@ jobs:
           python3 /tmp/treino-v07-upgrade/apply_v07.py dist /tmp/treino-v07-upgrade
           mkdir -p dist/tests
           sed 's@../public/@../@g' /tmp/treino-v07-upgrade/history_v07.mjs > dist/tests/history_v07.mjs
-          node --experimental-default-type=module dist/tests/history_v07.mjs | tee /tmp/treino-v07-tests.log
+          node dist/tests/history_v07.mjs | tee /tmp/treino-v07-tests.log
           grep -qx 'TOTAL_HISTORY_TESTS=55' /tmp/treino-v07-tests.log
           rm -rf dist/tests
           node --check dist/app.js
@@ -172,7 +172,7 @@ jobs:
           mkdir -p dist/tests
           for testname in body_v08 history_v07 insights_v06; do
             sed 's@../public/@../@g' /tmp/treino-v08-upgrade/$testname.mjs > dist/tests/$testname.mjs
-            node --experimental-default-type=module dist/tests/$testname.mjs | tee /tmp/treino-$testname.log
+            node dist/tests/$testname.mjs | tee /tmp/treino-$testname.log
           done
           grep -qx 'TOTAL_BODY_TESTS=68' /tmp/treino-body_v08.log
           grep -qx 'TOTAL_HISTORY_TESTS=55' /tmp/treino-history_v07.log
@@ -216,7 +216,7 @@ jobs:
           grep -q 'shell-v09' dist/sw.js
           grep -q "'./integrity.js'" dist/sw.js
           grep -q 'v0.9' dist/index.html
-          node --experimental-default-type=module --input-type=module <<'JS'
+          node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
           import {emptyDocument,commit} from './dist/store.js';
           import {encryptBackup} from './dist/backup.js';
@@ -288,9 +288,9 @@ jobs:
           cp dist/automatic_sync.js /tmp/sheets-qa/integration/
           cp integration/tests/sheets_core.mjs integration/tests/sheets_browser.mjs /tmp/sheets-qa/integration/tests/
           cp integration/tests/sheets_additional.mjs /tmp/sheets-qa/tests/
-          node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
-          node --experimental-default-type=module /tmp/sheets-qa/integration/tests/sheets_browser.mjs | tee /tmp/sheets-browser-results.log
-          node --experimental-default-type=module /tmp/sheets-qa/tests/sheets_additional.mjs | tee /tmp/sheets-guard-results.log
+          node /tmp/sheets-qa/integration/tests/sheets_core.mjs | tee /tmp/sheets-core-results.log
+          node /tmp/sheets-qa/integration/tests/sheets_browser.mjs | tee /tmp/sheets-browser-results.log
+          node /tmp/sheets-qa/tests/sheets_additional.mjs | tee /tmp/sheets-guard-results.log
           grep -qx 'SHEETS_SYNC_TESTS=13' /tmp/sheets-core-results.log
           grep -qx 'BROWSER_TRANSPORT_TESTS=10' /tmp/sheets-browser-results.log
           grep -qx 'TOTAL_SHEETS_GUARD_TESTS=11' /tmp/sheets-guard-results.log
@@ -322,7 +322,7 @@ jobs:
           echo "85fd9b6c7a9071ee610b3a34c0322a38bd823e81fdffa395cfc13eb0272a64f7  dist/integrity.js" | sha256sum -c -
           node --check dist/sheet_sync_core.js
           node --check dist/sw.js
-          node --experimental-default-type=module --input-type=module <<'JS'
+          node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
           import {emptyDocument,validateDocument} from './dist/store.js';
           import {stageInbound,previewRemote,planOutbound,parseReportedRir} from './dist/sheet_sync_core.js';
@@ -369,9 +369,9 @@ jobs:
           node --check dist/sheet_sync_browser.js
           node --check dist/sheet_sync_core.js
           node --check dist/app.js
-          node --experimental-default-type=module integration/tests/sheets_browser.mjs | tee /tmp/treino-browser-v102.log
+          node integration/tests/sheets_browser.mjs | tee /tmp/treino-browser-v102.log
           grep -qx 'BROWSER_TRANSPORT_TESTS=10' /tmp/treino-browser-v102.log
-          node --experimental-default-type=module integration/tests/sheets_numeric_formats.mjs | tee /tmp/treino-typed-v102.log
+          node integration/tests/sheets_numeric_formats.mjs | tee /tmp/treino-typed-v102.log
           grep -qx 'SHEETS_TYPED_NUMBERS_TESTS=19' /tmp/treino-typed-v102.log
           grep -q 'shell-v102-sheets-typed-numbers' dist/sw.js
           grep -q 'shell-v102-sheets-typed-numbers' dist/integrity.js
@@ -409,9 +409,9 @@ jobs:
           node --check dist/sheet_sync_browser.js
           node --check dist/sheet_sync_core.js
           node --check dist/sw.js
-          node --experimental-default-type=module integration/tests/sheets_write_confirmation.mjs | tee /tmp/treino-sheets-write-tests.log
+          node integration/tests/sheets_write_confirmation.mjs | tee /tmp/treino-sheets-write-tests.log
           grep -qx 'SHEETS_WRITE_CONFIRMATION_TESTS=15' /tmp/treino-sheets-write-tests.log
-          node --experimental-default-type=module integration/tests/sheets_numeric_formats.mjs | tee /tmp/treino-typed-retests.log
+          node integration/tests/sheets_numeric_formats.mjs | tee /tmp/treino-typed-retests.log
           grep -qx 'SHEETS_TYPED_NUMBERS_TESTS=19' /tmp/treino-typed-retests.log
           grep -q 'shell-v103-sheets-verify-write' dist/sw.js
           grep -q 'shell-v103-sheets-verify-write' dist/integrity.js
@@ -433,7 +433,7 @@ jobs:
           cp /tmp/treino-coach-v104/coach_logic.js dist/coach_logic.js
           mkdir -p dist/tests
           cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
-          node --experimental-default-type=module dist/tests/coach.mjs | tee /tmp/coach-tests-v104.log
+          node dist/tests/coach.mjs | tee /tmp/coach-tests-v104.log
           grep -qx 'COACH_TESTS=25' /tmp/coach-tests-v104.log
           rm -rf dist/tests
           python3 - <<'PY'
@@ -488,9 +488,9 @@ jobs:
           mkdir -p dist/tests
           cp /tmp/coach-v105/coach_commands_release.mjs dist/tests/coach_commands.mjs
           cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
-          node --experimental-default-type=module dist/tests/coach_commands.mjs | tee /tmp/coach-command-tests-v105.log
+          node dist/tests/coach_commands.mjs | tee /tmp/coach-command-tests-v105.log
           grep -qx 'COACH_COMMAND_TESTS=36' /tmp/coach-command-tests-v105.log
-          node --experimental-default-type=module dist/tests/coach.mjs | tee /tmp/coach-original-tests-v105.log
+          node dist/tests/coach.mjs | tee /tmp/coach-original-tests-v105.log
           grep -qx 'COACH_TESTS=25' /tmp/coach-original-tests-v105.log
           rm -rf dist/tests
           for module in app coach_logic coach_commands store metrics backup integrity edit_ops sheet_sync_core sheet_sync_browser sw; do node --check dist/$module.js; done
@@ -510,7 +510,7 @@ jobs:
           set -euo pipefail
           node --check quality/sync_preflight.mjs
           node --check quality/sync_preflight_tests.mjs
-          node --experimental-default-type=module quality/sync_preflight_tests.mjs | tee /tmp/etapa0-preflight.log
+          node quality/sync_preflight_tests.mjs | tee /tmp/etapa0-preflight.log
           grep -qx 'ETAPA0_PREFLIGHT_TESTS=17' /tmp/etapa0-preflight.log
           node --check dist/sheet_sync_core.js
           node --check dist/sheet_sync_browser.js
@@ -524,9 +524,9 @@ jobs:
           test -f dist/legacy_identity.js
           node --check dist/legacy_identity.js
           node --check dist/sheet_sync_core.js
-          node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/etapa1-tests.log
+          node integration/tests/legacy_identity.mjs | tee /tmp/etapa1-tests.log
           grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/etapa1-tests.log
-          node --experimental-default-type=module quality/sync_preflight_tests.mjs | tee /tmp/etapa0-retro-tests.log
+          node quality/sync_preflight_tests.mjs | tee /tmp/etapa0-retro-tests.log
           grep -qx 'ETAPA0_PREFLIGHT_TESTS=17' /tmp/etapa0-retro-tests.log
           python3 - <<'PY'
           from pathlib import Path
@@ -558,11 +558,11 @@ jobs:
           test -f dist/remote_reconcile.js
           node --check dist/remote_reconcile.js
           node --check dist/sheet_sync_core.js
-          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-tests.log
+          node integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-tests.log
           grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/etapa2-tests.log
-          node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/etapa1-retests.log
+          node integration/tests/legacy_identity.mjs | tee /tmp/etapa1-retests.log
           grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/etapa1-retests.log
-          node --experimental-default-type=module quality/sync_preflight_tests.mjs | tee /tmp/etapa0-retests.log
+          node quality/sync_preflight_tests.mjs | tee /tmp/etapa0-retests.log
           grep -qx 'ETAPA0_PREFLIGHT_TESTS=17' /tmp/etapa0-retests.log
           python3 - <<'PY'
           from pathlib import Path
@@ -601,11 +601,11 @@ jobs:
           node --check integration/tests/sheets_browser.mjs
           grep -q 'writeWeightPreservingFormulas' dist/sheet_sync_browser.js
           grep -q 'values:batchUpdate' dist/sheet_sync_browser.js
-          node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa3-write-tests.log
+          node integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa3-write-tests.log
           grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/etapa3-write-tests.log
-          node --experimental-default-type=module integration/tests/sheets_write_confirmation.mjs | tee /tmp/etapa3-write-regressions.log
+          node integration/tests/sheets_write_confirmation.mjs | tee /tmp/etapa3-write-regressions.log
           grep -qx 'SHEETS_WRITE_CONFIRMATION_TESTS=15' /tmp/etapa3-write-regressions.log
-          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-write-regressions.log
+          node integration/tests/remote_reconcile.mjs | tee /tmp/etapa2-write-regressions.log
           grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/etapa2-write-regressions.log
           python3 - <<'PY'
           from pathlib import Path
@@ -638,13 +638,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --experimental-default-type=module integration/tests/inspect_auto_sync.mjs
+          node integration/tests/inspect_auto_sync.mjs
       - name: Etapa 4 — sincronização automática consentida e segura
         shell: bash
         run: |
           set -euo pipefail
           node --check integration/automatic_sync.js
-          node --experimental-default-type=module integration/tests/automatic_sync.mjs | tee /tmp/etapa4-policy.log
+          node integration/tests/automatic_sync.mjs | tee /tmp/etapa4-policy.log
           grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/etapa4-policy.log
           python3 integration/patch_auto_sync.py | tee /tmp/etapa4-patch.log
           grep -qx 'ETAPA4_APP_PATCH=APPLIED' /tmp/etapa4-patch.log
@@ -664,11 +664,11 @@ jobs:
           assert 'v1.0.9.1 beta Escrita Segura' in html
           p.write_text(html.replace('v1.0.9.1 beta Escrita Segura','v1.1.0 beta Sincronização'),'utf8')
           PY
-          node --experimental-default-type=module integration/tests/automatic_wiring.mjs | tee /tmp/etapa4-ui.log
+          node integration/tests/automatic_wiring.mjs | tee /tmp/etapa4-ui.log
           grep -qx 'ETAPA4_WIRING_TESTS=24' /tmp/etapa4-ui.log
-          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/etapa4-reconcile-regression.log
+          node integration/tests/remote_reconcile.mjs | tee /tmp/etapa4-reconcile-regression.log
           grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/etapa4-reconcile-regression.log
-          node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa4-write-regression.log
+          node integration/tests/write_receipt_recovery.mjs | tee /tmp/etapa4-write-regression.log
           grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/etapa4-write-regression.log
           node --check dist/app.js
           node --check dist/automatic_sync.js
@@ -688,7 +688,7 @@ jobs:
           cp integration/coach_substitution.js dist/coach_substitution.js
           node --check dist/coach_policy.js
           node --check dist/coach_plan_read.js
-          node --experimental-default-type=module integration/tests/coach_plan_read.mjs | tee /tmp/etapa5-plan-read.log
+          node integration/tests/coach_plan_read.mjs | tee /tmp/etapa5-plan-read.log
           grep -qx 'ETAPA5_PLAN_READ_TESTS=16' /tmp/etapa5-plan-read.log
           python3 integration/patch_coach_plan.py | tee /tmp/etapa5-coach-patch.log
           grep -qx 'ETAPA5_COACH_PATCH=APPLIED' /tmp/etapa5-coach-patch.log
@@ -698,16 +698,16 @@ jobs:
           node --check dist/app.js
           grep -q 'fetchCoachPlanRows' dist/app.js
           grep -q 'coach_plan_rules' dist/app.js
-          node --experimental-default-type=module integration/tests/coach_policy.mjs | tee /tmp/etapa5-coach-policy.log
+          node integration/tests/coach_policy.mjs | tee /tmp/etapa5-coach-policy.log
           grep -qx 'ETAPA5_COACH_POLICY_TESTS=39' /tmp/etapa5-coach-policy.log
-          node --experimental-default-type=module integration/tests/coach_substitution.mjs | tee /tmp/etapa5-substitution.log
+          node integration/tests/coach_substitution.mjs | tee /tmp/etapa5-substitution.log
           grep -qx 'ETAPA5_SUBSTITUTION_TESTS=26' /tmp/etapa5-substitution.log
           mkdir -p dist/tests
           cp /tmp/treino-coach-v104/tests/coach.mjs dist/tests/coach.mjs
           cp /tmp/coach-v105/coach_commands_release.mjs dist/tests/coach_commands.mjs
-          node --experimental-default-type=module dist/tests/coach.mjs | tee /tmp/etapa5-old-coach.log
+          node dist/tests/coach.mjs | tee /tmp/etapa5-old-coach.log
           grep -qx 'COACH_TESTS=25' /tmp/etapa5-old-coach.log
-          node --experimental-default-type=module dist/tests/coach_commands.mjs | tee /tmp/etapa5-old-commands.log
+          node dist/tests/coach_commands.mjs | tee /tmp/etapa5-old-commands.log
           grep -qx 'COACH_COMMAND_TESTS=36' /tmp/etapa5-old-commands.log
           rm -rf dist/tests
           python3 - <<'PY'
@@ -745,19 +745,19 @@ jobs:
         run: |
           set -euo pipefail
           node --check quality/stage6_end_to_end.mjs
-          node --experimental-default-type=module quality/stage6_end_to_end.mjs | tee /tmp/stage6-e2e.log
+          node quality/stage6_end_to_end.mjs | tee /tmp/stage6-e2e.log
           grep -qx 'STAGE6_E2E_TESTS=56' /tmp/stage6-e2e.log
-          node --experimental-default-type=module integration/tests/legacy_identity.mjs | tee /tmp/stage6-dedup.log
+          node integration/tests/legacy_identity.mjs | tee /tmp/stage6-dedup.log
           grep -qx 'ETAPA1_DEDUP_TESTS=36' /tmp/stage6-dedup.log
-          node --experimental-default-type=module integration/tests/remote_reconcile.mjs | tee /tmp/stage6-conflict.log
+          node integration/tests/remote_reconcile.mjs | tee /tmp/stage6-conflict.log
           grep -qx 'ETAPA2_RECONCILIATION_TESTS=53' /tmp/stage6-conflict.log
-          node --experimental-default-type=module integration/tests/write_receipt_recovery.mjs | tee /tmp/stage6-write.log
+          node integration/tests/write_receipt_recovery.mjs | tee /tmp/stage6-write.log
           grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/stage6-write.log
-          node --experimental-default-type=module integration/tests/automatic_sync.mjs | tee /tmp/stage6-auto.log
+          node integration/tests/automatic_sync.mjs | tee /tmp/stage6-auto.log
           grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/stage6-auto.log
-          node --experimental-default-type=module integration/tests/coach_plan_read.mjs | tee /tmp/stage6-plan.log
+          node integration/tests/coach_plan_read.mjs | tee /tmp/stage6-plan.log
           grep -qx 'ETAPA5_PLAN_READ_TESTS=16' /tmp/stage6-plan.log
-          node --experimental-default-type=module integration/tests/coach_substitution.mjs | tee /tmp/stage6-substitution.log
+          node integration/tests/coach_substitution.mjs | tee /tmp/stage6-substitution.log
           grep -qx 'ETAPA5_SUBSTITUTION_TESTS=26' /tmp/stage6-substitution.log
           python3 - <<'PY'
           from pathlib import Path
@@ -784,36 +784,36 @@ jobs:
           set -euo pipefail
           rm -rf dist/tests
           SANDBOX_ENGINE_TEST_MODE=1 python3 testing/build_sandbox.py
-          node --experimental-default-type=module testing/isolation_tests.mjs | tee /tmp/sandbox-isolation.log
+          node testing/isolation_tests.mjs | tee /tmp/sandbox-isolation.log
           grep -qx 'SANDBOX_ISOLATION_TESTS=17' /tmp/sandbox-isolation.log
-          node --experimental-default-type=module testing/input_validation_tests.mjs | tee /tmp/input-validation.log
+          node testing/input_validation_tests.mjs | tee /tmp/input-validation.log
           grep -qx 'INPUT_VALIDATION_TESTS=31' /tmp/input-validation.log
-          node --experimental-default-type=module testing/sync_queue_tests.mjs | tee /tmp/sync-queue.log
+          node testing/sync_queue_tests.mjs | tee /tmp/sync-queue.log
           grep -qx 'SYNC_QUEUE_TESTS=13' /tmp/sync-queue.log
           mkdir -p dist/testes/tests
           cp integration/tests/automatic_sync.mjs dist/testes/tests/
-          node --experimental-default-type=module dist/testes/tests/automatic_sync.mjs | tee /tmp/sandbox-auto-regression.log
+          node dist/testes/tests/automatic_sync.mjs | tee /tmp/sandbox-auto-regression.log
           grep -qx 'ETAPA4_AUTO_POLICY_TESTS=35' /tmp/sandbox-auto-regression.log
           rm -r dist/testes/tests
-          node --experimental-default-type=module testing/grid_read_tests.mjs | tee /tmp/grid_read_tests.log
+          node testing/grid_read_tests.mjs | tee /tmp/grid_read_tests.log
           grep -qx 'GRID_READ_TESTS=25' /tmp/grid_read_tests.log
-          node --experimental-default-type=module testing/grid_numeric_regression.mjs | tee /tmp/grid_numeric_regression.log
+          node testing/grid_numeric_regression.mjs | tee /tmp/grid_numeric_regression.log
           grep -qx 'GRID_TYPED_NUMBERS_TESTS=19' /tmp/grid_numeric_regression.log
-          node --experimental-default-type=module testing/grid_write_regression.mjs | tee /tmp/grid_write_regression.log
+          node testing/grid_write_regression.mjs | tee /tmp/grid_write_regression.log
           grep -qx 'GRID_WRITE_CONFIRMATION_TESTS=15' /tmp/grid_write_regression.log
-          node --experimental-default-type=module testing/grid_receipt_regression.mjs | tee /tmp/grid_receipt_regression.log
+          node testing/grid_receipt_regression.mjs | tee /tmp/grid_receipt_regression.log
           grep -qx 'ETAPA3_WRITE_TESTS=41' /tmp/grid_receipt_regression.log
-          node --experimental-default-type=module testing/missing_ids_tests.mjs | tee /tmp/missing_ids.log
+          node testing/missing_ids_tests.mjs | tee /tmp/missing_ids.log
           grep -qx 'MISSING_IDS_TESTS=32' /tmp/missing_ids.log
-          node --experimental-default-type=module testing/coordinator_tests.mjs | tee /tmp/coordinator-tests.log
+          node testing/coordinator_tests.mjs | tee /tmp/coordinator-tests.log
           grep -qx 'COORDINATOR_CANDIDATE_TESTS=24' /tmp/coordinator-tests.log
           rm -rf dist/tests
           env -u SANDBOX_ENGINE_TEST_MODE python3 testing/build_sandbox.py
-          node --experimental-default-type=module testing/balanced_coach_tests.mjs | tee /tmp/balanced-coach.log
+          node testing/balanced_coach_tests.mjs | tee /tmp/balanced-coach.log
           grep -qx 'BALANCED_COACH_TESTS=42' /tmp/balanced-coach.log
-          node --experimental-default-type=module testing/concurrency_gate_tests.mjs | tee /tmp/concurrency-gate.log
+          node testing/concurrency_gate_tests.mjs | tee /tmp/concurrency-gate.log
           grep -qx 'CONCURRENCY_GATE_TESTS=14' /tmp/concurrency-gate.log
-          node --experimental-default-type=module testing/coordinator_client_tests.mjs | tee /tmp/coordinator-client.log
+          node testing/coordinator_client_tests.mjs | tee /tmp/coordinator-client.log
           grep -qx 'COORDINATOR_CLIENT_TESTS=28' /tmp/coordinator-client.log
           for file in dist/testes/*.js; do node --check "$file"; done
       - name: Ativar coordenador somente no artefato publicado
@@ -834,10 +834,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 testing/production_candidate.py /tmp/treino-production-candidate
-          node --experimental-default-type=module testing/production_candidate_tests.mjs /tmp/treino-production-candidate
-          node --experimental-default-type=module testing/production_session_tests.mjs /tmp/treino-production-candidate
+          node testing/production_candidate_tests.mjs /tmp/treino-production-candidate
+          node testing/production_session_tests.mjs /tmp/treino-production-candidate
           python3 testing/production_coach_tests.py /tmp/treino-production-candidate
-          (cd /tmp/treino-production-candidate && node --experimental-default-type=module testing/coordinator_tests.mjs)
+          (cd /tmp/treino-production-candidate && node testing/coordinator_tests.mjs)
           cp -a /tmp/treino-production-candidate/dist/. dist/
           python3 - <<'PY'
           from pathlib import Path
@@ -855,7 +855,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --experimental-default-type=module testing/diagnostico_conexao_tests.mjs
+          node testing/diagnostico_conexao_tests.mjs
           cp testing/diagnostico_conexao.html dist/diagnostico_conexao.html
           cp testing/diagnostico_conexao.js dist/diagnostico_conexao.js
       - name: Configurar GitHub Pages
