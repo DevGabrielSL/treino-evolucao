@@ -81,3 +81,14 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  ctx.filterSwapOptions(input);
  assert.deepEqual(select.options,[placeholder,scott,cable]);
 }
+
+{
+ const done={id:'done',session_id:active.id,variant_id:v.id,set_type:'effective',set_number:1};
+ const adjusted={...active,skipped_series:{v:1}};
+ const html=ctx.renderFocusDeck(adjusted,'v',{...entities,sets:[done]});
+ assert.match(html,/1 feita\(s\) · 1 pulada\(s\) · 1 restante\(s\)/);
+ assert.match(html,/0\/1 exercícios sem pendências/);
+ const resolved=ctx.renderFocusDeck({...adjusted,skipped_series:{v:2}},'v',{...entities,sets:[done]});
+ assert.match(resolved,/1 feita\(s\) · 2 pulada\(s\) · 0 restante\(s\)/);
+ assert.match(resolved,/1\/1 exercícios sem pendências/);
+}

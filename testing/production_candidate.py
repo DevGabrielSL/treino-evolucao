@@ -200,4 +200,19 @@ runpy.run_path(str(out / 'testing/principal_relics_art_patch.py'))
 # Refresh cached training assets for the revised series flow.
 for name in ('sw.js','integrity.js'):
  p=dist/name
- p.write_text(p.read_text().replace('shell-v170-relic-art','shell-v173-swap-search'))
+ p.write_text(p.read_text().replace('shell-v170-relic-art','shell-v174-deck-progress'))
+
+# Show the work already done and the remaining plan on each compact card.
+p=dist/'principal_cards.js';s=p.read_text()
+old='count:state.count,target:state.target'
+assert s.count(old)==1
+p.write_text(s.replace(old,'count:state.count,skipped:state.skipped,resolved:state.resolved,target:state.target'))
+p=dist/'app.js';s=p.read_text()
+old="<span>${x.count}${x.target!==null?' / '+x.target:''} séries</span>"
+new="""<span>${x.count} feita(s)${x.skipped?' · '+x.skipped+' pulada(s)':''}${x.target===null?'':' · '+Math.max(0,x.target-x.resolved)+' restante(s)'}</span>"""
+assert s.count(old)==1
+s=s.replace(old,new)
+old="${models.filter(x=>x.reached).length}/${models.length} metas atingidas"
+new="${models.filter(x=>x.target!==null&&x.resolved>=x.target).length}/${models.length} exercícios sem pendências"
+assert s.count(old)==1
+p.write_text(s.replace(old,new))
