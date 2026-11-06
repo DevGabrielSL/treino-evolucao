@@ -451,3 +451,8 @@ p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n'+(root/'testing/prin
 for name in ('sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('shell-v186-clean-planner','shell-v187-training-polish').replace('app.js?v=186','app.js?v=187').replace('principal_focus.css?v=186','principal_focus.css?v=187'))
+
+# Keep transient save confirmations clear of the fixed save action.
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('shell-v187-training-polish','shell-v188-training-feedback').replace('app.js?v=187','app.js?v=188').replace('principal_focus.css?v=187','principal_focus.css?v=188'))

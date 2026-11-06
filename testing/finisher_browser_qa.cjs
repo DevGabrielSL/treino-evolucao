@@ -22,6 +22,9 @@ const assert=require('node:assert/strict');
  const entryBounds=await page.evaluate(()=>{const save=document.querySelector('#quick-set-form button[type="submit"]').getBoundingClientRect(),nav=document.querySelector('.bottom-nav').getBoundingClientRect();return {saveBottom:save.bottom,saveTop:save.top,navTop:nav.top,overflow:document.documentElement.scrollWidth>innerWidth};});
  assert.ok(entryBounds.saveTop>=0&&entryBounds.saveBottom<=entryBounds.navTop-6,JSON.stringify(entryBounds));
  assert.equal(entryBounds.overflow,false);
+ const feedbackClear=await page.evaluate(()=>{const toast=document.querySelector('#toast'),save=document.querySelector('#quick-set-form button[type="submit"]').getBoundingClientRect();if(toast.hidden)return true;const rect=toast.getBoundingClientRect();return rect.bottom<=save.top-6||rect.top>=save.bottom+6;});
+ assert.equal(feedbackClear,true,'Save feedback must not cover the save action');
+
  console.log('ENTRY_SCREENSHOT_JPEG='+(await page.locator('.focus-entry').screenshot({type:'jpeg',quality:65})).toString('base64'));
  await page.screenshot({path:'/tmp/fitness-qa-rest.png'});
  await page.locator('[data-finisher-action="open"]').click();
