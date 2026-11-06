@@ -34,7 +34,7 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v180-finisher-layout' in content
+    assert 'shell-v181-first-deck' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=131'" in content
@@ -52,10 +52,11 @@ assert (dist / 'relic-emblem.svg').is_file()
 assert (dist / 'relic-group-scenes.webp').is_file()
 assert (dist / 'relic-supino-card.webp').is_file()
 assert 'relic-group-scenes.webp' in (dist / 'principal_relics_art.css').read_text()
-assert 'app.js?v=179' in (dist / 'index.html').read_text()
+assert 'app.js?v=181' in (dist / 'index.html').read_text()
 assert 'relic-ex-supino' in app
 assert 'relic-ex-supino' in (dist / 'principal_cards.js').read_text()
 for file in dist.glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
 print('PRINCIPAL_COACH_INTEGRATION=PASS')
+
 

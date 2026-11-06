@@ -398,3 +398,12 @@ p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=17
 
 # Finisher goals, durable timers and last-set rest clock.
 runpy.run_path(str(out / 'testing/principal_finisher_patch.py'))
+
+
+# The first preset follows the user's exact exercise order; keep the closing block separate.
+p=dist/'app.js';s=p.read_text();assert "./principal_presets.js?v=160" in s
+p.write_text(s.replace('./principal_presets.js?v=160','./principal_presets.js?v=181'))
+for name in ('sw.js','integrity.js'):
+ p=dist/name;s=p.read_text();assert 'shell-v180-finisher-layout' in s
+ p.write_text(s.replace('shell-v180-finisher-layout','shell-v181-first-deck').replace('principal_presets.js?v=160','principal_presets.js?v=181').replace('app.js?v=179','app.js?v=181'))
+p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=179','app.js?v=181'))
