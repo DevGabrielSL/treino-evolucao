@@ -407,3 +407,9 @@ for name in ('sw.js','integrity.js'):
  p=dist/name;s=p.read_text();assert 'shell-v180-finisher-layout' in s
  p.write_text(s.replace('shell-v180-finisher-layout','shell-v181-first-deck').replace('principal_presets.js?v=160','principal_presets.js?v=181').replace('app.js?v=179','app.js?v=181'))
 p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=179','app.js?v=181'))
+
+
+# Publish the user's second deck and refresh cached preset code.
+for name in ('app.js','sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('principal_presets.js?v=181','principal_presets.js?v=182').replace('app.js?v=181','app.js?v=182').replace('shell-v181-first-deck','shell-v182-second-deck'))
