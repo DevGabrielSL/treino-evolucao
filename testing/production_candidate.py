@@ -465,3 +465,9 @@ runpy.run_path(str(out / 'testing/principal_exercise_art_patch.py'))
 for name in ('sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('shell-v189-exercise-art','shell-v190-full-portrait-cards').replace('app.js?v=189','app.js?v=190').replace('principal_relics_art.css?v=189','principal_relics_art.css?v=190'))
+
+
+# Add the second set of eight uploaded exercise cards and refresh art modules.
+for name in ('app.js','principal_cards.js','sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('principal_exercise_art.js?v=189','principal_exercise_art.js?v=191').replace('principal_cards.js?v=189','principal_cards.js?v=191').replace('app.js?v=190','app.js?v=191').replace('principal_relics_art.css?v=190','principal_relics_art.css?v=191').replace('shell-v190-full-portrait-cards','shell-v191-back-triceps-art'))

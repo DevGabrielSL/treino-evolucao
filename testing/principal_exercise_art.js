@@ -2,6 +2,15 @@ const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toL
 const art=slug=>({src:'./exercise-'+slug+'.webp',width:768,height:1152});
 export function exerciseArt(name,equipment=''){
  const n=norm(name),q=norm(equipment),both=n+' '+q;
+ if(/puxada alta/.test(n)&&/unilateral/.test(both))return art('puxada-alta-unilateral');
+ if(n==='puxada alta')return art('puxada-alta');
+ if(/remada articulada/.test(n)&&/apoio/.test(both))return art('remada-articulada-apoio');
+ if(/remada alta/.test(n)&&/apoio no peito/.test(both))return art('remada-alta-apoio-peito');
+ if(/triceps frances/.test(n)&&/barra v/.test(both))return art('triceps-frances-polia-barra-v');
+ if(/triceps testa/.test(n)&&/barra v/.test(both)&&!/halter/.test(both))return art('triceps-testa-barra-v');
+ if(/triceps/.test(n)&&!/frances|testa/.test(n)&&/polia/.test(both)&&/barra v/.test(both))return art('triceps-polia-barra-v');
+ if(/crucifixo inverso/.test(n)&&/maquina/.test(both))return art('crucifixo-inverso-maquina');
+
  if(/supino/.test(n)&&/inclinado/.test(n)&&/halter/.test(both))return art('supino-inclinado-halteres');
  if(/supino reto/.test(n)&&/barra/.test(both))return art('supino-reto-barra');
  if(/supino declinado/.test(n)&&/maquina/.test(both))return art('supino-declinado-maquina');
@@ -16,3 +25,4 @@ export function renderExerciseArt(name,equipment='',mini=false){
  const item=exerciseArt(name,equipment);if(!item)return '';
  return '<img class="exercise-card-image" src="'+item.src+'" alt="" width="768" height="1152" loading="lazy" decoding="async"'+(mini?' sizes="138px"':'')+'>';
 }
+
