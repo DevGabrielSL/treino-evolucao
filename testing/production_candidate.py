@@ -477,3 +477,15 @@ for name in ('app.js','principal_cards.js','sw.js','integrity.js','index.html'):
 for name in ('app.js','principal_cards.js','sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('principal_exercise_art.js?v=191','principal_exercise_art.js?v=192').replace('principal_cards.js?v=191','principal_cards.js?v=192').replace('app.js?v=191','app.js?v=192').replace('principal_relics_art.css?v=191','principal_relics_art.css?v=192').replace('shell-v191-back-triceps-art','shell-v192-third-deck-art'))
+
+
+# Compact, accessible finishing targets and an unobstructed entry form.
+p=dist/'app.js';s=p.read_text()
+needle="if(label)label.textContent=seconds>=180?'Meta atingida':'Faltam '+(180-seconds)+' segundos';"
+assert s.count(needle)==1
+s=s.replace(needle,needle+"const progress=document.querySelector('[data-plank-progress]');if(progress)progress.value=Math.min(180,seconds);")
+p.write_text(s)
+p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n'+(root/'testing/principal_finisher_polish.css').read_text())
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('shell-v192-third-deck-art','shell-v193-finisher-polish').replace('app.js?v=192','app.js?v=193').replace('principal_focus.css?v=188','principal_focus.css?v=193'))

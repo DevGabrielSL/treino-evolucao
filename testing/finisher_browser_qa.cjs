@@ -33,6 +33,7 @@ const assert=require('node:assert/strict');
  await page.waitForFunction(()=>document.querySelector('.finisher-goal.selected strong')?.textContent==='20 / 50');
  await page.locator('[data-finisher-action="resume-plank"]').click();
  await page.waitForFunction(()=>document.querySelector('[data-plank-clock]')?.textContent!=='00:00:00',{},{timeout:5000});
+ assert.ok(Number(await page.locator('[data-plank-progress]').getAttribute('value'))>=1);
  await page.locator('[data-finisher-action="pause-plank"]').click();
  await page.locator('[data-finisher-action="resume-plank"]').waitFor();
  assert.match(await page.locator('[data-plank-clock]').innerText(),/00:00:0[1-9]/);
@@ -44,6 +45,12 @@ const assert=require('node:assert/strict');
  await page.locator('[data-finisher-key="abs"]').click();
  await form.locator('[name="load"]').fill('6');await form.locator('[name="reps"]').fill('25');await form.locator('[name="rir"]').fill('1');await form.locator('[name="kind"]').selectOption('effective');await form.locator('[name="unit"]').selectOption('plaquetas');await form.locator('[type="submit"]').click();
  await page.waitForFunction(()=>document.querySelector('.finisher-goal.selected strong')?.textContent==='25 / 100');
+ await form.locator('[name="load"]').scrollIntoViewIfNeeded();
+ const finishBounds=await page.evaluate(()=>{const save=document.querySelector('#finisher-set-form button[type="submit"]').getBoundingClientRect(),nav=document.querySelector('.bottom-nav').getBoundingClientRect(),a=document.querySelector('#finisher-set-form [name="load"]').getBoundingClientRect(),b=document.querySelector('#finisher-set-form [name="reps"]').getBoundingClientRect();return {top:save.top,bottom:save.bottom,nav:nav.top,aligned:Math.abs(a.top-b.top)<2};});
+ assert.ok(finishBounds.top>=0&&finishBounds.bottom<=finishBounds.nav-6,JSON.stringify(finishBounds));assert.equal(finishBounds.aligned,true);
+ assert.equal(await page.locator('.finisher-goal.selected progress').getAttribute('value'),'25');
+ await page.setViewportSize({width:320,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.setViewportSize({width:390,height:844});
+ await page.locator('#toast').waitFor({state:'hidden',timeout:6000});
  await page.locator('#finisher-panel').scrollIntoViewIfNeeded();
  console.log('FINISHER_SCREENSHOT_JPEG='+(await page.locator('#finisher-panel').screenshot({type:'jpeg',quality:50})).toString('base64'));
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
@@ -102,6 +109,7 @@ const assert=require('node:assert/strict');
 
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
+
 
 
 

@@ -1,0 +1,49 @@
+/* Finisher: compact progress targets, aligned fields and an unobstructed save action. */
+#finisher-panel{position:relative;isolation:isolate;overflow:visible!important;padding:18px!important;border:1px solid #687d6e;border-radius:18px;background:linear-gradient(150deg,#1b3037,#12202b 72%);box-shadow:0 12px 28px #0004,inset 0 1px #dfc78420}
+#finisher-panel .finisher-heading{gap:12px;align-items:center}
+#finisher-panel .focus-session-label{font:750 10px/1.4 system-ui;letter-spacing:.13em;color:#a2e5d0}
+#finisher-panel .finisher-heading h2{margin:5px 0 0;font-size:27px;line-height:1.2;color:#f3e0b1}
+#finisher-panel .finisher-heading>span{padding:6px 9px;border:1px solid #728574;border-radius:999px;font:600 10px/1.4 system-ui;color:#c7d8cc;white-space:nowrap}
+#finisher-panel .finisher-intro{font:400 12px/1.5 system-ui;color:#baccca;margin:13px 0 15px}
+#finisher-panel .finisher-goals{gap:8px;margin:0 0 17px;align-items:start}
+#finisher-panel .finisher-goal{display:grid;gap:7px;align-content:start;padding:10px 9px;border:2px solid #52685e;border-radius:12px;background:#122832;box-shadow:none;min-width:0;min-height:0;text-align:left}
+#finisher-panel .finisher-goal.selected{border-color:#91e3c6;background:#173c34;box-shadow:0 0 0 2px #91e3c615,inset 0 1px #c3f6df17}
+#finisher-panel .finisher-goal>span{min-height:29px;font:500 11px/1.35 system-ui;color:#cbdad5}
+#finisher-panel .finisher-goal>strong{font:750 clamp(14px,4.2vw,19px)/1.25 system-ui;letter-spacing:-.025em;color:#f7e7bd;font-variant-numeric:tabular-nums;white-space:nowrap}
+#finisher-panel .finisher-goal>small{font:500 10px/1.4 system-ui;color:#a9c7bc;white-space:nowrap}
+#finisher-panel .finisher-goal.is-complete>small{color:#a8efcc}
+#finisher-panel .finisher-goal.is-complete>small::before{content:'✓ ';font-weight:800}
+#finisher-panel progress{display:block;width:100%;min-width:0;height:5px;border:0;border-radius:99px;overflow:hidden;appearance:none;accent-color:#86dfb9;background:#354c46}
+#finisher-panel progress::-webkit-progress-bar{background:#354c46;border-radius:99px}
+#finisher-panel progress::-webkit-progress-value{background:linear-gradient(90deg,#62c89f,#a2edca);border-radius:99px}
+#finisher-panel progress::-moz-progress-bar{background:#87dfb9;border-radius:99px}
+#finisher-panel #finisher-set-form{padding:15px 0 6px;border-top:1px solid #6b7a653f;min-width:0;scroll-margin-block:20px 100px}
+#finisher-panel #finisher-set-form h3{font:700 18px/1.35 system-ui;color:#e9dfbf;margin:0 0 14px}
+#finisher-panel .quick-grid{gap:12px;align-items:start}
+#finisher-panel .quick-grid .field{margin:0!important;min-width:0;display:flex;flex-direction:column}
+#finisher-panel .field>span{font:650 12px/1.35 system-ui;color:#e2e7da;min-height:32px!important;margin-bottom:6px}
+#finisher-panel .field>span small{display:block;font:400 10px/1.4 system-ui;margin-top:2px;color:#a9c3c0}
+#finisher-panel .field:focus-within>span{color:#acebd1}
+#finisher-panel .input{width:100%;min-height:52px;height:52px;padding:10px 12px;border:1px solid #789089;border-radius:11px;background:#0c2029;color:#f6efdf;font-size:16px;box-sizing:border-box;scroll-margin-block:24px 160px}
+#finisher-panel input[name=load],#finisher-panel input[name=reps]{font:650 25px/1.3 system-ui;text-align:center;font-variant-numeric:tabular-nums}
+#finisher-panel input[name=rir]{font-size:21px;text-align:center;font-variant-numeric:tabular-nums}
+#finisher-panel .input::placeholder{font-size:19px;font-weight:400;color:#849c9e}
+#finisher-panel select.input{font-size:14px;padding-inline:10px}
+#finisher-panel .finisher-load-help{font:400 11px/1.45 system-ui;color:#b1c9c2;margin:10px 0 0}
+#finisher-panel #finisher-set-form>button[type=submit]{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:7;display:block;width:100%;min-height:52px;margin:13px 0 4px;padding:13px 16px;border-radius:12px;font:750 16px/1.4 system-ui;box-shadow:0 7px 18px #0005,0 -7px 14px #14232be8}
+#finisher-panel .finisher-plank{margin:17px 0 14px;padding:15px;border:1px solid #4d7b66;border-radius:14px;background:linear-gradient(140deg,#163c32,#102b2a)}
+#finisher-panel .finisher-plank-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#finisher-panel .finisher-plank-heading h3{font:700 17px/1.3 system-ui;margin:0;color:#eadfbd}
+#finisher-panel .finisher-plank-heading h3 small{display:block;font:400 11px/1.4 system-ui;color:#b3d4c7;margin-top:3px}
+#finisher-panel .finisher-plank-state{padding:5px 8px;border-radius:99px;background:#25483d;color:#c4ded1;font:600 10px/1.3 system-ui;white-space:nowrap}
+#finisher-panel .finisher-plank-state.is-running{background:#a4e6c5;color:#13332a}
+#finisher-panel .finisher-plank>strong{font:750 clamp(34px,10vw,46px)/1.2 system-ui;text-align:center;color:#f7e6b7;letter-spacing:.025em;font-variant-numeric:tabular-nums;margin:17px 0 12px}
+#finisher-panel .finisher-plank-progress{height:6px}
+#finisher-panel [data-plank-remaining]{font:600 11px/1.45 system-ui;text-align:center;color:#b6dfca;margin-top:7px}
+#finisher-panel .finisher-plank>p{font:400 11px/1.5 system-ui;color:#bbd1c6;margin:11px 0}
+#finisher-panel .finisher-plank>.btn{font-size:13px;min-height:46px;border:1px solid #81a68d;border-radius:10px;background:#1c3f37;color:#dfeddf;box-shadow:none}
+#finisher-panel>details>summary{font:600 12px/1.4 system-ui;min-height:44px;padding:10px 0;color:#c3d7cc}
+#finisher-panel>.btn[data-coach-action=finish]{font:650 13px/1.4 system-ui;min-height:46px;margin-top:12px;border-radius:11px;background:#1b3039;border-color:#a3936a;color:#e9dfc3;scroll-margin-bottom:100px}
+@media(max-width:360px){#finisher-panel{padding:15px!important}#finisher-panel .finisher-goals{gap:6px}#finisher-panel .finisher-goal{padding:9px 7px}#finisher-panel .quick-grid{gap:10px}#finisher-panel select.input{font-size:13px;padding-inline:8px}}
+
+#finisher-panel .field:has(select[name=unit])>span{min-height:0!important}
