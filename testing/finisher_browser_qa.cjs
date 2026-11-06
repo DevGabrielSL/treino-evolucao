@@ -83,13 +83,26 @@ const assert=require('node:assert/strict');
   assert.equal(await img.evaluate(im=>{const a=im.getBoundingClientRect(),b=im.parentElement.getBoundingClientRect();return Math.abs(a.height/a.width-1.5)<0.02&&Math.abs(a.height-b.height)<2&&Math.abs(a.width-b.width)<2;}),true);
  }
  const thirdArts=await page.evaluate(async()=>{const {presetPlan}=await import('/principal_presets.js'),{exerciseArt}=await import('/principal_exercise_art.js');return presetPlan('rpg_deck_03',{sessions:[],sets:[],exercises:[],exercise_variants:[]},'2026-11-06').items.map(x=>exerciseArt(x.name,x.equipment)?.src||null);});
- assert.equal(thirdArts[1],'./exercise-triceps-frances-polia-barra-v.webp');assert.equal(thirdArts[3],'./exercise-triceps-polia-barra-v.webp');assert.equal(thirdArts[5],null);assert.equal(thirdArts[8],'./exercise-crucifixo-inverso-maquina.webp');
+ assert.equal(thirdArts[1],'./exercise-triceps-frances-polia-barra-v.webp');assert.equal(thirdArts[3],'./exercise-triceps-polia-barra-v.webp');assert.equal(thirdArts[5],'./exercise-triceps-testa-halteres.webp');assert.equal(thirdArts[8],'./exercise-crucifixo-inverso-maquina.webp');
  await page.locator('#toast').waitFor({state:'hidden',timeout:6000});
  await secondCards.first().scrollIntoViewIfNeeded();console.log('SECOND_DECK_ART_SCREENSHOT_JPEG='+(await secondCards.first().screenshot({type:'jpeg',quality:55})).toString('base64'));
  console.log('SECOND_DECK_EIGHT_IMAGES_LOADED_UNCROPPED_AND_THIRD_DECK_VARIANTS=PASS');
+ await page.locator('[data-coach-action="clear"]').click();await page.locator('[data-preset-id="rpg_deck_03"]').click();
+ const thirdImages=['rosca-scott-unilateral','triceps-frances-polia-barra-v','rosca-polia-alongada','triceps-polia-barra-v','rosca-martelo','triceps-testa-halteres','desenvolvimento-ombros-maquina','elevacao-lateral-polia','crucifixo-inverso-maquina'];
+ const thirdCards=page.locator('.proposal-list .sport-card.has-exercise-art');assert.equal(await thirdCards.count(),9);
+ for(let i=0;i<9;i++){
+  const img=thirdCards.nth(i).locator('.exercise-card-image');await img.scrollIntoViewIfNeeded();
+  const src='./exercise-'+thirdImages[i]+'.webp';assert.equal(await img.getAttribute('src'),src);
+  await page.waitForFunction(src=>[...document.images].some(im=>im.getAttribute('src')===src&&im.complete&&im.naturalWidth>0),src);
+  assert.equal(await img.evaluate(im=>{const a=im.getBoundingClientRect(),b=im.parentElement.getBoundingClientRect();return Math.abs(a.height/a.width-1.5)<0.02&&Math.abs(a.height-b.height)<2&&Math.abs(a.width-b.width)<2;}),true);
+ }
+ await thirdCards.nth(2).scrollIntoViewIfNeeded();console.log('THIRD_DECK_ART_SCREENSHOT_JPEG='+(await thirdCards.nth(2).screenshot({type:'jpeg',quality:55})).toString('base64'));
+ console.log('THIRD_DECK_ALL_NINE_IMAGES_LOADED_UNCROPPED_CORRECT_VARIANTS=PASS');
+
 
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
+
 
 
 

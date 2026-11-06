@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil,json,hashlib
 root=Path(__file__).resolve().parents[1];dist=root/'dist'
 manifest=json.loads((root/'testing/exercise_art/manifest.json').read_text())
-assert len(manifest)==16
+assert len(manifest)==19
 for entry in manifest:
  p=root/'testing/exercise_art'/entry['file'];assert hashlib.sha256(p.read_bytes()).hexdigest()==entry['sha256']
  shutil.copy2(p,dist/entry['file'])
@@ -29,4 +29,5 @@ for name in ('sw.js','integrity.js'):
  s=s.replace('shell-v188-training-feedback','shell-v189-exercise-art').replace('principal_cards.js?v=170','principal_cards.js?v=189').replace('principal_relics_art.css?v=170','principal_relics_art.css?v=189')
  p.write_text(s)
 p=dist/'index.html';p.write_text(p.read_text().replace('app.js?v=188','app.js?v=189').replace('principal_relics_art.css?v=170','principal_relics_art.css?v=189'))
+
 

@@ -2,6 +2,10 @@ const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toL
 const art=slug=>({src:'./exercise-'+slug+'.webp',width:768,height:1152});
 export function exerciseArt(name,equipment=''){
  const n=norm(name),q=norm(equipment),both=n+' '+q;
+ if(/rosca/.test(n)&&/polia/.test(both)&&/alongad/.test(both))return art('rosca-polia-alongada');
+ if(/triceps testa/.test(n)&&/halter/.test(both))return art('triceps-testa-halteres');
+ if(/desenvolvimento/.test(n)&&/ombro/.test(n)&&/maquina/.test(both))return art('desenvolvimento-ombros-maquina');
+
  if(/puxada alta/.test(n)&&/unilateral/.test(both))return art('puxada-alta-unilateral');
  if(n==='puxada alta')return art('puxada-alta');
  if(/remada articulada/.test(n)&&/apoio/.test(both))return art('remada-articulada-apoio');
@@ -25,4 +29,5 @@ export function renderExerciseArt(name,equipment='',mini=false){
  const item=exerciseArt(name,equipment);if(!item)return '';
  return '<img class="exercise-card-image" src="'+item.src+'" alt="" width="768" height="1152" loading="lazy" decoding="async"'+(mini?' sizes="138px"':'')+'>';
 }
+
 

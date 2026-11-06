@@ -94,5 +94,23 @@
     "source": "Imagem do ChatGPT 6 de nov. de 2026, 13_51_47-8.png",
     "sha256": "580880fe81cd17314411cfb1a455d7fd59e5e5a33eaf5af223471029fd6b26d9",
     "bytes": 221702
+  },
+  {
+    "file": "exercise-desenvolvimento-ombros-maquina.webp",
+    "source": "03-41964.png",
+    "sha256": "b1ea7216059339a51c3d6cce40893f1a9e735f3f532a1715a416a2a6ad6cb494",
+    "bytes": 216108
+  },
+  {
+    "file": "exercise-rosca-polia-alongada.webp",
+    "source": "01-41965.png",
+    "sha256": "6578ba936bd70197b56977a787bbdd830013d736ac46cffb744d983c1fe0b6f7",
+    "bytes": 228634
+  },
+  {
+    "file": "exercise-triceps-testa-halteres.webp",
+    "source": "02-41966.png",
+    "sha256": "31e49cd5c8be449fc56cbc70e448d504a4d0aaa8659f63ac7dc1b0022573e08b",
+    "bytes": 226230
   }
 ]
