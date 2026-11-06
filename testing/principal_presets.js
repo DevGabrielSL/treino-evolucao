@@ -2,6 +2,8 @@ import {analyzeHistory,readinessAdjustment} from './balanced_coach.js?v=121';
 const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 // Equipment descriptions are explicit. Machine load conventions must be confirmed by the user.
 const registry={
+ curlCableLengthened:['biceps','Rosca na polia alongada','Polia · posição alongada',10,15],
+ tricepsSkullcrusherDB:['triceps','Tríceps testa com halteres','Halteres',10,15,'kg/halter'],
  deck2Pulldown:['costas','Puxada alta','Polia alta',8,12],
  deck2ArticulatedRow:['costas','Remada articulada com apoio','Máquina articulada com apoio',8,12],
  deck2SinglePulldown:['costas','Puxada alta unilateral','Polia alta · unilateral',8,12],
@@ -24,7 +26,7 @@ const spec=(id,name,items,note='')=>({id:'rpg_deck_'+id,name,items,note});
 export const PRESET_DECKS=[
  spec('01','Peito + bíceps + ombro lateral',['inclineDB','bench','declineMachine','fly','scottUnilateral','curlIncline45','hammer','lateralCable']),
  spec('02','Costas + tríceps + ombro posterior',['deck2Pulldown','deck2ArticulatedRow','deck2SinglePulldown','deck2HighRow','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','rear']),
- spec('03','Quadríceps + panturrilhas + core',['hack','leg','extension','flexLying',['calfStanding',10,20],'absMachine']),
+ spec('03','Braços + ombros',['scottUnilateral','deck2FrenchV','curlCableLengthened','deck2PushdownV','hammer','tricepsSkullcrusherDB','press','lateralCable','rear']),
  spec('04','Posteriores + glúteos + panturrilhas + core',['rdl','hip','flexSeated','lunge','calfSeated','reverse'],'Romeno e afundo exigem familiaridade com a técnica; no afundo, repetições por perna.'),
  spec('05','Empurrar: peito + ombros + tríceps + core',['bench','inclineDB','press','lateralCable','tri','absCable']),
  spec('06','Puxar: costas + bíceps + ombro posterior + core',['latPronated','rowLow',['rowSupport',10,12],'rear','scott','reverse']),
@@ -62,5 +64,6 @@ export function presetPlan(id,entities,today,readiness={}){
 export function presetHistorySummary(plan){return 'Deck predefinido: a ordem não foi reorganizada pelo histórico. '+plan.history.total+' séries sem aquecimento classificadas nos últimos 7 dias. '+(plan.history.recent.length?'Há grupos treinados hoje ou ontem: '+plan.history.recent.join(', ')+'. Confira sua condição antes de repetir. ':'')+(plan.presetNote||'');}
 const escape=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderPresetLibrary(){return `<details class="preset-library" open><summary>15 decks prontos</summary><p class="text-small">3 séries de trabalho por exercício. Sem cargas predefinidas. Revise as cartas antes de iniciar; escolha os treinos conforme sua semana.</p><div class="preset-list">${PRESET_DECKS.map((d,i)=>`<article class="preset-item"><div><span class="preset-number">DECK ${String(i+1).padStart(2,'0')}</span><h3>${escape(d.name)}</h3><p class="text-small">${d.items.length} exercícios · ${d.items.length*3} séries sugeridas</p></div><button class="btn primary small" data-coach-action="preset" data-preset-id="${d.id}">Ver deck</button></article>`).join('')}</div></details>`;}
+
 
 
