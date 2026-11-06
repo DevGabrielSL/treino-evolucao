@@ -2,6 +2,14 @@ const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toL
 const art=slug=>({src:'./exercise-'+slug+'.webp',width:768,height:1152});
 export function exerciseArt(name,equipment=''){
  const n=norm(name),q=norm(equipment),both=n+' '+q;
+ if(/leg press/.test(n)&&/45/.test(both))return art('leg-press-45');
+ if(/hack/.test(n)&&/maquina|machine/.test(both))return art('hack-machine');
+ if(n==='cadeira extensora')return art('cadeira-extensora');
+ if(n==='cadeira flexora')return art('cadeira-flexora');
+ if(n==='cadeira abdutora')return art('cadeira-abdutora');
+ if(n==='cadeira adutora')return art('cadeira-adutora');
+ if(/panturrilha sentada/.test(n))return art('panturrilha-sentada');
+
  if(/rosca/.test(n)&&/polia/.test(both)&&/alongad/.test(both))return art('rosca-polia-alongada');
  if(/triceps testa/.test(n)&&/halter/.test(both))return art('triceps-testa-halteres');
  if(/desenvolvimento/.test(n)&&/ombro/.test(n)&&/maquina/.test(both))return art('desenvolvimento-ombros-maquina');
@@ -29,5 +37,6 @@ export function renderExerciseArt(name,equipment='',mini=false){
  const item=exerciseArt(name,equipment);if(!item)return '';
  return '<img class="exercise-card-image" src="'+item.src+'" alt="" width="768" height="1152" loading="lazy" decoding="async"'+(mini?' sizes="138px"':'')+'>';
 }
+
 
 

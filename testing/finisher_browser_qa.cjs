@@ -105,10 +105,23 @@ const assert=require('node:assert/strict');
  }
  await thirdCards.nth(2).scrollIntoViewIfNeeded();console.log('THIRD_DECK_ART_SCREENSHOT_JPEG='+(await thirdCards.nth(2).screenshot({type:'jpeg',quality:55})).toString('base64'));
  console.log('THIRD_DECK_ALL_NINE_IMAGES_LOADED_UNCROPPED_CORRECT_VARIANTS=PASS');
+ await page.locator('[data-coach-action="clear"]').click();await page.locator('[data-preset-id="rpg_deck_04"]').click();
+ const fourthImages=["leg-press-45", "hack-machine", "cadeira-extensora", "cadeira-flexora", "cadeira-abdutora", "cadeira-adutora", "panturrilha-sentada"];
+ const fourthCards=page.locator('.proposal-list .sport-card.has-exercise-art');assert.equal(await fourthCards.count(),7);
+ for(let i=0;i<7;i++){
+  const img=fourthCards.nth(i).locator('.exercise-card-image');await img.scrollIntoViewIfNeeded();
+  const src='./exercise-'+fourthImages[i]+'.webp';assert.equal(await img.getAttribute('src'),src);
+  await page.waitForFunction(src=>[...document.images].some(im=>im.getAttribute('src')===src&&im.complete&&im.naturalWidth>0),src);
+  assert.equal(await img.evaluate(im=>{const a=im.getBoundingClientRect(),b=im.parentElement.getBoundingClientRect();return Math.abs(a.height/a.width-1.5)<0.02&&Math.abs(a.height-b.height)<2&&Math.abs(a.width-b.width)<2;}),true);
+ }
+ await fourthCards.nth(0).scrollIntoViewIfNeeded();console.log('FOURTH_DECK_ART_SCREENSHOT_JPEG='+(await fourthCards.nth(0).screenshot({type:'jpeg',quality:55})).toString('base64'));
+ console.log('FOURTH_DECK_SEVEN_IMAGES_LOADED_UNCROPPED=PASS');
+
 
 
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
+
 
 
 

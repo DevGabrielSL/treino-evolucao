@@ -112,5 +112,47 @@
     "source": "02-41966.png",
     "sha256": "31e49cd5c8be449fc56cbc70e448d504a4d0aaa8659f63ac7dc1b0022573e08b",
     "bytes": 226230
+  },
+  {
+    "file": "exercise-leg-press-45.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_22-1.png",
+    "sha256": "f1229563765b09db9e5cebc329f5d586cce1729de69f15149801be2f07ed3e98",
+    "bytes": 236890
+  },
+  {
+    "file": "exercise-hack-machine.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_24-2.png",
+    "sha256": "f6e9f137b4501aa82c65f93458ad489a4db9aad4b57d1d315ba065a8a2726914",
+    "bytes": 242416
+  },
+  {
+    "file": "exercise-cadeira-extensora.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_25-3.png",
+    "sha256": "e9778626611c4135588a40899b44c0020a1dbedeef99903970d4164000619d8e",
+    "bytes": 240422
+  },
+  {
+    "file": "exercise-cadeira-flexora.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_26-4.png",
+    "sha256": "d138f65673e6cc01bbb29193651d7fdd9521cc8e42d3ff22b0cfd17a3d51688a",
+    "bytes": 230778
+  },
+  {
+    "file": "exercise-cadeira-abdutora.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_27-5.png",
+    "sha256": "4f793898807f7b4a2ccf245f62754b85c4080db8576c9fef9a9f751b4bd6baca",
+    "bytes": 235024
+  },
+  {
+    "file": "exercise-cadeira-adutora.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_28-6.png",
+    "sha256": "83799ab73d798ca41be71704565983ffa5f184fc2dd1e25f0fc9886ac053a9df",
+    "bytes": 232328
+  },
+  {
+    "file": "exercise-panturrilha-sentada.webp",
+    "source": "Imagem do ChatGPT 6 de nov. de 2026, 15_51_30-7.png",
+    "sha256": "0214b941e9f3df23318586fd1387fba4a1b608ab669e2ab1f921c443807cc9de",
+    "bytes": 240886
   }
 ]

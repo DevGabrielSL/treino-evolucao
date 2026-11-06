@@ -489,3 +489,9 @@ p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n'+(root/'testing/prin
 for name in ('sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('shell-v192-third-deck-art','shell-v193-finisher-polish').replace('app.js?v=192','app.js?v=193').replace('principal_focus.css?v=188','principal_focus.css?v=193'))
+
+
+# Complete the fourth deck with the seven supplied leg exercise cards.
+for name in ('app.js','principal_cards.js','sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('principal_exercise_art.js?v=192','principal_exercise_art.js?v=194').replace('principal_cards.js?v=192','principal_cards.js?v=194').replace('app.js?v=193','app.js?v=194').replace('principal_relics_art.css?v=192','principal_relics_art.css?v=194').replace('shell-v193-finisher-polish','shell-v194-leg-deck-art'))
