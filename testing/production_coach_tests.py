@@ -34,7 +34,7 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v179-finisher-rest' in content
+    assert 'shell-v180-finisher-layout' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=131'" in content
