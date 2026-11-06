@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {xpReward,xpState} from '../dist/principal_xp.js';
+const empty={sets:[],sessions:[]},one={sets:[{id:'a',session_id:'s',repetitions:10,set_type:'effective'}],sessions:[{id:'s',status:'in_progress'}]};
+assert.equal(xpReward(empty,one).gain,10);
+const edit=structuredClone(one);edit.sets[0].repetitions=12;assert.equal(xpReward(one,edit),null);
+assert.equal(xpReward(one,structuredClone(one)),null);
+const finished=structuredClone(one);finished.sessions[0].status='completed';assert.equal(xpReward(one,finished).gain,100);assert.equal(xpState(finished).total,110);
+assert.equal(xpReward(finished,finished),null);assert.equal(xpReward(one,empty),null);
+assert.equal(xpState({sets:[...one.sets,...one.sets],sessions:[]}).total,10);
+assert.equal(xpState({sets:[{id:'p',finisher_key:'plank',duration_ms:30000}],sessions:[]}).total,0);
+assert.equal(xpState({sets:[{id:'w',repetitions:10,set_type:'warmup'}],sessions:[]}).total,5);
+const before={sets:Array.from({length:49},(_,i)=>({id:String(i),repetitions:10})),sessions:[]},after={sets:[...before.sets,{id:'50',repetitions:10}],sessions:[]};
+assert.equal(xpReward(before,after).to.level,2);assert.equal(xpReward(before,after).to.progress,0);
+console.log('XP_REWARDS_DATA_REGRESSIONS=PASS');

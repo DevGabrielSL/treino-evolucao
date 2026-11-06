@@ -15,6 +15,10 @@ const assert=require('node:assert/strict');
  await page.locator('#quick-set-form [name="rir"]').fill('2');
  await page.locator('#quick-set-form [name="kind"]').selectOption('effective');
  await page.locator('#quick-set-form button[type="submit"]').click();
+ await page.locator('.xp-reward[data-xp-gain="10"]').waitFor();
+ assert.equal(await page.locator('.xp-reward').getAttribute('data-xp-total'),'10');
+ assert.equal(await page.locator('.xp-reward').evaluate(el=>getComputedStyle(el).pointerEvents),'none');
+ console.log('XP_SERIES_SCREENSHOT_JPEG='+(await page.locator('.xp-reward').screenshot({type:'jpeg',quality:65})).toString('base64'));
  await page.locator('[data-last-set-clock]').waitFor();
  await page.waitForFunction(()=>document.querySelector('[data-last-set-clock]')?.textContent!=='00:00:00',{},{timeout:5000});
  assert.notEqual(await page.locator('[data-last-set-clock]').innerText(),'00:00:00');
@@ -31,6 +35,7 @@ const assert=require('node:assert/strict');
  const form=page.locator('#finisher-set-form');
  await form.locator('[name="load"]').fill('0');await form.locator('[name="reps"]').fill('20');await form.locator('[name="rir"]').fill('0');await form.locator('[name="kind"]').selectOption('effective');await form.locator('[type="submit"]').click();
  await page.waitForFunction(()=>document.querySelector('.finisher-goal.selected strong')?.textContent==='20 / 50');
+ await page.locator('.xp-reward[data-xp-gain="10"]').waitFor();
  await page.locator('[data-finisher-action="resume-plank"]').click();
  await page.waitForFunction(()=>document.querySelector('[data-plank-clock]')?.textContent!=='00:00:00',{},{timeout:5000});
  assert.ok(Number(await page.locator('[data-plank-progress]').getAttribute('value'))>=1);
@@ -67,6 +72,15 @@ const assert=require('node:assert/strict');
  await page.locator('#finisher-panel').waitFor();doc=await snapshot();assert.equal(doc.overlay.sets.find(s=>s.id===plank.id).duration_ms,30000);
  page.once('dialog',d=>d.accept());await page.locator('#finisher-panel [data-coach-action="finish"]').click();
  await page.getByRole('heading',{name:'Treino concluído'}).waitFor();doc=await snapshot();assert.equal(doc.overlay.sessions[0].status,'completed');assert.ok(doc.overlay.sessions[0].finished_at);
+ await page.locator('.xp-reward.is-finish[data-xp-gain="100"]').waitFor();
+ console.log('XP_FINISH_SCREENSHOT_JPEG='+(await page.locator('.xp-reward').screenshot({type:'jpeg',quality:65})).toString('base64'));
+ await page.locator('.xp-reward').waitFor({state:'detached',timeout:6000});
+ await page.reload();assert.equal(await page.locator('.xp-reward').count(),0);
+ await page.evaluate(async()=>{const {showXpReward,xpReward}=await import('/principal_xp.js');showXpReward(xpReward({sets:[],sessions:[]},{sets:[{id:'qa',repetitions:10,set_type:'effective'}],sessions:[]}));});
+ await page.emulateMedia({reducedMotion:'reduce'});
+ assert.equal(await page.locator('.xp-reward').evaluate(el=>getComputedStyle(el).animationName),'none');
+ await page.locator('.xp-reward').waitFor({state:'detached',timeout:6000});await page.emulateMedia({reducedMotion:'no-preference'});
+ console.log('XP_SERIES_FINISH_REOPEN_REDUCED_MOTION=PASS');
  await page.locator('[data-preset-id="rpg_deck_01"]').click();
  const imageNames=['supino-inclinado-halteres','supino-reto-barra','supino-declinado-maquina','crucifixo-maquina-inclinada','rosca-scott-unilateral','rosca-inclinada-45','rosca-martelo','elevacao-lateral-polia'];
  const cards=page.locator('.proposal-list .sport-card.has-exercise-art');assert.equal(await cards.count(),8);
@@ -121,6 +135,7 @@ const assert=require('node:assert/strict');
 
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
+
 
 
 

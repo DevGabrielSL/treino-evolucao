@@ -495,3 +495,19 @@ for name in ('sw.js','integrity.js','index.html'):
 for name in ('app.js','principal_cards.js','sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('principal_exercise_art.js?v=192','principal_exercise_art.js?v=194').replace('principal_cards.js?v=192','principal_cards.js?v=194').replace('app.js?v=193','app.js?v=194').replace('principal_relics_art.css?v=192','principal_relics_art.css?v=194').replace('shell-v193-finisher-polish','shell-v194-leg-deck-art'))
+
+
+# Show rewards only after a successful durable save; XP is derived from records.
+shutil.copy2(root/'testing/principal_xp.js',dist/'principal_xp.js')
+p=dist/'app.js';s=p.read_text()
+s="import {xpReward,showXpReward} from './principal_xp.js?v=195';\n"+s
+old="const nextGeneration=await saveSnapshot(next,storageGeneration);doc=next;storageGeneration=nextGeneration;saved=true;notify(message);render();return true;"
+assert s.count(old)==1
+s=s.replace(old,"const nextGeneration=await saveSnapshot(next,storageGeneration);const reward=xpReward(merged(doc),merged(next));doc=next;storageGeneration=nextGeneration;saved=true;notify(message);render();showXpReward(reward);return true;")
+p.write_text(s)
+p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n'+(root/'testing/principal_xp.css').read_text())
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ s=s.replace('app.js?v=194','app.js?v=195').replace('shell-v194-leg-deck-art','shell-v195-xp-rewards').replace('principal_focus.css?v=193','principal_focus.css?v=195')
+ if name!='index.html':s=s.replace("'./principal_rpg.js'","'./principal_rpg.js','./principal_xp.js?v=195'")
+ p.write_text(s)
