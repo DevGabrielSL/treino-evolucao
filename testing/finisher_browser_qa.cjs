@@ -68,6 +68,8 @@ const assert=require('node:assert/strict');
   await page.waitForFunction(src=>[...document.images].some(im=>im.getAttribute('src')===src&&im.complete&&im.naturalWidth>0),'./exercise-'+imageNames[i]+'.webp');
   assert.equal(await img.getAttribute('src'),'./exercise-'+imageNames[i]+'.webp');
   const ratio=await img.evaluate(im=>{const r=im.getBoundingClientRect();return r.height/r.width;});assert.ok(Math.abs(ratio-1.5)<0.02,'Full portrait must retain its aspect ratio');
+  const fits=await img.evaluate(im=>{const a=im.getBoundingClientRect(),b=im.parentElement.getBoundingClientRect();return Math.abs(a.height-b.height)<2&&Math.abs(a.width-b.width)<2;});assert.equal(fits,true,'Portrait container must not clip any part of the artwork');
+
  }
  await cards.first().scrollIntoViewIfNeeded();console.log('UPLOADED_CARD_SCREENSHOT_JPEG='+(await cards.first().screenshot({type:'jpeg',quality:55})).toString('base64'));
  console.log('UPLOADED_ART_EIGHT_CORRECT_LOADED_UNCROPPED=PASS');

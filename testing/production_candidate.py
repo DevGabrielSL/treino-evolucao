@@ -460,3 +460,8 @@ for name in ('sw.js','integrity.js','index.html'):
 
 # Associate the eight uploaded complete cards with their actual exercise variants.
 runpy.run_path(str(out / 'testing/principal_exercise_art_patch.py'))
+
+# Remove the legacy fixed flex basis from full portrait cards.
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('shell-v189-exercise-art','shell-v190-full-portrait-cards').replace('app.js?v=189','app.js?v=190').replace('principal_relics_art.css?v=189','principal_relics_art.css?v=190'))
