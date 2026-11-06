@@ -3,7 +3,7 @@ import {PRESET_DECKS,presetItems,presetPlan,renderPresetLibrary} from '../dist/p
 import {catalogEntities} from '../dist/balanced_coach.js?v=121';
 import {emptyDocument,validateDocument} from '../dist/store.js';
 const entities={sessions:[],sets:[],exercises:[],exercise_variants:[]},today='2026-10-29';
-assert.equal(PRESET_DECKS.length,15);assert.equal(new Set(PRESET_DECKS.map(x=>x.id)).size,15);
+assert.equal(PRESET_DECKS.length,4);assert.equal(new Set(PRESET_DECKS.map(x=>x.id)).size,4);
 const before=JSON.stringify(PRESET_DECKS);
 for(const deck of PRESET_DECKS){
  const p=presetPlan(deck.id,entities,today);assert.equal(p.items.length,deck.items.length);assert.equal(new Set(p.items.map(x=>x.variant_id)).size,p.items.length);assert.equal(p.items.some(x=>x.group==='core'),!['rpg_deck_01','rpg_deck_02','rpg_deck_03','rpg_deck_04'].includes(deck.id));
@@ -16,8 +16,8 @@ assert.equal(JSON.stringify(PRESET_DECKS),before);assert.deepEqual(entities,{ses
 const e={...entities,exercises:[{id:'personalEx',name:'Supino reto'}],exercise_variants:[{id:'personalV',exercise_id:'personalEx',equipment_or_variation:'Barra livre',unit:'kg/lado',unit_confirmed:true}]};
 const reused=presetPlan('rpg_deck_01',e,today).items[1];assert.equal(reused.variant_id,'personalV');assert.equal(reused.unit,'kg/lado');assert.equal(reused.is_catalog,false);
 e.exercise_variants[0].unit_confirmed=false;assert.notEqual(presetPlan('rpg_deck_01',e,today).items[1].variant_id,'personalV');
-const html=renderPresetLibrary();assert.equal((html.match(/data-preset-id=/g)||[]).length,15);assert.ok(html.includes('Ver deck'));
-console.log('PRESETS_15_PREFERENCES_DOSE_RECOVERY_IDENTITY_NO_WRITES=PASS');
+const html=renderPresetLibrary();assert.equal((html.match(/data-preset-id=/g)||[]).length,4);assert.ok(html.includes('Ver deck'));
+console.log('PRESETS_4_PREFERENCES_DOSE_RECOVERY_IDENTITY_NO_WRITES=PASS');
 
 
 const first=presetPlan('rpg_deck_01',entities,today).items;
@@ -82,3 +82,10 @@ assert.equal(fourth.length,7);assert.equal(new Set(fourth.map(x=>x.variant_id)).
 assert.ok(fourth.every(x=>x.group==='pernas'&&x.dose.sets===3));
 assert.ok(!fourth.some(x=>/stiff|romeno|pélvica|afundo|reverso/i.test(x.name)));
 console.log('FOURTH_DECK_EXACT_SEVEN_LEG_EXERCISES=PASS');
+
+assert.deepEqual(PRESET_DECKS.map(x=>x.id),['rpg_deck_01','rpg_deck_02','rpg_deck_03','rpg_deck_04']);
+for(let i=5;i<=15;i++){
+ const id='rpg_deck_'+String(i).padStart(2,'0');assert.throws(()=>presetPlan(id,entities,today),/não encontrado/);assert.ok(!html.includes('data-preset-id="'+id+'"'));
+}
+assert.ok(html.includes('4 decks prontos'));assert.ok(!html.includes('15 decks prontos'));
+console.log('ONLY_FOUR_PRESETS_REMOVED_IDS_REJECTED_HISTORY_UNTOUCHED=PASS');

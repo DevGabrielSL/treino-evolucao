@@ -31,17 +31,6 @@ export const PRESET_DECKS=[
  spec('02','Costas + tríceps + ombro posterior',['deck2Pulldown','deck2ArticulatedRow','deck2SinglePulldown','deck2HighRow','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','rear']),
  spec('03','Braços + ombros',['scottUnilateral','deck2FrenchV','curlCableLengthened','deck2PushdownV','hammer','tricepsSkullcrusherDB','press','lateralCable','rear']),
  spec('04','Pernas completas',['legPress45','hack','extension','flexSeated','hipAbduction','hipAdduction','calfSeated']),
- spec('05','Empurrar: peito + ombros + tríceps + core',['bench','inclineDB','press','lateralCable','tri','absCable']),
- spec('06','Puxar: costas + bíceps + ombro posterior + core',['latPronated','rowLow',['rowSupport',10,12],'rear','scott','reverse']),
- spec('07','Pernas completas + core',['hack','rdl','leg','flexSeated','calfStanding','absMachine']),
- spec('08','Superiores A: ênfase em peito',['inclineDB','bench','rowSupport',['latNeutral',10,12],'lateral','tri','absCable']),
- spec('09','Superiores B: ênfase em costas',['latNeutral','rowSupport','rowOne','bench','rear','curlCable','reverse']),
- spec('10','Corpo inteiro A: pesos livres',['goblet','bench','rowSupport','rdl','lateral','absCable']),
- spec('11','Corpo inteiro B: máquinas e glúteos',['leg','hip','latNeutral','inclineMachine','calfSeated','absMachine']),
- spec('12','Braços + ombros + core',['scott','tri','hammer','triOver','lateral','rear','reverse']),
- spec('13','Ombros + costas + core',['press','latNeutral','rowSupport','lateralCable','rear','absCable']),
- spec('14','Base em máquinas + supino com barra',['hack','flexSeated','bench','rowMachine','calfStanding','absMachine'],'Supino reto com barra, conforme sua preferência; os demais exercícios usam máquinas.'),
- spec('15','Express: corpo inteiro + core',['leg','bench','rowMachine','absCable'],'Opção mais curta; complemente os movimentos e grupos ao longo da semana. Não há duração garantida.')
 ];
 export function presetItems(deck){return deck.items.map(value=>{
  const [key,min,max]=Array.isArray(value)?value:[value];const [group,name,equipment,lo,hi,unit='a confirmar']=registry[key];
@@ -66,7 +55,7 @@ export function presetPlan(id,entities,today,readiness={}){
 }
 export function presetHistorySummary(plan){return 'Deck predefinido: a ordem não foi reorganizada pelo histórico. '+plan.history.total+' séries sem aquecimento classificadas nos últimos 7 dias. '+(plan.history.recent.length?'Há grupos treinados hoje ou ontem: '+plan.history.recent.join(', ')+'. Confira sua condição antes de repetir. ':'')+(plan.presetNote||'');}
 const escape=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function renderPresetLibrary(){return `<details class="preset-library" open><summary>15 decks prontos</summary><p class="text-small">3 séries de trabalho por exercício. Sem cargas predefinidas. Revise as cartas antes de iniciar; escolha os treinos conforme sua semana.</p><div class="preset-list">${PRESET_DECKS.map((d,i)=>`<article class="preset-item"><div><span class="preset-number">DECK ${String(i+1).padStart(2,'0')}</span><h3>${escape(d.name)}</h3><p class="text-small">${d.items.length} exercícios · ${d.items.length*3} séries sugeridas</p></div><button class="btn primary small" data-coach-action="preset" data-preset-id="${d.id}">Ver deck</button></article>`).join('')}</div></details>`;}
+export function renderPresetLibrary(){return `<details class="preset-library" open><summary>${PRESET_DECKS.length} decks prontos</summary><p class="text-small">3 séries de trabalho por exercício. Sem cargas predefinidas. Revise as cartas antes de iniciar; escolha os treinos conforme sua semana.</p><div class="preset-list">${PRESET_DECKS.map((d,i)=>`<article class="preset-item"><div><span class="preset-number">DECK ${String(i+1).padStart(2,'0')}</span><h3>${escape(d.name)}</h3><p class="text-small">${d.items.length} exercícios · ${d.items.length*3} séries sugeridas</p></div><button class="btn primary small" data-coach-action="preset" data-preset-id="${d.id}">Ver deck</button></article>`).join('')}</div></details>`;}
 
 
 
