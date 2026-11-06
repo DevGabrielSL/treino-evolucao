@@ -456,3 +456,7 @@ for name in ('sw.js','integrity.js','index.html'):
 for name in ('sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('shell-v187-training-polish','shell-v188-training-feedback').replace('app.js?v=187','app.js?v=188').replace('principal_focus.css?v=187','principal_focus.css?v=188'))
+
+
+# Associate the eight uploaded complete cards with their actual exercise variants.
+runpy.run_path(str(out / 'testing/principal_exercise_art_patch.py'))

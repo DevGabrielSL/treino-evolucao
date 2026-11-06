@@ -60,6 +60,18 @@ const assert=require('node:assert/strict');
  await page.locator('#finisher-panel').waitFor();doc=await snapshot();assert.equal(doc.overlay.sets.find(s=>s.id===plank.id).duration_ms,30000);
  page.once('dialog',d=>d.accept());await page.locator('#finisher-panel [data-coach-action="finish"]').click();
  await page.getByRole('heading',{name:'Treino concluído'}).waitFor();doc=await snapshot();assert.equal(doc.overlay.sessions[0].status,'completed');assert.ok(doc.overlay.sessions[0].finished_at);
+ await page.locator('[data-preset-id="rpg_deck_01"]').click();
+ const imageNames=['supino-inclinado-halteres','supino-reto-barra','supino-declinado-maquina','crucifixo-maquina-inclinada','rosca-scott-unilateral','rosca-inclinada-45','rosca-martelo','elevacao-lateral-polia'];
+ const cards=page.locator('.proposal-list .sport-card.has-exercise-art');assert.equal(await cards.count(),8);
+ for(let i=0;i<8;i++){
+  const img=cards.nth(i).locator('.exercise-card-image');await img.scrollIntoViewIfNeeded();
+  await page.waitForFunction(src=>[...document.images].some(im=>im.getAttribute('src')===src&&im.complete&&im.naturalWidth>0),'./exercise-'+imageNames[i]+'.webp');
+  assert.equal(await img.getAttribute('src'),'./exercise-'+imageNames[i]+'.webp');
+  const ratio=await img.evaluate(im=>{const r=im.getBoundingClientRect();return r.height/r.width;});assert.ok(Math.abs(ratio-1.5)<0.02,'Full portrait must retain its aspect ratio');
+ }
+ await cards.first().scrollIntoViewIfNeeded();console.log('UPLOADED_CARD_SCREENSHOT_JPEG='+(await cards.first().screenshot({type:'jpeg',quality:55})).toString('base64'));
+ console.log('UPLOADED_ART_EIGHT_CORRECT_LOADED_UNCROPPED=PASS');
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
+
 

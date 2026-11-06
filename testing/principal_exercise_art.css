@@ -1,0 +1,12 @@
+/* Uploaded cards keep their complete portrait framing and printed exercise name. */
+.sport-card.has-exercise-art .sport-card-top{display:none!important}
+.sport-card.has-exercise-art .sport-card-art{height:auto!important;min-height:0!important;max-height:none!important;aspect-ratio:2/3!important;width:100%;padding:0!important;border:0!important;background:none!important;display:block;overflow:hidden!important}
+.sport-card.has-exercise-art .sport-card-art::before,.sport-card.has-exercise-art .sport-card-art::after{display:none!important}
+.sport-card.has-exercise-art .sport-card-art>.exercise-card-image{display:block!important;width:100%!important;height:auto!important;aspect-ratio:2/3;object-fit:contain!important;position:static!important;transform:none!important;border-radius:0}
+.sport-card.has-exercise-art .sport-card-body{padding:14px!important}
+.focus-mini.has-exercise-art .focus-mini-art{height:auto!important;min-height:0!important;aspect-ratio:2/3!important;display:block!important;padding:0!important;background:none!important;border:0!important;overflow:hidden;border-radius:6px}
+.focus-mini.has-exercise-art .focus-mini-art::before,.focus-mini.has-exercise-art .focus-mini-art::after{display:none!important}
+.focus-mini.has-exercise-art .exercise-card-image{display:block;width:100%;height:auto;aspect-ratio:2/3;object-fit:contain}
+.focus-mini.has-exercise-art{align-self:start;min-height:0!important;padding:7px!important}
+.focus-mini.has-exercise-art .focus-mini-name{font-size:12px;line-height:1.4;margin:8px 0 6px}
+.focus-mini.has-exercise-art>span:last-child{margin-top:2px}
