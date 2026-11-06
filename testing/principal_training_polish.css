@@ -1,0 +1,42 @@
+/* Compact training entry with clear hierarchy and an accessible save action. */
+.training-entry.focus-entry{padding:18px!important;border:1px solid #667b6e!important;border-radius:18px!important;background:linear-gradient(155deg,#1b3038,#111f2a 72%)!important;box-shadow:0 12px 28px #0004,inset 0 1px #e3d0a722!important;overflow:visible!important;isolation:isolate}
+.focus-entry .focus-exercise-kicker{font:750 10px/1.4 system-ui;letter-spacing:.15em;color:#9ee9d3}
+.focus-entry .focus-exercise-name{font-size:clamp(25px,6.2vw,32px);line-height:1.12;margin:8px 0!important;text-wrap:balance}
+.focus-entry .focus-equipment{font:400 13px/1.5 system-ui!important;color:#b8cccf;margin-bottom:16px!important}
+.focus-entry .focus-dose{gap:8px;font:600 13px/1.4 system-ui}
+.focus-entry .focus-dose>strong{padding:6px 10px;border-radius:7px;background:#21443f;color:#c4f3e2;font-size:12px;white-space:nowrap}
+.focus-entry .focus-dose>span{font-size:12px;text-align:right;color:#cfdbd8}
+.focus-entry .focus-pips{gap:6px;margin:9px 0 12px}
+.focus-entry .focus-pip{flex:1;height:5px;width:auto;border:0;border-radius:8px;background:#354b54}
+.focus-entry .focus-pip.filled{background:#7ae2bf;box-shadow:0 0 8px #7ae2bf24}
+.focus-entry .focus-saved{padding:9px 11px;margin:0 0 10px;border-left:3px solid #83ddbc;border-radius:0 8px 8px 0;background:#17352f;color:#bfdfd1;font:400 12px/1.5 system-ui}
+.focus-entry .focus-saved strong{font-weight:750;color:#e4f6e9}
+.focus-entry .focus-reference{margin:0 0 12px!important;padding:5px 0 10px;border-bottom:1px solid #52675d66}
+.focus-entry .focus-reference summary{font:500 12px/1.5 system-ui!important;color:#c0d0cd}
+.focus-entry .load-reference{padding:11px 12px;margin:10px 0 16px;border-color:#506e61;border-radius:11px;background:#12322e}
+.focus-entry .load-reference p{font-size:13px;line-height:1.5;margin:5px 0}
+.focus-entry .load-reference.is-empty{padding:9px 11px;background:#20323a;border:0;border-left:2px solid #7b8c7f;border-radius:0 8px 8px 0;margin:8px 0 16px}
+.focus-entry .load-reference.is-empty>span{display:none}
+.focus-entry .load-reference.is-empty p{margin:0;font-size:12px;line-height:1.5;color:#b9c8c8}
+.focus-entry #quick-set-form{position:relative;padding-bottom:6px;max-width:640px;margin-inline:auto}
+.focus-entry #quick-set-form>.quick-grid{gap:10px 12px;align-items:start}
+.focus-entry #quick-set-form>.required-set-fields{margin-top:12px}
+.focus-entry #quick-set-form .quick-grid .field{margin:0!important;min-width:0;grid-column:auto;display:flex;flex-direction:column}
+.focus-entry #quick-set-form .field>span{font:650 13px/1.35 system-ui;min-height:34px!important;margin:0 0 6px;color:#e9e9dc}
+.focus-entry #quick-set-form .field>span small{font:400 11px/1.4 system-ui;color:#aabfc0;margin-top:2px}
+.focus-entry #quick-set-form .field:focus-within>span{color:#a8f0d5}
+.focus-entry #quick-set-form .input{height:52px;min-height:52px!important;padding:11px 12px;border:1px solid #758d88!important;border-radius:11px;font-size:16px;box-sizing:border-box;scroll-margin-block:24px 160px}
+.focus-entry #quick-set-form .input[name=load],.focus-entry #quick-set-form .input[name=reps]{font-size:25px;font-weight:650;font-variant-numeric:tabular-nums;text-align:center}
+.focus-entry #quick-set-form .input::placeholder{font-size:19px;font-weight:400;color:#839ca1}
+.focus-entry #quick-set-form select.input{font-size:14px;padding-inline:10px}
+.focus-entry #quick-set-form .entry-help{font:400 11px/1.5 system-ui;margin:10px 0 8px;color:#b3c6c4}
+.focus-entry #quick-set-form>[data-coach-action=add-drop]{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 12px;margin:4px 0 6px;border:1px dashed #708b80;border-radius:9px;background:transparent;color:#c8ded2;font:600 12px/1.4 system-ui}
+.focus-entry #quick-set-form>[data-coach-action=add-drop]::before{content:'+';font-size:20px;font-weight:400;line-height:1}
+.focus-entry #quick-set-form>button[type=submit]{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:7;display:block;width:100%;min-height:52px!important;margin:12px 0 4px;padding:13px 16px;border-radius:12px;font:750 16px/1.4 system-ui;box-shadow:0 7px 18px #0005,0 -7px 14px #14232be8;letter-spacing:.01em}
+.focus-entry #quick-set-form [data-drop-parts]:not(:empty){padding-top:4px}
+.focus-entry #quick-set-form fieldset{background:#10252b;border-color:#536f62}
+body[data-realm=workout] .bottom-nav{height:calc(72px + env(safe-area-inset-bottom,0px));min-height:72px;box-sizing:border-box;padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px))!important}
+body[data-realm=workout] .bottom-nav button:not([hidden]){min-height:50px!important}
+body[data-realm=workout] #app{padding-bottom:calc(116px + env(safe-area-inset-bottom,0px))}
+@media(max-width:360px){.training-entry.focus-entry{padding:15px!important}.focus-entry #quick-set-form>.quick-grid{gap:10px}.focus-entry #quick-set-form select.input{font-size:13px;padding-inline:8px}}
+@media(prefers-reduced-motion:reduce){.focus-entry .focus-saved{animation:none}}

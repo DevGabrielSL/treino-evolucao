@@ -18,6 +18,11 @@ const assert=require('node:assert/strict');
  await page.locator('[data-last-set-clock]').waitFor();
  await page.waitForFunction(()=>document.querySelector('[data-last-set-clock]')?.textContent!=='00:00:00',{},{timeout:5000});
  assert.notEqual(await page.locator('[data-last-set-clock]').innerText(),'00:00:00');
+ await page.locator('#quick-set-form [name="load"]').scrollIntoViewIfNeeded();
+ const entryBounds=await page.evaluate(()=>{const save=document.querySelector('#quick-set-form button[type="submit"]').getBoundingClientRect(),nav=document.querySelector('.bottom-nav').getBoundingClientRect();return {saveBottom:save.bottom,saveTop:save.top,navTop:nav.top,overflow:document.documentElement.scrollWidth>innerWidth};});
+ assert.ok(entryBounds.saveTop>=0&&entryBounds.saveBottom<=entryBounds.navTop-6,JSON.stringify(entryBounds));
+ assert.equal(entryBounds.overflow,false);
+ console.log('ENTRY_SCREENSHOT_JPEG='+(await page.locator('.focus-entry').screenshot({type:'jpeg',quality:65})).toString('base64'));
  await page.screenshot({path:'/tmp/fitness-qa-rest.png'});
  await page.locator('[data-finisher-action="open"]').click();
  const form=page.locator('#finisher-set-form');
@@ -54,3 +59,4 @@ const assert=require('node:assert/strict');
  await page.getByRole('heading',{name:'Treino concluído'}).waitFor();doc=await snapshot();assert.equal(doc.overlay.sessions[0].status,'completed');assert.ok(doc.overlay.sessions[0].finished_at);
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
+

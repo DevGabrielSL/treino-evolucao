@@ -438,3 +438,16 @@ p.write_text(p.read_text()+"\n.planner-readiness,.planner-examples,.planner-mess
 for name in ('sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('shell-v185-four-custom-decks','shell-v186-clean-planner').replace('app.js?v=185','app.js?v=186').replace('principal_focus.css?v=180','principal_focus.css?v=186'))
+
+
+# Polish the active exercise screen without changing set registration.
+p=dist/'app.js';s=p.read_text()
+old="if(!reference)return '<div class=\"load-reference\">"
+assert s.count(old)==1
+s=s.replace(old,"if(!reference)return '<div class=\"load-reference is-empty\">")
+s=s.replace('Sem carga anterior confirmada para este equipamento e unidade.</p></div>', 'Sem carga anterior confirmada para esta variação.</p></div>')
+p.write_text(s)
+p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n'+(root/'testing/principal_training_polish.css').read_text())
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('shell-v186-clean-planner','shell-v187-training-polish').replace('app.js?v=186','app.js?v=187').replace('principal_focus.css?v=186','principal_focus.css?v=187'))
