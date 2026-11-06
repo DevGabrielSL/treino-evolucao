@@ -511,3 +511,37 @@ for name in ('sw.js','integrity.js','index.html'):
  s=s.replace('app.js?v=194','app.js?v=195').replace('shell-v194-leg-deck-art','shell-v195-xp-rewards').replace('principal_focus.css?v=193','principal_focus.css?v=195')
  if name!='index.html':s=s.replace("'./principal_rpg.js'","'./principal_rpg.js','./principal_xp.js?v=195'")
  p.write_text(s)
+
+
+# Explain execution failures and preserve timed sets without fictitious repetitions.
+shutil.copy2(root/'testing/principal_sync_fix.js',dist/'principal_sync_fix.js')
+p=dist/'coordinator_client.js';s=p.read_text()
+s="import {coordinatorExecutionFailure} from './principal_sync_fix.js?v=196';\n"+s
+old="if(execution?.error||execution?.done!==true)throw failure('COORDINATOR_EXECUTION_ERROR','Não foi possível executar o coordenador no Google. Confira implantação, autorização e configuração.');"
+assert s.count(old)==1
+s=s.replace(old,"const issue=coordinatorExecutionFailure(execution);if(issue)throw failure(issue.code,issue.message);")
+p.write_text(s)
+p=dist/'sheet_sync_core.js';s=p.read_text()
+s="import {timedSeconds} from './principal_sync_fix.js?v=196';\n"+s
+needle="  if(set.repetitions!==null&&!Number.isInteger(set.repetitions))"
+assert s.count(needle)==1
+s=s.replace(needle,"  const seconds=timedSeconds(str(r[7]),set.notes);if(seconds!==null){set.duration_ms=Math.round(seconds*1000);set.finisher_key='plank';}\n"+needle)
+p.write_text(s)
+p=dist/'app.js';s=p.read_text()
+s="import {outboundSeriesLabel} from './principal_sync_fix.js?v=196';\n"+s
+old="plan.Series.map(x=>'Série: '+x.values[0]+' · '+x.values[2]+' · '+x.values[6]+' '+x.values[7]+' × '+x.values[8])"
+assert s.count(old)==1
+s=s.replace(old,"plan.Series.map(x=>outboundSeriesLabel(x.values))")
+s=s.replace("from './coordinator_client.js'","from './coordinator_client.js?v=196'").replace("from './sheet_sync_core.js'","from './sheet_sync_core.js?v=196'")
+p.write_text(s)
+p=dist/'sheet_sync_browser.js';s=p.read_text().replace("from './coordinator_client.js'","from './coordinator_client.js?v=196'").replace("from './sheet_sync_core.js'","from './sheet_sync_core.js?v=196'");p.write_text(s)
+p=dist/'coordinator_client.js';p.write_text(p.read_text().replace("from './sheet_sync_core.js'","from './sheet_sync_core.js?v=196'"))
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ s=s.replace('app.js?v=195','app.js?v=196').replace('shell-v195-xp-rewards','shell-v196-sync-diagnostics')
+ if name!='index.html':
+  s=s.replace("'./coordinator_client.js'","'./coordinator_client.js?v=196','./principal_sync_fix.js?v=196'").replace("'./sheet_sync_core.js'","'./sheet_sync_core.js?v=196'")
+ p.write_text(s)
+# Refresh the transport URL because its imports changed.
+for name in ('app.js','sw.js','integrity.js'):
+ p=dist/name;p.write_text(p.read_text().replace("sheet_sync_browser.js'","sheet_sync_browser.js?v=196'"))
