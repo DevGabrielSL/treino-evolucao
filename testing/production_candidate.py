@@ -394,3 +394,7 @@ p.write_text(p.read_text()+"""
 for name in ('sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace('shell-v177-finish-review','shell-v178-mobile-edit').replace('principal_focus.css?v=176','principal_focus.css?v=178'))
 p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=176','principal_focus.css?v=178'))
+
+
+# Finisher goals, durable timers and last-set rest clock.
+runpy.run_path(str(out / 'testing/principal_finisher_patch.py'))

@@ -1,3 +1,4 @@
+import {workoutElapsed,finisherProgress} from '../dist/principal_finisher.js?v=179';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -9,7 +10,7 @@ const active={id:'s',date:'2026-10-29',status:'in_progress',planned_variant_ids:
 const entities={exercise_variants:[v],exercises:[ex],sessions:[active],sets:[]};
 const m={entities,variantMap:new Map([['v',v]]),exerciseMap:new Map([['ex',ex]])};
 const escape=x=>String(x??'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
-const ctx=vm.createContext({e:escape,liveGuidance,deckModels,muscleSymbol,restTimer:{state:()=>({})},Map,panel:(s,c)=>`<section class="${c}">${s}</section>`,g:()=>m});
+const ctx=vm.createContext({workoutElapsed,finisherProgress,e:escape,liveGuidance,deckModels,muscleSymbol,restTimer:{state:()=>({})},Map,panel:(s,c)=>`<section class="${c}">${s}</section>`,g:()=>m});
 vm.runInContext(app.slice(app.indexOf('function renderLiveGuidance('),app.indexOf('function renderCoach(')),ctx);
 // Extract only the function, as later source may contain unrelated boot code.
 const start=app.indexOf('function renderUnitConfirmation('),end=app.indexOf('\n',start);
@@ -45,7 +46,7 @@ assert.throws(()=>validate({...valid,reps:'1.5'}));
 assert.throws(()=>validate({...valid,kind:'other'}));
 console.log('REQUIRED_SET_FIELDS_BLANK_ZERO_WARMUP_RANGES=PASS');
 const clockSource=app.slice(app.indexOf('function sessionClockSeconds('),app.indexOf('function updateSessionClock('));
-const clock=vm.createContext({e:escape});vm.runInContext(clockSource,clock);
+const clock=vm.createContext({workoutElapsed,e:escape});vm.runInContext(clockSource,clock);
 assert.equal(clock.sessionClockSeconds(undefined),null);
 assert.equal(clock.sessionClockLabel(null),'—');
 assert.equal(clock.sessionClockLabel(0),'00:00:00');
@@ -141,3 +142,4 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  assert.ok(html.includes('01:02:03'));
  assert.ok(html.includes('1 redução(ões) de drop'));
 }
+

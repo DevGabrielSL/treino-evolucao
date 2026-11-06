@@ -1,0 +1,37 @@
+let finisherSelected='pushups';
+const finisherDrafts=new Map();
+function renderFinisherSummary(session,sets){
+ return '<div class="finisher-summary"><strong>Bloco final</strong>'+finisherProgress(session,sets).map(g=>'<span>'+e(g.name)+': '+g.done+' / '+g.target+(g.timed?' s':' reps')+'</span>').join('')+'</div>';
+}
+function renderLastSetClock(session,sets){
+ const last=lastRecordedSet(session,sets);
+ if(!last)return '<div class="last-set-clock"><span>Descanso</span><small>'+ (sets.some(s=>s.session_id===session.id)?'As séries anteriores não têm horário registrado.':'A contagem começa ao salvar a primeira série.')+'</small></div>';
+ const time=new Date(last.recorded_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ return '<div class="last-set-clock"><span>Desde a última série salva</span><strong role="timer" aria-label="Tempo de descanso" data-last-set-clock="'+e(last.recorded_at)+'">'+sessionClockLabel(sessionClockSeconds(last.recorded_at))+'</strong><small>Última série às '+e(time)+' · contado desde o registro</small></div>';
+}
+function renderFinisher(session,m){
+ const goals=finisherProgress(session,m.sets),goal=goals.find(g=>g.key===finisherSelected&&!g.timed)||goals[0],draft=finisherDrafts.get(session.id+':'+goal.key)||{};
+ const paused=Boolean(session.clock_paused_at),running=Boolean(session.finisher_plank_started_at);
+ const field=(name,label,type,extra='')=>'<label class="field"><span>'+label+'</span><input class="input" name="'+name+'" type="'+type+'" value="'+e(draft[name]??'')+'" required '+extra+'></label>';
+ const recent=m.sets.filter(s=>s.session_id===session.id&&s.finisher_key).slice(-4).reverse();
+ return panel('<div class="finisher-heading"><div><span class="focus-session-label">FECHAMENTO DO TREINO</span><h2>Bloco final</h2></div><span>Metas totais</span></div><p class="text-small">Divida em quantas séries precisar. Só as séries de trabalho contam para as metas.</p>'+
+ '<div class="finisher-goals">'+goals.filter(g=>!g.timed).map(g=>'<button type="button" class="finisher-goal '+(g.key===goal.key?'selected':'')+'" data-finisher-action="select" data-finisher-key="'+g.key+'" data-session="'+e(session.id)+'" aria-pressed="'+(g.key===goal.key)+'"><span>'+e(g.name)+'</span><strong>'+g.done+' / '+g.target+'</strong><small>'+(g.remaining?'Faltam '+g.remaining+' reps':'Meta atingida')+'</small></button>').join('')+'</div>'+
+ '<form id="finisher-set-form"><input type="hidden" name="session_id" value="'+e(session.id)+'"><input type="hidden" name="key" value="'+goal.key+'"><h3>Registrar '+e(goal.name.toLowerCase())+'</h3><div class="quick-grid">'+field('load',goal.key==='abs'?'Carga':'Carga externa em kg','number','min="0" max="10000" step="0.1" inputmode="decimal"')+field('reps','Repetições realizadas','number','min="1" max="500" step="1" inputmode="numeric"')+field('rir','RIR · 0 a 10','number','min="0" max="10" step="0.5" inputmode="decimal"')+
+ '<label class="field"><span>Tipo de série</span><select name="kind" class="input" required><option value="" disabled '+(!draft.kind?'selected':'')+'>Selecione</option><option value="effective" '+(draft.kind==='effective'?'selected':'')+'>Trabalho</option><option value="warmup" '+(draft.kind==='warmup'?'selected':'')+'>Aquecimento</option></select></label>'+(goal.key==='abs'?'<label class="field"><span>Unidade da máquina</span><select class="input" name="unit" required><option value="" disabled '+(!draft.unit?'selected':'')+'>Selecione</option><option value="kg" '+(draft.unit==='kg'?'selected':'')+'>kg</option><option value="plaquetas" '+(draft.unit==='plaquetas'?'selected':'')+'>Plaquetas</option></select></label>':'<input type="hidden" name="unit" value="peso corporal">')+'</div>'+(goal.key!=='abs'?'<p class="text-small">Sem carga externa, informe 0. A carga representa somente o peso adicional.</p>':'')+'<button class="btn primary block" type="submit">Salvar série do bloco final</button></form>'+
+ '<div class="finisher-plank"><h3>Prancha · meta de 3 minutos</h3><strong role="timer" data-plank-clock="'+e(session.id)+'">'+sessionClockLabel(Math.floor(plankElapsed(session,m.sets)/1000))+'</strong><small data-plank-remaining="'+e(session.id)+'">'+(goals[3].remaining?'Faltam '+goals[3].remaining+' segundos':'Meta atingida')+'</small><p class="text-small">'+(running?'Contando. Pause ao interromper a posição.':'Pausada. Os trechos registrados são somados.')+'</p><button type="button" class="btn block" data-finisher-action="'+(running?'pause-plank':'resume-plank')+'" data-session="'+e(session.id)+'" '+(paused?'disabled':'')+'>'+(running?'Pausar e salvar trecho':goals[3].done?'Continuar prancha':'Iniciar prancha')+'</button>'+(paused?'<p class="text-small">Retome o treino para continuar a prancha.</p>':'')+'</div>'+
+ (recent.length?'<details><summary>Últimos registros do bloco</summary>'+recent.map(row=>'<div class="finisher-record"><span>'+e(FINISHER_GOALS.find(g=>g.key===row.finisher_key)?.name)+' · '+(row.finisher_key==='plank'?(row.duration_ms/1000).toFixed(1)+' s':row.repetitions+' reps · '+(row.set_type==='warmup'?'Aquecimento':'Trabalho'))+'</span><button type="button" class="btn small" data-finisher-action="remove" data-set="'+e(row.id)+'" data-session="'+e(session.id)+'">Remover registro</button></div>').join('')+'</details>':'')+
+ '<button class="btn block mt" data-coach-action="finish">Revisar e concluir treino</button>','finisher-panel') .replace('<section','<section id="finisher-panel" tabindex="-1"');
+}
+async function handleFinisherAction(btn){
+ const session=coachActive();if(!session||session.id!==btn.dataset.session)throw new Error('O treino mudou. Confira a sessão atual.');
+ const action=btn.dataset.finisherAction;
+ if(action==='open'){document.querySelector('#finisher-panel')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector('#finisher-panel')?.focus({preventScroll:true});return;}
+ if(action==='select'){if(!FINISHER_GOALS.some(g=>g.key===btn.dataset.finisherKey&&!g.timed))return;finisherSelected=btn.dataset.finisherKey;render();document.querySelector('#finisher-set-form')?.scrollIntoView({block:'center'});return;}
+ if(busy||quickSaving)return;
+ if(action==='remove'){
+  if(!confirm('Remover este registro do bloco final? A meta será recalculada.'))return;
+  await perform(d=>{const s=d.overlay.sessions.find(s=>s.id===session.id&&s.status==='in_progress');if(!s)throw new Error('Treino encerrado.');const i=d.overlay.sets.findIndex(s=>s.id===btn.dataset.set&&s.session_id===session.id&&s.finisher_key);if(i<0)throw new Error('Registro indisponível.');d.overlay.sets.splice(i,1);},'Registro removido e meta recalculada.');return;
+ }
+ if(action==='pause-workout'||action==='resume-workout')await perform(d=>setWorkoutPaused(d,session.id,action==='pause-workout',{id:makeId('set')}),action==='pause-workout'?'Treino pausado.':'Treino retomado.');
+ if(action==='pause-plank'||action==='resume-plank')await perform(d=>setPlankRunning(d,session.id,action==='resume-plank',{id:makeId('set')}),action==='pause-plank'?'Trecho de prancha salvo.':'Prancha contando.');
+}

@@ -837,6 +837,11 @@ jobs:
           node testing/production_candidate_tests.mjs /tmp/treino-production-candidate
           node testing/production_session_tests.mjs /tmp/treino-production-candidate
           python3 testing/production_coach_tests.py /tmp/treino-production-candidate
+          npm install --prefix /tmp/fitness-browser playwright@1.56.1
+          python3 -m http.server 8123 --directory /tmp/treino-production-candidate/dist >/tmp/fitness-browser-server.log 2>&1 &
+          FITNESS_QA_SERVER_PID=$!
+          trap 'kill "$FITNESS_QA_SERVER_PID" 2>/dev/null || true' EXIT
+          CHROME_BIN="$(command -v google-chrome || command -v chromium)" NODE_PATH=/tmp/fitness-browser/node_modules node testing/finisher_browser_qa.cjs
           (cd /tmp/treino-production-candidate && node testing/coordinator_tests.mjs)
           cp -a /tmp/treino-production-candidate/dist/. dist/
           python3 - <<'PY'
