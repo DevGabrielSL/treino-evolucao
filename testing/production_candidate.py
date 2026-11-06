@@ -419,3 +419,9 @@ for name in ('app.js','sw.js','integrity.js','index.html'):
 for name in ('app.js','sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('principal_presets.js?v=182','principal_presets.js?v=183').replace('app.js?v=182','app.js?v=183').replace('shell-v182-second-deck','shell-v183-third-deck'))
+
+
+# Publish the requested fourth deck before simplifying the preset library.
+for name in ('app.js','sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('principal_presets.js?v=183','principal_presets.js?v=184').replace('app.js?v=183','app.js?v=184').replace('shell-v183-third-deck','shell-v184-fourth-deck'))

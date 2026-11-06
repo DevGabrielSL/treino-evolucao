@@ -6,9 +6,9 @@ const entities={sessions:[],sets:[],exercises:[],exercise_variants:[]},today='20
 assert.equal(PRESET_DECKS.length,15);assert.equal(new Set(PRESET_DECKS.map(x=>x.id)).size,15);
 const before=JSON.stringify(PRESET_DECKS);
 for(const deck of PRESET_DECKS){
- const p=presetPlan(deck.id,entities,today);assert.equal(p.items.length,deck.items.length);assert.equal(new Set(p.items.map(x=>x.variant_id)).size,p.items.length);assert.equal(p.items.some(x=>x.group==='core'),!['rpg_deck_01','rpg_deck_02','rpg_deck_03'].includes(deck.id));
+ const p=presetPlan(deck.id,entities,today);assert.equal(p.items.length,deck.items.length);assert.equal(new Set(p.items.map(x=>x.variant_id)).size,p.items.length);assert.equal(p.items.some(x=>x.group==='core'),!['rpg_deck_01','rpg_deck_02','rpg_deck_03','rpg_deck_04'].includes(deck.id));
  for(const x of p.items){assert.equal(x.dose.sets,3);assert.ok(x.dose.min>0&&x.dose.max>=x.dose.min);assert.equal(x.last,null);assert.ok(!/smith|smitch/i.test(x.equipment));if(x.name==='Supino reto')assert.equal(x.equipment,'Barra livre');if(x.name==='Crucifixo de peito')assert.equal(x.equipment,'Máquina inclinada com anilhas');if(/Agachamento/.test(x.name))assert.ok(/hack|goblet/.test(x.name));}
- const reduced=presetPlan(deck.id,entities,today,{fatigue:'high'});assert.ok(reduced.items.length<=4);assert.equal(reduced.items.some(x=>x.group==='core'),!['rpg_deck_01','rpg_deck_02','rpg_deck_03'].includes(deck.id));assert.ok(reduced.items.every(x=>x.dose.sets===3));
+ const reduced=presetPlan(deck.id,entities,today,{fatigue:'high'});assert.ok(reduced.items.length<=4);assert.equal(reduced.items.some(x=>x.group==='core'),!['rpg_deck_01','rpg_deck_02','rpg_deck_03','rpg_deck_04'].includes(deck.id));assert.ok(reduced.items.every(x=>x.dose.sets===3));
  assert.throws(()=>presetPlan(deck.id,entities,today,{pain:'yes'}));
  const doc=emptyDocument(),c=catalogEntities(p.items);doc.overlay.exercises.push(...c.exercises);doc.overlay.exercise_variants.push(...c.variants);assert.equal(validateDocument(doc),true);assert.equal(doc.overlay.sets.length,0);assert.equal(doc.overlay.sessions.length,0);
 }
@@ -72,3 +72,13 @@ assert.notEqual(third[5].variant_id,second[6].variant_id);
 assert.equal(third[0].variant_id,first[4].variant_id);
 assert.equal(third[1].variant_id,second[4].variant_id);
 console.log('THIRD_DECK_EXACT_NINE_ALTERNATING_ARMS_SHOULDERS_DUMBBELL_SKULLCRUSHER=PASS');
+
+
+const fourth=presetPlan('rpg_deck_04',entities,today).items;
+assert.deepEqual(fourth.map(x=>[x.name,x.equipment]),[
+ ['Leg press 45°','Máquina · 45°'],['Agachamento hack','Máquina hack'],['Cadeira extensora','Máquina'],['Cadeira flexora','Máquina'],['Cadeira abdutora','Máquina'],['Cadeira adutora','Máquina'],['Panturrilha sentada','Máquina']
+]);
+assert.equal(fourth.length,7);assert.equal(new Set(fourth.map(x=>x.variant_id)).size,7);
+assert.ok(fourth.every(x=>x.group==='pernas'&&x.dose.sets===3));
+assert.ok(!fourth.some(x=>/stiff|romeno|pélvica|afundo|reverso/i.test(x.name)));
+console.log('FOURTH_DECK_EXACT_SEVEN_LEG_EXERCISES=PASS');
