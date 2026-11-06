@@ -87,6 +87,6 @@ for name in ('sw.js','integrity.js'):
  p=dist/name;t=p.read_text();assert 'shell-v178-mobile-edit' in t
  t=t.replace('shell-v178-mobile-edit','shell-v179-finisher-rest').replace('principal_focus.css?v=178','principal_focus.css?v=179')
  assert "'./app.js?v=170'" in t
- t=t.replace("'./app.js?v=170'","'./app.js?v=170','./principal_finisher.js?v=179'")
+ t=t.replace("'./app.js?v=170'","'./app.js?v=179','./principal_finisher.js?v=179'")
  p.write_text(t)
-p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=178','principal_focus.css?v=179'))
+p=dist/'index.html';p.write_text(p.read_text().replace('principal_focus.css?v=178','principal_focus.css?v=179').replace('app.js?v=170','app.js?v=179'))

@@ -52,7 +52,7 @@ assert (dist / 'relic-emblem.svg').is_file()
 assert (dist / 'relic-group-scenes.webp').is_file()
 assert (dist / 'relic-supino-card.webp').is_file()
 assert 'relic-group-scenes.webp' in (dist / 'principal_relics_art.css').read_text()
-assert 'app.js?v=170' in (dist / 'index.html').read_text()
+assert 'app.js?v=179' in (dist / 'index.html').read_text()
 assert 'relic-ex-supino' in app
 assert 'relic-ex-supino' in (dist / 'principal_cards.js').read_text()
 for file in dist.glob('*.js'):
