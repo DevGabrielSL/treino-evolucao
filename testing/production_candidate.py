@@ -430,3 +430,11 @@ for name in ('app.js','sw.js','integrity.js','index.html'):
 for name in ('app.js','sw.js','integrity.js','index.html'):
  p=dist/name;s=p.read_text()
  p.write_text(s.replace('principal_presets.js?v=184','principal_presets.js?v=185').replace('app.js?v=184','app.js?v=185').replace('shell-v184-fourth-deck','shell-v185-four-custom-decks'))
+
+
+# Hide the requested planner details and local conversation text.
+p=dist/'principal_focus.css'
+p.write_text(p.read_text()+"\n.planner-readiness,.planner-examples,.planner-messages,.planner-storage-note{display:none!important}\n")
+for name in ('sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ p.write_text(s.replace('shell-v185-four-custom-decks','shell-v186-clean-planner').replace('app.js?v=185','app.js?v=186').replace('principal_focus.css?v=180','principal_focus.css?v=186'))
