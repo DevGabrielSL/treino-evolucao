@@ -10,6 +10,13 @@ const belongs = (session, id, row) => slotIds(session, id).includes(plannedId(ro
 export function changeWorkoutPlan(doc, {sessionId, current, replacement, action}) {
  const session = doc.overlay.sessions.find(s => s.id === sessionId && s.status === 'in_progress');
  if (!session?.planned_variant_ids?.includes(current)) throw new Error('Exercício fora do roteiro atual.');
+ if (action === 'remove') {
+  session.planned_variant_ids = session.planned_variant_ids.filter(id => id !== current);
+  for (const field of ['planned_guidance', 'prior_planned_variants', 'skipped_series']) {
+   if (session[field]) delete session[field][current];
+  }
+  return;
+ }
  const entities = {
   sessions: [...(doc.base?.entities?.sessions || []), ...doc.overlay.sessions],
   sets: [...(doc.base?.entities?.sets || []), ...doc.overlay.sets],
@@ -66,3 +73,4 @@ export function nextPending(session,current,entities){
  const start=ids.indexOf(current);for(let i=1;i<=ids.length;i++){const id=ids[(start+i+ids.length)%ids.length];if(id===current)continue;const state=liveGuidance(session,id,entities);if(state.target===null||state.resolved<state.target)return id;}
  return null;
 }
+

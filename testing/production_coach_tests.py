@@ -34,10 +34,10 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v196-sync-diagnostics' in content
+    assert 'shell-v197-workout-controls' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
-    assert "'./principal_live.js?v=131'" in content
+    assert "'./principal_live.js?v=197'" in content
     assert "'./principal_rest.js'" in content
     assert "'./principal_visual.css'" in content
     assert "'./principal_cards.css'" in content
@@ -52,7 +52,7 @@ assert (dist / 'relic-emblem.svg').is_file()
 assert (dist / 'relic-group-scenes.webp').is_file()
 assert (dist / 'relic-supino-card.webp').is_file()
 assert 'relic-group-scenes.webp' in (dist / 'principal_relics_art.css').read_text()
-assert 'app.js?v=196' in (dist / 'index.html').read_text()
+assert 'app.js?v=197' in (dist / 'index.html').read_text()
 assert 'relic-ex-supino' in app
 assert 'relic-ex-supino' in (dist / 'principal_cards.js').read_text()
 for file in dist.glob('*.js'):
@@ -74,3 +74,4 @@ print('PRINCIPAL_COACH_INTEGRATION=PASS')
 subprocess.run(['node', str(candidate / 'testing/principal_xp_tests.mjs')], check=True)
 
 subprocess.run(['node', str(candidate / 'testing/principal_sync_fix_tests.mjs')], check=True)
+

@@ -545,3 +545,47 @@ for name in ('sw.js','integrity.js','index.html'):
 # Refresh the transport URL because its imports changed.
 for name in ('app.js','sw.js','integrity.js'):
  p=dist/name;p.write_text(p.read_text().replace("sheet_sync_browser.js'","sheet_sync_browser.js?v=196'"))
+
+
+# Reward a higher comparable load and allow removing a slot from the active plan.
+p=dist/'app.js';s=p.read_text()
+s=replace_once(s,"import {xpReward,showXpReward}","import {markLoadBonus,xpReward,showXpReward}")
+s=replace_once(s,"const next=commit(doc,mutate);const nextGeneration=await saveSnapshot(next,storageGeneration);const reward=", """const previous=merged(doc);
+ const previousSetIds=new Set(previous.sets.map(row=>row.id));
+ const next=commit(doc,draft=>{
+  mutate(draft);
+  for(const row of draft.overlay.sets){
+   if(previousSetIds.has(row.id)||row.set_type!=='effective')continue;
+   const session=draft.overlay.sessions.find(item=>item.id===row.session_id&&item.status==='in_progress');
+   if(!session)continue;
+   const variant=draft.overlay.exercise_variants.find(item=>item.id===row.variant_id)
+    ||previous.exercise_variants.find(item=>item.id===row.variant_id);
+   markLoadBonus(row,session,variant,previous);
+  }
+ });const nextGeneration=await saveSnapshot(next,storageGeneration);const reward=""")
+s=replace_once(s,"function renderTrainingTools(active,selected,m){","""function renderTrainingTools(active,selected,m){
+ if(!selected)return panel('<h2>Roteiro sem exercícios</h2><p>Você pode seguir para o bloco final ou concluir o treino.</p>','focus-entry');""")
+s=replace_once(s,"active?.planned_variant_ids?.length?active.planned_variant_ids:(coachPlan?.items||[]).map(x=>x.variant_id)","active?(active.planned_variant_ids||[]):(coachPlan?.items||[]).map(x=>x.variant_id)")
+s=replace_once(s," ${state.skipped?'<button",''' <button class="btn danger" type="button" data-coach-action="remove-exercise" data-coach-variant="${e(selected)}">Remover exercício do treino</button>
+ ${state.skipped?'<button''')
+s=replace_once(s," if(['skip','undo-skip','swap'].includes(action)){",""" if(action==='remove-exercise'){
+  const active=coachActive(),current=btn.dataset.coachVariant;
+  if(busy||quickSaving||!active?.planned_variant_ids?.includes(current))return;
+  const model=g();
+  const variant=model.variantMap.get(current);
+  const name=model.exerciseMap.get(variant?.exercise_id)?.name||'este exercício';
+  if(!confirm('Remover '+name+' do roteiro deste treino? As séries salvas serão mantidas.'))return;
+  const next=nextPending(active,current,model.entities)||active.planned_variant_ids.find(id=>id!==current)||'';
+  const ok=await perform(d=>changeWorkoutPlan(d,{sessionId:active.id,current,action:'remove'}),'Exercício removido do roteiro.');
+  if(ok){quickDrafts.delete(active.id+':'+current);coachSelected=next;render();}
+  return;
+ }
+ if(['skip','undo-skip','swap'].includes(action)){""")
+p.write_text(s)
+p=dist/'principal_focus.css'
+p.write_text(p.read_text()+'\n#finisher-panel .finisher-goals{grid-template-columns:minmax(0,1fr)}\n.xp-content .xp-load-bonus{color:#ffe4a1}\n')
+for name in ('app.js','sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text()
+ for old,new in [('app.js?v=196','app.js?v=197'),('shell-v196-sync-diagnostics','shell-v197-workout-controls'),('principal_xp.js?v=195','principal_xp.js?v=197'),('principal_finisher.js?v=179','principal_finisher.js?v=197'),('principal_live.js?v=131','principal_live.js?v=197'),('principal_focus.css?v=195','principal_focus.css?v=197')]:
+  s=s.replace(old,new)
+ p.write_text(s)

@@ -1,7 +1,5 @@
 // Actual finisher records use the same set collection as the rest of the workout.
 export const FINISHER_GOALS=Object.freeze([
- {key:'pushups',name:'Flexões',exercise:'Flexão de braços',target:50},
- {key:'pullups',name:'Barra fixa',exercise:'Barra fixa',target:30},
  {key:'abs',name:'Abdominal máquina',exercise:'Abdominal máquina',target:100},
  {key:'plank',name:'Prancha',exercise:'Prancha',target:180,timed:true}
 ]);
@@ -19,8 +17,8 @@ export function finisherProgress(session,sets,now=Date.now()){
 }
 function variantFor(doc,goal,unit){
  const exerciseId='exercise_finisher_'+goal.key,variantId='variant_finisher_'+goal.key+'_'+unit.replace(/[^a-z]/g,'');
- if(!all(doc,'exercises').some(x=>x.id===exerciseId))doc.overlay.exercises.push({id:exerciseId,name:goal.exercise,muscle_group:goal.key==='pushups'?'peito':goal.key==='pullups'?'costas':'abdômen',classification_verified:false,notes:'Bloco final do treino.'});
- if(!all(doc,'exercise_variants').some(x=>x.id===variantId))doc.overlay.exercise_variants.push({id:variantId,exercise_id:exerciseId,equipment_or_variation:goal.key==='abs'?'Máquina do bloco final':goal.key==='pullups'?'Barra fixa livre':'Peso corporal',unit,unit_confirmed:true,comparison_group_id:variantId,comparison_policy:'match_same_variant_only'});
+ if(!all(doc,'exercises').some(x=>x.id===exerciseId))doc.overlay.exercises.push({id:exerciseId,name:goal.exercise,muscle_group:'abdômen',classification_verified:false,notes:'Bloco final do treino.'});
+ if(!all(doc,'exercise_variants').some(x=>x.id===variantId))doc.overlay.exercise_variants.push({id:variantId,exercise_id:exerciseId,equipment_or_variation:goal.key==='abs'?'Máquina do bloco final':'Peso corporal',unit,unit_confirmed:true,comparison_group_id:variantId,comparison_policy:'match_same_variant_only'});
  const v=all(doc,'exercise_variants').find(x=>x.id===variantId);if(v.exercise_id!==exerciseId||v.unit!==unit)throw new Error('Conflito no cadastro do bloco final.');return v;
 }
 function pushRow(doc,session,goal,{id,load,reps,rir,kind,unit,now,durationMs=null}){
@@ -35,7 +33,7 @@ export function recordFinisherSet(doc,sessionId,key,values){
  const session=activeSession(doc,sessionId),goal=goalFor(key),{load,reps,rir,kind,unit}=values;
  if(goal.timed)throw new Error('Use o cronômetro para registrar a prancha.');
  if(!Number.isFinite(load)||load<0||load>10000||!Number.isInteger(reps)||reps<1||reps>500||!Number.isFinite(rir)||rir<0||rir>10||!['effective','warmup'].includes(kind))throw new Error('Informe carga, repetições, RIR e trabalho ou aquecimento.');
- if(!(key==='abs'?['kg','plaquetas']:['peso corporal']).includes(unit))throw new Error('Confirme a unidade da carga.');
+ if(!['kg','plaquetas'].includes(unit))throw new Error('Confirme a unidade da carga.');
  return pushRow(doc,session,goal,values);
 }
 export function setPlankRunning(doc,sessionId,running,{now=Date.now(),id}={}){
@@ -59,3 +57,4 @@ export function setWorkoutPaused(doc,sessionId,paused,{now=Date.now(),id}={}){
  else if(session.clock_paused_at){session.clock_paused_ms=(session.clock_paused_ms||0)+Math.max(0,now-Date.parse(session.clock_paused_at));session.clock_paused_at=null;}
 }
 export function lastRecordedSet(session,sets){return sets.filter(s=>s.session_id===session.id&&Number.isFinite(Date.parse(s.recorded_at||''))).sort((a,b)=>Date.parse(b.recorded_at)-Date.parse(a.recorded_at))[0]||null;}
+

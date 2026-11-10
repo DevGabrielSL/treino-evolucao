@@ -1,4 +1,4 @@
-let finisherSelected='pushups';
+let finisherSelected='abs';
 const finisherDrafts=new Map();
 function renderFinisherSummary(session,sets){
  return '<div class="finisher-summary"><strong>Bloco final</strong>'+finisherProgress(session,sets).map(g=>'<span>'+e(g.name)+': '+g.done+' / '+g.target+(g.timed?' s':' reps')+'</span>').join('')+'</div>';
@@ -13,8 +13,8 @@ function renderFinisher(session,m){
  const goals=finisherProgress(session,m.sets),goal=goals.find(g=>g.key===finisherSelected&&!g.timed)||goals[0],draft=finisherDrafts.get(session.id+':'+goal.key)||{};
  const paused=Boolean(session.clock_paused_at),running=Boolean(session.finisher_plank_started_at),plankSeconds=Math.floor(plankElapsed(session,m.sets)/1000);
  const field=(name,label,type,extra='')=>'<label class="field"><span>'+label+'</span><input class="input" name="'+name+'" type="'+type+'" value="'+e(draft[name]??'')+'" required placeholder="'+(name==='rir'?'0–10':'—')+'" '+extra+'></label>';
- const recent=m.sets.filter(s=>s.session_id===session.id&&s.finisher_key).slice(-4).reverse();
- return panel('<div class="finisher-heading"><div><span class="focus-session-label">FECHAMENTO DO TREINO</span><h2>Bloco final</h2></div><span>4 metas</span></div><p class="text-small finisher-intro">Some repetições em séries de trabalho. Aquecimentos não contam.</p>'+
+ const recent=m.sets.filter(s=>s.session_id===session.id&&FINISHER_GOALS.some(g=>g.key===s.finisher_key)).slice(-4).reverse();
+ return panel('<div class="finisher-heading"><div><span class="focus-session-label">FECHAMENTO DO TREINO</span><h2>Bloco final</h2></div><span>2 metas</span></div><p class="text-small finisher-intro">Some repetições em séries de trabalho. Aquecimentos não contam.</p>'+
  '<div class="finisher-goals">'+goals.filter(g=>!g.timed).map(g=>'<button type="button" class="finisher-goal '+(g.key===goal.key?'selected':'')+(g.remaining?'':' is-complete')+'" data-finisher-action="select" data-finisher-key="'+g.key+'" data-session="'+e(session.id)+'" aria-pressed="'+(g.key===goal.key)+'"><span>'+e(g.name)+'</span><strong>'+g.done+' / '+g.target+'</strong><progress class="finisher-goal-progress" max="'+g.target+'" value="'+Math.min(g.done,g.target)+'" aria-label="'+e(g.name)+': '+g.done+' de '+g.target+' repetições"></progress><small>'+(g.remaining?'Faltam '+g.remaining:'Concluído')+'</small></button>').join('')+'</div>'+
  '<form id="finisher-set-form"><input type="hidden" name="session_id" value="'+e(session.id)+'"><input type="hidden" name="key" value="'+goal.key+'"><h3>Registrar '+e(goal.name.toLowerCase())+'</h3><div class="quick-grid">'+field('load',goal.key==='abs'?'Carga <small>da máquina</small>':'Peso extra <small>kg</small>','number','min="0" max="10000" step="0.1" inputmode="decimal"')+field('reps','Repetições <small>realizadas</small>','number','min="1" max="500" step="1" inputmode="numeric"')+field('rir','RIR <small>0 a 10 · obrigatório</small>','number','min="0" max="10" step="0.5" inputmode="decimal"')+
  '<label class="field"><span>Tipo de série <small>obrigatório</small></span><select name="kind" class="input" required><option value="" disabled '+(!draft.kind?'selected':'')+'>Selecione</option><option value="effective" '+(draft.kind==='effective'?'selected':'')+'>Trabalho</option><option value="warmup" '+(draft.kind==='warmup'?'selected':'')+'>Aquecimento</option></select></label>'+(goal.key==='abs'?'<label class="field"><span>Unidade da máquina</span><select class="input" name="unit" required><option value="" disabled '+(!draft.unit?'selected':'')+'>Selecione</option><option value="kg" '+(draft.unit==='kg'?'selected':'')+'>kg</option><option value="plaquetas" '+(draft.unit==='plaquetas'?'selected':'')+'>Plaquetas</option></select></label>':'<input type="hidden" name="unit" value="peso corporal">')+'</div>'+(goal.key!=='abs'?'<p class="text-small finisher-load-help">Sem peso adicional, preencha 0 kg.</p>':'')+'<button class="btn primary block" type="submit">Salvar série</button></form>'+
@@ -35,4 +35,5 @@ async function handleFinisherAction(btn){
  if(action==='pause-workout'||action==='resume-workout')await perform(d=>setWorkoutPaused(d,session.id,action==='pause-workout',{id:makeId('set')}),action==='pause-workout'?'Treino pausado.':'Treino retomado.');
  if(action==='pause-plank'||action==='resume-plank')await perform(d=>setPlankRunning(d,session.id,action==='resume-plank',{id:makeId('set')}),action==='pause-plank'?'Trecho de prancha salvo.':'Prancha contando.');
 }
+
 
