@@ -26,6 +26,10 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('.xp-reward').evaluate(el=>getComputedStyle(el).pointerEvents),'none');
  console.log('XP_SERIES_SCREENSHOT_JPEG='+(await page.locator('.xp-reward').screenshot({type:'jpeg',quality:65})).toString('base64'));
  await page.locator('[data-last-set-clock]').waitFor();
+ assert.equal(await page.locator('.focus-session .session-metrics [role="timer"]').count(),2);
+ assert.equal(await page.getByRole('button',{name:'Pausar treino'}).count(),1);
+ assert.equal(await page.locator('.focus-equipment-row [data-coach-action="switch-load-unit"]').count(),1);
+
  await page.waitForFunction(()=>document.querySelector('[data-last-set-clock]')?.textContent!=='00:00:00',{},{timeout:5000});
  assert.notEqual(await page.locator('[data-last-set-clock]').innerText(),'00:00:00');
  await page.locator('#quick-set-form [name="load"]').scrollIntoViewIfNeeded();

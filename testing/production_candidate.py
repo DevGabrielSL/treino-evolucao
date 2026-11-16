@@ -709,3 +709,74 @@ for name in ('app.js','sw.js','integrity.js','index.html','principal_live.js'):
  ):
   s = s.replace(old,new)
  p.write_text(s)
+
+# Keep the exercise and its entry form above the secondary workout controls.
+p = dist / 'app.js'
+s = p.read_text()
+start = s.index(' const current=active?panel(')
+end = s.index('\n',start)
+s = s[:start] + ''' const current=active?panel(`<div class="focus-session-top">
+  <div class="focus-session-title"><span class="focus-session-label">${active.clock_paused_at?'TREINO PAUSADO':'TREINO EM ANDAMENTO'}</span><p>${e(active.name)}</p></div>
+  <div class="focus-session-actions">
+   ${active.started_at||active.clock_started_at?`<button type="button" class="btn session-pause" data-finisher-action="${active.clock_paused_at?'resume-workout':'pause-workout'}" data-session="${e(active.id)}" aria-label="${active.clock_paused_at?'Retomar treino':'Pausar treino'}" title="${active.clock_paused_at?'Retomar treino':'Pausar treino'}"><span aria-hidden="true">${active.clock_paused_at?'▶':'Ⅱ'}</span></button>`:''}
+   <details class="focus-session-menu"><summary aria-label="Opções do treino">⋯</summary><div><button class="btn" data-coach-action="finish">Concluir treino</button><button class="btn danger" data-coach-action="cancel" data-coach-session="${e(active.id)}">Cancelar treino</button></div></details>
+  </div>
+ </div><div class="session-metrics">${renderSessionClock(active)}${renderLastSetClock(active,activeSets)}</div>
+ ${planIds.length?`<div class="session-targets"><progress max="${planIds.length}" value="${liveGuidance(active,selected,m.entities).reached}" aria-label="Metas de exercícios atingidas"></progress><small>${liveGuidance(active,selected,m.entities).reached} / ${planIds.length} metas</small></div>`:''}`,'focus-session'):'';''' + s[end:]
+s = replace_once(s, 'current+renderLastSetClock(active,activeSets)+renderTrainingTools', 'current+renderTrainingTools')
+start = s.index(" return '<div class=\"session-clock\"><small>'+")
+end = s.index('\n', start)
+s = s[:start] + ''' return '<div class="session-clock"><span>Tempo de treino</span><strong role="timer" aria-label="Tempo decorrido" data-session-clock="'+e(start)+'" data-clock-session="'+e(session.id)+'">'+sessionClockLabel(seconds)+'</strong><small>'+(session.started_at?'Início do treino: ':'Contagem iniciada: ')+e(time)+'</small></div>';''' + s[end:]
+s = replace_once(s, '<span>Desde a última série salva</span>', '<span>Desde a última série</span>')
+s = replace_once(s, " · contado desde o registro</small>", "</small>")
+s = replace_once(s, '<p class="focus-equipment">', '<div class="focus-equipment-row"><p class="focus-equipment">')
+s = replace_once(s, "</p>${renderLiveGuidance(active,selected,m)}${renderLoadReference(active,selected,m)}${unitButton}${entry}", "</p>${unitButton}</div>${renderLiveGuidance(active,selected,m)}${renderLoadReference(active,selected,m)}${entry}")
+s = replace_once(s, '<div class="load-reference"><span>Último treino compatível · ', '<div class="load-reference"><div class="load-reference-value"><span>Último treino · ')
+s = replace_once(s, "label(reference)+'</strong></p>'", "label(reference)+'</strong></p></div>'")
+s = replace_once(s, '>Usar carga e repetições</button>', ' aria-label="Usar carga e repetições">Usar valores</button>')
+p.write_text(s)
+p = dist / 'principal_focus.css'
+p.write_text(p.read_text() + '''
+/* Active workout: one status panel, then the entry form. */
+.focus-session{margin-bottom:10px!important;border-color:#536d65!important}
+.focus-session-top{align-items:flex-start;gap:8px}
+.focus-session-title p{font-size:15px;font-weight:700;line-height:1.3;margin:3px 0 0!important}
+.focus-session-actions{display:flex;flex:none;align-items:center;gap:4px}
+.focus-session .session-pause,.focus-session .focus-session-menu>summary{
+ width:44px;height:44px;min-height:44px;box-sizing:border-box;padding:0;
+ display:grid;place-items:center;border:1px solid #536d65;border-radius:10px;background:#20343b;color:#f5e3b7
+}
+.focus-session .session-pause{font:700 18px/1 system-ui,sans-serif}
+.focus-session .focus-session-menu>summary{font-size:22px}
+.session-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.focus-session .session-clock,.focus-session .last-set-clock{
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;
+ min-width:0;margin:0;padding:8px 10px;border:0;border-radius:10px;background:#0d222a
+}
+.focus-session .last-set-clock{background:#14302f}
+.session-metrics span,.session-metrics small{font:500 11px/1.3 system-ui,sans-serif;color:#b8cece}
+.session-metrics strong{font:700 clamp(18px,5vw,25px)/1.15 system-ui,sans-serif;color:#f4dcab;letter-spacing:0;font-variant-numeric:tabular-nums}
+.session-targets{display:flex;align-items:center;gap:10px;margin-top:8px}
+.session-targets small{color:#b8cece;white-space:nowrap;font-size:11px}
+.session-targets progress{flex:1;min-width:0;height:5px;accent-color:#7ae2bf}
+.focus-entry .focus-exercise-name{margin:5px 0 2px!important}
+.focus-entry .focus-equipment-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.focus-entry .focus-equipment-row .focus-equipment{margin:0!important}
+.focus-entry [data-coach-action=switch-load-unit]{min-height:44px;padding:5px 10px;flex:none;background:#20343b;border-color:#637d70}
+.focus-entry .focus-reference{padding:0;margin-bottom:6px!important;border-bottom:0}
+.focus-entry .load-reference:not(.is-empty){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 8px;padding:6px 9px;margin:6px 0 10px}
+.focus-entry .load-reference-value>span{font-size:11px;color:#b9ddd0}
+.focus-entry .load-reference-value>p{margin:0}
+.focus-entry .load-reference [data-coach-action=use-reference]{min-height:44px;padding:5px 9px;white-space:nowrap}
+.focus-entry .load-reference details,.focus-entry [data-reference-feedback]{grid-column:1/-1}
+.focus-entry [data-reference-feedback]:empty{display:none}
+.focus-entry #quick-set-form>.required-set-fields{grid-template-columns:minmax(0,1fr);margin-top:8px}
+.focus-entry #quick-set-form .field>span{min-height:0!important;margin-bottom:4px}
+.focus-entry #quick-set-form .field>span small{display:inline;margin-left:3px}
+.focus-entry #quick-set-form .input{height:46px;min-height:46px!important}
+.focus-entry #quick-set-form>button[type=submit]{scroll-margin-bottom:100px}
+''')
+for name in ('sw.js','integrity.js','index.html'):
+ p = dist / name
+ p.write_text(p.read_text().replace('shell-v198-workout-view','shell-v199-workout-layout')
+  .replace('app.js?v=198','app.js?v=199').replace('principal_focus.css?v=197','principal_focus.css?v=199'))
