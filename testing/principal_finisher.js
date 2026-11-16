@@ -30,11 +30,11 @@ function pushRow(doc,session,goal,{id,load,reps,rir,kind,unit,now,durationMs=nul
  doc.overlay.sets.push(row);return row;
 }
 export function recordFinisherSet(doc,sessionId,key,values){
- const session=activeSession(doc,sessionId),goal=goalFor(key),{load,reps,rir,kind,unit}=values;
+ const session=activeSession(doc,sessionId),goal=goalFor(key),{load,reps,kind,unit,rir=null}=values;
  if(goal.timed)throw new Error('Use o cronômetro para registrar a prancha.');
- if(!Number.isFinite(load)||load<0||load>10000||!Number.isInteger(reps)||reps<1||reps>500||!Number.isFinite(rir)||rir<0||rir>10||!['effective','warmup'].includes(kind))throw new Error('Informe carga, repetições, RIR e trabalho ou aquecimento.');
+ if(!Number.isFinite(load)||load<0||load>10000||!Number.isInteger(reps)||reps<1||reps>500||(rir!==null&&(!Number.isFinite(rir)||rir<0||rir>10))||!['effective','warmup'].includes(kind))throw new Error('Informe carga, repetições e trabalho ou aquecimento.');
  if(!['kg','plaquetas'].includes(unit))throw new Error('Confirme a unidade da carga.');
- return pushRow(doc,session,goal,values);
+ return pushRow(doc,session,goal,{...values,rir});
 }
 export function setPlankRunning(doc,sessionId,running,{now=Date.now(),id}={}){
  validNow(now);const session=activeSession(doc,sessionId),start=Date.parse(session.finisher_plank_started_at||'');

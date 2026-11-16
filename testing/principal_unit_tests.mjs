@@ -32,3 +32,18 @@ assert.equal(reused.overlay.exercise_variants.length,1);
  assert.deepEqual(doc.overlay.sets.map(s=>s.load_value),[30,15,10]);
  console.log('DROP_EDIT_PRESERVES_SEQUENCE=PASS');
 }
+{
+ const doc=make(),session=doc.overlay.sessions[0];
+ const kg=confirmSessionVariant(doc,args);
+ doc.overlay.sets.push({id:'kg-set',variant_id:kg.id,load_value:20});
+ session.skipped_series[kg.id]=1;
+ const plates=confirmSessionVariant(doc,{...args,sourceId:kg.id,newId:'plates',unit:'plaquetas'});
+ doc.overlay.sets.push({id:'plates-set',variant_id:plates.id,load_value:5});
+ assert.deepEqual(session.prior_planned_variants[plates.id],[kg.id,'old']);
+ assert.equal(session.skipped_series[plates.id],1);
+ const restored=confirmSessionVariant(doc,{...args,sourceId:plates.id,newId:'unused'});
+ assert.equal(restored.id,kg.id);
+ assert.deepEqual(session.prior_planned_variants[kg.id],[plates.id,'old']);
+ assert.equal(session.skipped_series[kg.id],1);
+ assert.deepEqual(doc.overlay.sets.slice(1).map(s=>[s.variant_id,s.load_value]),[[kg.id,20],[plates.id,5]]);
+}

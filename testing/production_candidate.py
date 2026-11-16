@@ -589,3 +589,123 @@ for name in ('app.js','sw.js','integrity.js','index.html'):
  for old,new in [('app.js?v=196','app.js?v=197'),('shell-v196-sync-diagnostics','shell-v197-workout-controls'),('principal_xp.js?v=195','principal_xp.js?v=197'),('principal_finisher.js?v=179','principal_finisher.js?v=197'),('principal_live.js?v=131','principal_live.js?v=197'),('principal_focus.css?v=195','principal_focus.css?v=197')]:
   s=s.replace(old,new)
  p.write_text(s)
+
+# Active workout controls and a dedicated finisher view.
+p = dist / 'app.js'
+s = p.read_text()
+start = s.index('function renderFocusDeck(')
+end = s.index('\nlet quickSaving', start)
+deck = s[start:end]
+prefix, card = deck.split('${models.map(x=>`', 1)
+prefix = prefix[:prefix.index(' return `<section')]
+card = card.split("`).join('')}", 1)[0]
+s = s[:start] + prefix + ''' const resolved = x => x.target !== null && x.resolved >= x.target;
+ const finished = models.filter(resolved), pending = models.filter(x=>!resolved(x));
+ const card = x => `''' + card + '''`;
+ const row = items => '<div class="focus-deck-row">'+items.map(card).join('')+'</div>';
+ return `<section class="surface focus-deck"><div class="focus-deck-heading"><h2>Exercícios pendentes</h2><span>${pending.length} de ${models.length}</span></div>
+ ${pending.length?row(pending):'<p class="text-small">Roteiro concluído. Você pode seguir para o bloco final.</p>'}
+ ${pending.some(x=>!x.selected)?'<button class="btn block" data-coach-action="next">Próximo exercício →</button>':''}
+ ${finished.length?`<details class="mt"><summary>Exercícios finalizados (${finished.length})</summary>${row(finished)}</details>`:''}</section>`;
+}
+''' + s[end:]
+
+start = s.index('<label class="field"><span>RIR <small>obrigatório')
+end = s.index('<label class="field"><span>Tipo de série', start)
+s = s[:start] + s[end:]
+start = s.index('<p id="entry-rir-help"')
+end = s.index('</p>', start) + len('</p>')
+s = s[:start] + "${v.unit==='peso corporal'?'<p class=\"entry-help\">Use 0 se não houver carga externa.</p>':''}" + s[end:]
+s = replace_once(s, "rir=numeric(values.get('rir')),kind=", "kind=")
+s = replace_once(s, '||rir!==null&&(rir<0||rir>10)', '')
+s = replace_once(s, "(rir===null?'':' RIR '+rir)+", '')
+s = replace_once(s, 'Confira carga, repetições, RIR e tipo da série.','Confira carga, repetições e tipo da série.')
+s = replace_once(s, ",rir=numeric(values.getAll('drop_rir')[i])", '')
+s = replace_once(s, '||rir>10)', ')')
+s = replace_once(s, 'reductionLoads.map((raw,i)=>', 'reductionLoads.map(raw=>')
+s = replace_once(s, ' e RIR de 0 a 10. Selecione Trabalho.', '. Selecione Trabalho.')
+s = replace_once(s, 'return {load,reps,rir};', 'return {load,reps,rir:null};')
+s = replace_once(s, '<label class="field"><span>RIR</span><input class="input" inputmode="decimal" name="drop_rir" required></label>', '')
+s = replace_once(s, ",rir:readFinalNumber('rir')", '')
+s = s.replace('Preencha carga, repetições e RIR.', 'Preencha carga e repetições.')
+s = s.replace('Informe o RIR e o tipo da série realizada.', 'Informe o tipo da série realizada.')
+s = s.replace('carga, repetições e RIR de cada série', 'carga e repetições de cada série')
+s = s.replace(" · RIR ${s.rir??'não informado'}${dropSequence", "${dropSequence").replace("+' · RIR '+e(row.rir??'não informado')", '').replace("+' (RIR '+fmt(s.rir)+')'", '')
+s = s.replace(' · RIR ${fmt(s.rir)}', '')
+s = s.replace('<div class="stat"><span>RIR médio</span><b>${fmt(m.rir_avg,2)}</b><small>Dados informados</small></div>', '')
+s = s.replace('50 kg 10 reps RIR 2','50 kg 10 reps').replace('50 x 10 RIR 2','50 x 10')
+s = s.replace(' e <strong>1-2</strong> como RIR','').replace('55 kg 8 reps RIR 2','55 kg 8 reps')
+s = s.replace(", RIR '+(parsed.rir??'não informado')+'", '').replace(", RIR ${parsed.rir??'não informado'}", '')
+start = s.index('function renderSetEditor(')
+end = s.index('name="rir"', start)
+field_start = s.rindex('<label', start, end)
+field_end = s.index('</label>',end) + len('</label>')
+s = s[:field_start] + s[field_end:]
+s = replace_once(s, 'rir=parseNumber(x.rir,{allowEmpty:false,max:10})', "rir=doc.overlay.sets.find(row=>row.id===x.set_id).rir??null")
+
+s = replace_once(s, ' const entry=!safeUnit', ''' const switchUnit = !timed && /^(kg(?:\\/lado|\\/halter)?|plaquetas)$/.test(v?.unit||'');
+ const previousKg=(active.prior_planned_variants?.[selected]||[]).map(id=>m.variantMap.get(id))
+  .find(prior=>prior&&prior.exercise_id===v?.exercise_id&&prior.equipment_or_variation===v.equipment_or_variation&&/^kg(?:\\/lado|\\/halter)?$/.test(prior.unit))?.unit;
+ const unitButton=switchUnit?`<button class="btn small" type="button" data-coach-action="switch-load-unit" data-coach-variant="${e(selected)}" data-unit="${v.unit==='plaquetas'?previousKg||'kg':'plaquetas'}">Usar ${v.unit==='plaquetas'?e(previousKg||'kg'):'plaquetas'}</button>`:'';
+ const entry=!safeUnit''')
+s = replace_once(s, '${renderLoadReference(active,selected,m)}${entry}', '${renderLoadReference(active,selected,m)}${unitButton}${entry}')
+s = replace_once(s, " if(action==='add-drop'){", ''' if(action==='switch-load-unit'){
+  const active=coachActive(),source=g().variantMap.get(coachSelected),unit=btn.dataset.unit;
+  if(!active||!source||coachSelected!==btn.dataset.coachVariant||busy||quickSaving)return;
+  let variant;
+  const ok=await perform(d=>{variant=confirmSessionVariant(d,{sessionId:active.id,sourceId:source.id,
+   newId:makeId('variant'),equipment:source.equipment_or_variation,unit});},'Unidade atualizada. Informe a carga em '+unit+'.');
+  if(ok){
+   const from=active.id+':'+source.id,to=active.id+':'+variant.id;
+   const {reps,kind}=quickDrafts.get(from)||{};
+   quickDrafts.delete(from);
+   quickDrafts.set(to,{reps,kind});
+   coachSelected=variantSelected=variant.id;
+   render();
+   document.querySelector('#quick-set-form [name="load"]')?.focus();
+  }
+  return;
+ }
+ if(action==='add-drop'){''')
+
+s = replace_once(s, ' const actions=active?.status', ''' const inFinisher=active&&sessionStorage.getItem('workout-finisher-session')===active.id;
+ const visibleSets=inFinisher?activeSets.filter(row=>row.finisher_key):activeSets;
+ const actions=active?.status''')
+s = replace_once(s, 'activeSets.filter(s=>!isGroupedDrop(s,activeSets))', 'visibleSets.filter(s=>!isGroupedDrop(s,visibleSets))')
+s = replace_once(s, "${activeSets.length?'<div class=\"inline-actions mt\">", "${!inFinisher&&activeSets.length?'<div class=\"inline-actions mt\">")
+s = replace_once(s, 'return `${describeSave()}${!active?deckRecap', '''if(inFinisher)return `${describeSave()}${current}<button class="btn block mt" data-finisher-action="back" data-session="${e(active.id)}">Voltar aos exercícios</button>${renderFinisher(active,m)}${actions}`;
+ return `${describeSave()}${!active?deckRecap''')
+s = replace_once(s, '+renderFinisher(active,m)+composer', '+composer')
+s = replace_once(s, "  if(ok&&action==='swap'){", '''  if(ok&&action==='skip'){
+   const saved=coachActive(),entities=g().entities,state=liveGuidance(saved,current,entities);
+   if(state.target!==null&&state.resolved>=state.target){coachSelected=nextPending(saved,current,entities)||'';render();}
+  }
+  if(ok&&action==='swap'){''')
+s = replace_once(s, '  const next=nextPending(active,current,model.entities)||active.planned_variant_ids.find(id=>id!==current)||\'\';','  const next=nextPending(active,current,model.entities)||\'\';')
+s = replace_once(s, '   if(doc.overlay.sets.length===count+1+reductions.length){quickDrafts.delete(active.id+\':\'+id);if(restTimer.state(active.id).auto)restTimer.start(active.id);render();}', '''   if(doc.overlay.sets.length===count+1+reductions.length){
+    quickDrafts.delete(active.id+':'+id);
+    const saved=coachActive(),entities=g().entities,state=liveGuidance(saved,id,entities);
+    if(state.target!==null&&state.resolved>=state.target)coachSelected=nextPending(saved,id,entities)||'';
+    if(restTimer.state(active.id).auto)restTimer.start(active.id);
+    render();
+   }''')
+s = replace_once(s, "active?resumeSelectedVariant(doc,active.id,planIds):planIds[0]||''", "active?nextPending(active,'',m.entities)||'':planIds[0]||''")
+s = replace_once(s, "if(!selected)return panel('<h2>Roteiro sem exercícios</h2><p>Você pode seguir para o bloco final ou concluir o treino.</p>','focus-entry');", """if(!selected)return active.planned_variant_ids?.length?renderFocusDeck(active,selected,m.entities):panel('<h2>Roteiro sem exercícios</h2><p>Você pode seguir para o bloco final ou concluir o treino.</p>','focus-entry');""")
+s = replace_once(s, '<button type="button" class="btn small" data-finisher-action="open" data-session="\'+e(session.id)+\'">Ir para bloco final</button>', '')
+s = replace_once(s, '+composer:composer+preview', '''+`<button type="button" class="btn primary block mt" data-finisher-action="open" data-session="${e(active.id)}">Ir para o bloco final</button>`+composer:composer+preview''')
+p.write_text(s)
+p = dist / 'principal_cards.js'
+s = p.read_text().replace('principal_live.js?v=131','principal_live.js?v=198')
+s = replace_once(s, "${e(item.equipment||'Confira o equipamento')}</p>", "${e(item.equipment||'Confira o equipamento')}${item.unit==='plaquetas'?' · plaquetas':''}</p>")
+p.write_text(s)
+for name in ('app.js','sw.js','integrity.js','index.html','principal_live.js'):
+ p = dist / name
+ s = p.read_text()
+ for old,new in (
+  ('app.js?v=197','app.js?v=198'), ('shell-v197-workout-controls','shell-v198-workout-view'),
+  ('principal_unit.js?v=155','principal_unit.js?v=198'), ('principal_presets.js?v=185','principal_presets.js?v=198'),
+  ('principal_cards.js?v=194','principal_cards.js?v=198'),
+  ('principal_live.js?v=197','principal_live.js?v=198'), ('principal_finisher.js?v=197','principal_finisher.js?v=198')
+ ):
+  s = s.replace(old,new)
+ p.write_text(s)

@@ -15,16 +15,16 @@ export function confirmSessionVariant(doc,{sessionId,sourceId,newId,equipment,un
  const source=all.find(x=>x.id===sourceId);
  if(!session||!source||!session.planned_variant_ids?.includes(sourceId)||!newId||all.some(x=>x.id===newId))throw new Error('Exercício do treino indisponível.');
  const candidate={id:newId,exercise_id:source.exercise_id,equipment_or_variation:name,unit,unit_confirmed:true,comparison_group_id:newId,comparison_policy:'match_same_variant_only',provenance:{source:'android_local'}};
- const existing = all.find(v => sameLoadVariant(v, candidate) &&
-  (v.id === sourceId || !session.planned_variant_ids.includes(v.id)));
+ const occupied = new Set(session.planned_variant_ids.filter(id=>id!==sourceId)
+  .flatMap(id=>[id,...(session.prior_planned_variants?.[id]||[])]));
+ const existing = all.find(v=>sameLoadVariant(v,candidate)&&!occupied.has(v.id));
  const variant = existing || candidate;
  if (variant.id === sourceId) return variant;
  if (!existing) doc.overlay.exercise_variants.push(variant);
  session.planned_variant_ids=session.planned_variant_ids.map(x=>x===sourceId?variant.id:x);
- if(session.prior_planned_variants?.[sourceId] || session.skipped_series?.[sourceId]){
-  session.prior_planned_variants={...session.prior_planned_variants,[variant.id]:[sourceId,...(session.prior_planned_variants?.[sourceId]||[])]};
-  session.skipped_series={...session.skipped_series,[variant.id]:session.skipped_series?.[sourceId]||0};
- }
+ const prior = [sourceId,...(session.prior_planned_variants?.[sourceId]||[])];
+ session.prior_planned_variants={...session.prior_planned_variants,[variant.id]:[...new Set(prior)].filter(id=>id!==variant.id)};
+ session.skipped_series={...session.skipped_series,[variant.id]:session.skipped_series?.[sourceId]||0};
  if(session.planned_guidance?.[sourceId])session.planned_guidance={...session.planned_guidance,[variant.id]:{...session.planned_guidance[sourceId]}};
  return variant;
 }

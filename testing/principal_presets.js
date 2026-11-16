@@ -14,11 +14,11 @@ const registry={
  deck2FrenchV:['triceps','Tríceps francês na polia barra V','Polia · barra V',10,15],
  deck2PushdownV:['triceps','Tríceps polia barra V','Polia · barra V',10,15],
  deck2SkullcrusherV:['triceps','Tríceps testa barra V','Polia · barra V',10,15],
- declineMachine:['peito','Supino declinado','Máquina',8,12],
+ declinePlateMachine:['peito','Supino declinado','Máquina com anilhas',8,12],
  scottUnilateral:['biceps','Rosca Scott unilateral','Banco Scott · unilateral',10,15],
  curlIncline45:['biceps','Rosca inclinada 45°','Halteres · banco a 45°',10,15,'kg/halter'],
  bench:['peito','Supino reto','Barra livre',8,12], inclineMachine:['peito','Supino inclinado','Máquina',8,12], inclineDB:['peito','Supino inclinado','Halteres',8,12,'kg/halter'], fly:['peito','Crucifixo de peito','Máquina inclinada com anilhas',10,15],
- curlCable:['biceps','Rosca direta','Polia',10,15], hammer:['biceps','Rosca martelo','Halteres',10,15,'kg/halter'], scott:['biceps','Rosca Scott','Máquina',10,15],
+ curlCable:['biceps','Rosca direta','Polia',10,15], hammer:['biceps','Rosca martelo','Halteres',10,15,'kg/halter'], scott:['biceps','Rosca Scott','Máquina',10,15,'plaquetas'],
  lateral:['ombros','Elevação lateral','Halteres',12,20,'kg/halter'], lateralCable:['ombros','Elevação lateral','Polia',12,20], rear:['ombros','Crucifixo inverso','Máquina',12,20], press:['ombros','Desenvolvimento de ombros','Máquina',8,12],
  latNeutral:['costas','Puxada alta neutra','Polia alta',8,12], latPronated:['costas','Puxada alta pronada','Polia alta',8,12], rowSupport:['costas','Remada com apoio no peito','Máquina',8,12], rowOne:['costas','Remada unilateral','Polia',10,15], rowLow:['costas','Remada baixa neutra','Polia',8,12], rowMachine:['costas','Remada','Máquina',8,12],
  tri:['triceps','Tríceps','Polia',10,15], triOver:['triceps','Tríceps acima da cabeça','Polia',10,15],
@@ -27,7 +27,7 @@ const registry={
 };
 const spec=(id,name,items,note='')=>({id:'rpg_deck_'+id,name,items,note});
 export const PRESET_DECKS=[
- spec('01','Peito + bíceps + ombro lateral',['inclineDB','bench','declineMachine','fly','scottUnilateral','curlIncline45','hammer','lateralCable']),
+ spec('01','Peito + bíceps + ombro lateral',['fly','inclineDB','bench','declinePlateMachine','scott','curlCable','hammer','lateralCable']),
  spec('02','Costas + tríceps + ombro posterior',['deck2Pulldown','deck2ArticulatedRow','deck2SinglePulldown','deck2HighRow','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','rear']),
  spec('03','Braços + ombros',['scottUnilateral','deck2FrenchV','curlCableLengthened','deck2PushdownV','hammer','tricepsSkullcrusherDB','press','lateralCable','rear']),
  spec('04','Pernas completas',['legPress45','hack','extension','flexSeated','hipAbduction','hipAdduction','calfSeated']),
@@ -43,7 +43,7 @@ export function presetPlan(id,entities,today,readiness={}){
  const deck=PRESET_DECKS.find(x=>x.id===id);if(!deck)throw new Error('Deck pronto não encontrado.');
  const adjustment=readinessAdjustment(readiness);if(adjustment.blocked)throw new Error(adjustment.summary);
  const all=presetItems(deck).map(item=>{
-  const matching=(entities.exercise_variants||[]).find(v=>v.unit_confirmed===true&&['kg','kg/lado','kg/halter','plaquetas','peso corporal'].includes(v.unit)&&norm(v.equipment_or_variation)===norm(item.equipment)&&(entities.exercises||[]).some(e=>e.id===v.exercise_id&&norm(e.name)===norm(item.name)));
+  const matching=(entities.exercise_variants||[]).find(v=>v.unit_confirmed===true&&['kg','kg/lado','kg/halter','plaquetas','peso corporal'].includes(v.unit)&&(item.unit==='a confirmar'||v.unit===item.unit)&&norm(v.equipment_or_variation)===norm(item.equipment)&&(entities.exercises||[]).some(e=>e.id===v.exercise_id&&norm(e.name)===norm(item.name)));
   const completed=new Set((entities.sessions||[]).filter(s=>s.status==='completed'&&s.date<=today).map(s=>s.id));
   const last=matching?(entities.sets||[]).filter(s=>s.variant_id===matching.id&&s.exercise_id===matching.exercise_id&&completed.has(s.session_id)&&s.date<=today&&s.set_type==='effective'&&Number.isFinite(s.load_value)&&Number.isInteger(s.repetitions)&&s.repetitions>0).sort((a,b)=>String(a.date).localeCompare(String(b.date))).at(-1)||null:null;
   return matching?{...item,exercise_id:matching.exercise_id,variant_id:matching.id,unit:matching.unit,is_catalog:false,last}:item;

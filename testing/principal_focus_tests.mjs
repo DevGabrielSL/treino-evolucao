@@ -22,11 +22,11 @@ assert.ok(html.includes('Série 1 de 3'));
 assert.ok(html.includes('id="quick-set-form"'));
 assert.ok(!html.includes('rest-card'));assert.ok(!html.includes('Resumo do roteiro'));
 assert.ok(!html.includes('<details class="focus-options">'));
-assert.ok(html.includes('name="rir" required'));
+assert.ok(!html.includes('name="rir"'));
+assert.ok(html.includes('data-coach-action="switch-load-unit"'));
 assert.ok(html.includes('name="kind" class="input" required'));
 assert.ok(html.includes('Selecione o tipo'));
 assert.ok(!html.includes('opcional · 0 a 10'));
-assert.ok(app.includes("rir=numeric(values.get('rir'))"));
 assert.ok(app.includes("effective:'Trabalho',warmup:'Aquecimento'"));
 assert.ok(html.includes('aria-pressed="true"'));
 v.unit='a confirmar';const setup=ctx.renderTrainingTools(active,'v',m);
@@ -37,12 +37,10 @@ assert.equal(entities.sets.length,0);
 console.log('FOCUS_RENDER_COMPACT_DECK_EXPLICIT_UNIT_NO_WRITES=PASS');
 // Exercise the actual submit validation before any storage operation.
 const validation=app.slice(app.indexOf('   const numeric='),app.indexOf('   const count=doc.overlay.sets.length;'));
-function validate(fields){return vm.runInNewContext('(()=>{'+validation+';return {load,reps,rir,kind};})()', {values:{get:key=>fields[key]}});}
-const valid={load:'30',reps:'10',rir:'2',kind:'effective'};
-for(const key of ['load','reps','rir','kind'])assert.throws(()=>validate({...valid,[key]:''}),key+' must be required');
-assert.equal(validate({...valid,load:'0',rir:'0',kind:'warmup'}).kind,'warmup');
-assert.equal(validate({...valid,rir:'0'}).rir,0);
-assert.throws(()=>validate({...valid,rir:'11'}));
+function validate(fields){return vm.runInNewContext('(()=>{'+validation+';return {load,reps,kind};})()', {values:{get:key=>fields[key]}});}
+const valid={load:'30',reps:'10',kind:'effective'};
+for(const key of ['load','reps','kind'])assert.throws(()=>validate({...valid,[key]:''}),key+' must be required');
+assert.equal(validate({...valid,load:'0',kind:'warmup'}).kind,'warmup');
 assert.throws(()=>validate({...valid,reps:'1.5'}));
 assert.throws(()=>validate({...valid,kind:'other'}));
 console.log('REQUIRED_SET_FIELDS_BLANK_ZERO_WARMUP_RANGES=PASS');
@@ -89,10 +87,10 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  const adjusted={...active,skipped_series:{v:1}};
  const html=ctx.renderFocusDeck(adjusted,'v',{...entities,sets:[done]});
  assert.match(html,/1 feita\(s\) · 1 pulada\(s\) · 1 restante\(s\)/);
- assert.match(html,/0\/1 exercícios sem pendências/);
+ assert.match(html,/Exercícios pendentes<\/h2><span>1 de 1/);
  const resolved=ctx.renderFocusDeck({...adjusted,skipped_series:{v:2}},'v',{...entities,sets:[done]});
  assert.match(resolved,/1 feita\(s\) · 2 pulada\(s\) · 0 restante\(s\)/);
- assert.match(resolved,/1\/1 exercícios sem pendências/);
+ assert.match(resolved,/<details class="mt"><summary>Exercícios finalizados \(1\)/);
 }
 
 {
@@ -118,7 +116,7 @@ console.log('SESSION_CLOCK_WALL_TIME_REOPEN_UNKNOWN_START=PASS');
  const reference={id:'r',session_id:'old',variant_id:'v',date:old.date,set_type:'effective',set_number:2,load_value:30,repetitions:10,rir:0};
  const m={entities:{sessions:[old],exercise_variants:[v],sets:[{...reference,id:'first',set_number:1},reference]},variantMap:new Map([['v',v]])};
  const html=ctx.renderLoadReference(active,'v',m);
- assert.ok(html.includes('30 kg/lado × 10 · RIR 0'));
+ assert.ok(html.includes('30 kg/lado × 10'));
  assert.ok(html.includes('Ver séries daquele treino'));
  assert.ok(html.includes('data-reference-session="current"'));
  assert.ok(html.includes('Usar carga e repetições'));

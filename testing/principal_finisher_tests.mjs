@@ -13,14 +13,14 @@ const progress=()=>logic.finisherProgress(session(),merged(doc).sets,t);
 assert.deepEqual(progress().map(g=>[g.target,g.done]),[[100,0],[180,0]]);
 let n=0;
 const entry=(more={})=>({id:'set-'+(++n),now:t+1000*n,load:0,reps:10,rir:0,kind:'effective',unit:'plaquetas',...more});
-for(const field of ['load','reps','rir','kind','unit']){
+for(const field of ['load','reps','kind','unit']){
  assert.throws(()=>commit(doc,d=>logic.recordFinisherSet(d,'s','abs',entry({[field]:undefined}))),field);
 }
 for(const more of [{load:-1},{reps:1.5},{reps:0},{rir:11},{kind:'other'},{unit:'peso corporal'}])assert.throws(()=>commit(doc,d=>logic.recordFinisherSet(d,'s','abs',entry(more))));
 for(const key of ['pushups','pullups'])assert.throws(()=>commit(doc,d=>logic.recordFinisherSet(d,'s',key,entry())));
 doc=commit(doc,d=>logic.recordFinisherSet(d,'s','abs',entry({load:5,reps:100,kind:'warmup'})));
 assert.equal(progress()[0].done,0);
-doc=commit(doc,d=>logic.recordFinisherSet(d,'s','abs',entry({load:7,reps:100})));
+doc=commit(doc,d=>logic.recordFinisherSet(d,'s','abs',entry({load:7,reps:100,rir:undefined})));
 assert.equal(progress()[0].done,100);assert.equal(progress()[0].remaining,0);
 const original=doc.overlay.sets.at(-1).recorded_at;
 assert.equal(logic.lastRecordedSet(session(),merged(doc).sets).id,doc.overlay.sets.at(-1).id);
@@ -65,7 +65,8 @@ const ui=fs.readFileSync(new URL('./principal_finisher_ui.js',import.meta.url),'
 const ctx=vm.createContext({...logic,e:x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),Map,panel:(s,c)=>'<section class="'+c+'">'+s+'</section>',sessionClockLabel:s=>s===null?'—':[Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,'0')).join(':'),sessionClockSeconds:(s)=>Number.isFinite(Date.parse(s))?0:null});
 vm.runInContext(ui,ctx);
 let html=ctx.renderFinisher({...session(),status:'in_progress'},{sets:merged(doc).sets});
-for(const label of ['Abdominal máquina','3 minutos','name="rir"','name="kind"','name="load"','name="reps"'])assert.ok(html.includes(label),label);
+for(const label of ['Abdominal máquina','3 minutos','name="kind"','name="load"','name="reps"'])assert.ok(html.includes(label),label);
+assert.ok(!html.includes('name="rir"'));
 assert.match(ctx.renderLastSetClock({id:'old'},[{session_id:'old'}]),/não têm horário/);
 assert.match(ctx.renderLastSetClock(session(),merged(doc).sets),/data-last-set-clock/);
 assert.ok(app.includes('recorded_at:new Date().toISOString()'));

@@ -14,20 +14,19 @@ for(const deck of PRESET_DECKS){
 }
 assert.equal(JSON.stringify(PRESET_DECKS),before);assert.deepEqual(entities,{sessions:[],sets:[],exercises:[],exercise_variants:[]});assert.throws(()=>presetPlan('missing',entities,today));
 const e={...entities,exercises:[{id:'personalEx',name:'Supino reto'}],exercise_variants:[{id:'personalV',exercise_id:'personalEx',equipment_or_variation:'Barra livre',unit:'kg/lado',unit_confirmed:true}]};
-const reused=presetPlan('rpg_deck_01',e,today).items[1];assert.equal(reused.variant_id,'personalV');assert.equal(reused.unit,'kg/lado');assert.equal(reused.is_catalog,false);
-e.exercise_variants[0].unit_confirmed=false;assert.notEqual(presetPlan('rpg_deck_01',e,today).items[1].variant_id,'personalV');
+const reused=presetPlan('rpg_deck_01',e,today).items[2];assert.equal(reused.variant_id,'personalV');assert.equal(reused.unit,'kg/lado');assert.equal(reused.is_catalog,false);
+e.exercise_variants[0].unit_confirmed=false;assert.notEqual(presetPlan('rpg_deck_01',e,today).items[2].variant_id,'personalV');
 const html=renderPresetLibrary();assert.equal((html.match(/data-preset-id=/g)||[]).length,4);assert.ok(html.includes('Ver deck'));
 console.log('PRESETS_4_PREFERENCES_DOSE_RECOVERY_IDENTITY_NO_WRITES=PASS');
 
 
 const first=presetPlan('rpg_deck_01',entities,today).items;
 assert.deepEqual(first.map(x=>[x.name,x.equipment]),[
- ['Supino inclinado','Halteres'],['Supino reto','Barra livre'],['Supino declinado','Máquina'],['Crucifixo de peito','Máquina inclinada com anilhas'],
- ['Rosca Scott unilateral','Banco Scott · unilateral'],['Rosca inclinada 45°','Halteres · banco a 45°'],['Rosca martelo','Halteres'],['Elevação lateral','Polia']
+ ['Crucifixo de peito','Máquina inclinada com anilhas'],['Supino inclinado','Halteres'],['Supino reto','Barra livre'],['Supino declinado','Máquina com anilhas'],
+ ['Rosca Scott','Máquina'],['Rosca direta','Polia'],['Rosca martelo','Halteres'],['Elevação lateral','Polia']
 ]);
-assert.equal(first[4].unit,'a confirmar');
-assert.match(first[4].dose.effort,/por lado/);
-assert.equal(first[5].unit,'kg/halter');
+assert.equal(first[4].unit,'plaquetas');
+assert.equal(first[6].unit,'kg/halter');
 assert.deepEqual(first.map(x=>x.group),['peito','peito','peito','peito','biceps','biceps','biceps','ombros']);
 console.log('FIRST_DECK_EXACT_ORDER_EQUIPMENT_EIGHT_EXERCISES=PASS');
 
@@ -69,7 +68,7 @@ assert.deepEqual(third.map(x=>x.group),['biceps','triceps','biceps','triceps','b
 assert.ok(third.every(x=>x.dose.sets===3));
 assert.equal(third[4].unit,'kg/halter');assert.equal(third[5].unit,'kg/halter');
 assert.notEqual(third[5].variant_id,second[6].variant_id);
-assert.equal(third[0].variant_id,first[4].variant_id);
+assert.notEqual(third[0].variant_id,first[4].variant_id);
 assert.equal(third[1].variant_id,second[4].variant_id);
 console.log('THIRD_DECK_EXACT_NINE_ALTERNATING_ARMS_SHOULDERS_DUMBBELL_SKULLCRUSHER=PASS');
 
