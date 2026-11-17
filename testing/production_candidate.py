@@ -780,3 +780,8 @@ for name in ('sw.js','integrity.js','index.html'):
  p = dist / name
  p.write_text(p.read_text().replace('shell-v198-workout-view','shell-v199-workout-layout')
   .replace('app.js?v=198','app.js?v=199').replace('principal_focus.css?v=197','principal_focus.css?v=199'))
+
+# Refresh the principal cache after improving rejected-batch diagnostics.
+for name in ('app.js','sheet_sync_browser.js','automatic_sync.js','sw.js','integrity.js','index.html'):
+ p=dist/name
+ p.write_text(p.read_text().replace('shell-v199-workout-layout','shell-v200-sync-rejection').replace('app.js?v=199','app.js?v=200').replace('coordinator_client.js?v=196','coordinator_client.js?v=200'))

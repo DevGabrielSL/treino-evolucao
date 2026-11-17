@@ -29,4 +29,6 @@ for(const [name,mutate,pattern] of [
  ['célula não escalar',o=>o.records[0].values[8]={x:1},/INVALID_CELL/],
  ['versão negativa',o=>o.expectedRevision=-1,/INVALID_BATCH/]
 ])test(name+' é rejeitado antes de gravar',()=>{const h=harness(),x=op();mutate(x);assert.throws(()=>h.call(h.a,x),pattern);assert.equal(h.writes,0)});
+test('Rejeição explícita de validação não mantém bloqueio incerto',()=>{const h=harness();h.rejection='API call to sheets.spreadsheets.batchUpdate failed with error: Invalid requests[0].updateCells: Invalid value';assert.equal(h.call(h.a,op()).code,'WRITE_REJECTED');assert.equal(h.props.SYNC_INTENT,undefined);assert.ok(h.props.SYNC_LAST_REJECTION);assert.equal(h.control.revision,0);assert.equal(h.tabs.Treinos.length,1);h.rejection='';assert.equal(h.call(h.b,op()).ok,true);assert.equal(h.tabs.Treinos.length,2)});
+test('Erro desconhecido conserva intenção e bloqueio',()=>{const h=harness();h.rejection='Service unavailable';assert.equal(h.call(h.a,op()).code,'UNCERTAIN');assert.ok(h.props.SYNC_INTENT);h.rejection='';assert.equal(h.call(h.b,op()).code,'UNCERTAIN')});
 console.log('COORDINATOR_CANDIDATE_TESTS='+count);

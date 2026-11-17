@@ -125,7 +125,19 @@ function coordinateSync_(request){
   if(props.getProperty('SYNC_INTENT')!==marker)syncError_('INTENT_NOT_SAVED');
   // Data and receipt share one Sheets batch. If the outcome is unknown the
   // marker remains, blocking further mutations until its receipt is observed.
-  try{Sheets.Spreadsheets.batchUpdate({requests:requests},SYNC_TEST_SHEET_);}catch(e){return {ok:false,code:'UNCERTAIN'};}
+  try{Sheets.Spreadsheets.batchUpdate({requests:requests},SYNC_TEST_SHEET_);}catch(e){
+   // Only Google's explicit request-validation rejection proves no batch was applied.
+   // Timeouts, transport failures and unknown errors retain the intent.
+   var message=String(e&&e.message||'');
+   if(/Invalid requests\[\d+\]\./.test(message)){
+    var rejected=snapshot_();
+    if(rejected.state.revision===snap.state.revision&&!rejected.state.operations[op.operationId]&&rejected.state.fingerprint===fingerprint_(rejected.rows)&&fingerprint_(rejected.rows)===fingerprint_(snap.rows)){
+     props.setProperty('SYNC_LAST_REJECTION',JSON.stringify({operationId:op.operationId,at:new Date().toISOString(),code:'WRITE_REJECTED'}));
+     props.deleteProperty('SYNC_INTENT');return {ok:false,code:'WRITE_REJECTED'};
+    }
+   }
+   return {ok:false,code:'UNCERTAIN'};
+  }
   var check=snapshot_(),saved=check.state.operations[op.operationId];
   if(!saved||saved.digest!==digest||check.state.fingerprint!==fingerprint_(check.rows))return {ok:false,code:'UNCERTAIN'};
   props.deleteProperty('SYNC_INTENT');return {ok:true,receipt:saved};

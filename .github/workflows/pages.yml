@@ -806,7 +806,7 @@ jobs:
           node testing/missing_ids_tests.mjs | tee /tmp/missing_ids.log
           grep -qx 'MISSING_IDS_TESTS=32' /tmp/missing_ids.log
           node testing/coordinator_tests.mjs | tee /tmp/coordinator-tests.log
-          grep -qx 'COORDINATOR_CANDIDATE_TESTS=24' /tmp/coordinator-tests.log
+          grep -qx 'COORDINATOR_CANDIDATE_TESTS=26' /tmp/coordinator-tests.log
           rm -rf dist/tests
           env -u SANDBOX_ENGINE_TEST_MODE python3 testing/build_sandbox.py
           node testing/balanced_coach_tests.mjs | tee /tmp/balanced-coach.log
