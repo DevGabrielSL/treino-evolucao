@@ -3,19 +3,20 @@ import {workoutElapsed,finisherProgress} from '../dist/principal_finisher.js?v=1
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {liveGuidance} from '../dist/principal_live.js?v=131';
+import {liveGuidance,nextPending} from '../dist/principal_live.js?v=131';
 import {deckModels,muscleSymbol} from '../dist/principal_cards.js?v=132';
 const app=fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 const v={id:'v',exercise_id:'ex',equipment_or_variation:'Barra livre',unit:'kg/lado'},ex={id:'ex',name:'Supino reto',muscle_group:'peito'};
 const active={id:'s',date:'2026-10-29',status:'in_progress',planned_variant_ids:['v'],planned_guidance:{v:{sets:3,min:8,max:12,unit:'repetições',label:'3 séries de 8–12'}}};
 const entities={exercise_variants:[v],exercises:[ex],sessions:[active],sets:[]};
-const m={entities,variantMap:new Map([['v',v]]),exerciseMap:new Map([['ex',ex]])};
+const m={entities,sets:entities.sets,variantMap:new Map([['v',v]]),exerciseMap:new Map([['ex',ex]])};
 const escape=x=>String(x??'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
-const ctx=vm.createContext({exerciseArt,renderExerciseArt,workoutElapsed,finisherProgress,e:escape,liveGuidance,deckModels,muscleSymbol,restTimer:{state:()=>({})},Map,panel:(s,c)=>`<section class="${c}">${s}</section>`,g:()=>m});
+const ctx=vm.createContext({exerciseArt,renderExerciseArt,workoutElapsed,finisherProgress,e:escape,liveGuidance,nextPending,deckModels,muscleSymbol,restTimer:{state:()=>({})},Map,panel:(s,c)=>`<section class="${c}">${s}</section>`,g:()=>m});
 vm.runInContext(app.slice(app.indexOf('function renderLiveGuidance('),app.indexOf('function renderCoach(')),ctx);
 // Extract only the function, as later source may contain unrelated boot code.
 const start=app.indexOf('function renderUnitConfirmation('),end=app.indexOf('\n',start);
 vm.runInContext(app.slice(start,end<0?undefined:end),ctx);
+vm.runInContext(app.slice(app.indexOf('function renderMissionHome()')),ctx);
 const html=ctx.renderTrainingTools(active,'v',m);
 assert.equal((html.match(/Supino reto/g)||[]).length,2); // heading and compact deck
 assert.ok(html.includes('Série 1 de 3'));

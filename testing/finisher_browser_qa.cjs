@@ -54,6 +54,7 @@ const assert=require('node:assert/strict');
  await finished.locator('summary').click();
  await finished.locator('.focus-mini').click();
  page.once('dialog',dialog=>dialog.accept());
+ await page.locator('.mission-controls > summary').click();
  await page.locator('[data-coach-action="remove-exercise"]').click();
  await page.getByRole('heading',{name:'Roteiro sem exercícios'}).waitFor();
  const removed=await page.evaluate(async()=>{const {readSnapshot}=await import('/store.js');return (await readSnapshot()).document.overlay;});
@@ -117,6 +118,11 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('.xp-reward').evaluate(el=>getComputedStyle(el).animationName),'none');
  await page.locator('.xp-reward').waitFor({state:'detached',timeout:6000});await page.emulateMedia({reducedMotion:'no-preference'});
  console.log('XP_SERIES_FINISH_REOPEN_REDUCED_MOTION=PASS');
+ await page.getByRole('heading',{name:'Sua próxima missão'}).waitFor();
+ assert.equal(await page.getByRole('heading',{name:'Monte seu treino',exact:true}).count(),0);
+ assert.equal(await page.locator('#coach-form').isVisible(),false);
+ await page.waitForFunction(()=>document.querySelector('.mission-cover')?.naturalWidth>0);
+ assert.equal(await page.locator('.mission-list [data-preset-id]').count(),3);
  await page.locator('[data-preset-id="rpg_deck_01"]').click();
  const firstCards=page.locator('.proposal-list .sport-card');
  assert.deepEqual(await firstCards.locator('h3').allTextContents(),['Crucifixo de peito','Supino inclinado','Supino reto','Supino declinado','Rosca Scott','Rosca direta','Rosca martelo','Elevação lateral']);
@@ -171,6 +177,16 @@ const assert=require('node:assert/strict');
 
 
 
+ await page.locator('[data-coach-action="clear"]').click();
+ await page.getByRole('button',{name:'Iniciar treino',exact:true}).click();
+ await page.locator('.focus-session [role="timer"]').first().waitFor();
+ await page.locator('.mission-next').click();
+ await page.locator('.mission-exercise-art[src="./mission-incline.webp"]').waitFor();
+ await page.waitForFunction(()=>document.querySelector('.mission-exercise-art')?.naturalWidth>0);
+ assert.equal(await page.locator('.focus-exercise-name').innerText(),'SUPINO INCLINADO');
+ assert.equal(await page.locator('#quick-set-form').isVisible(),true);
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ console.log('MISSION_HOME_DIRECT_START_AND_NEXT_EXERCISE=PASS');
  assert.deepEqual(errors,[]);console.log('BROWSER_MOBILE_FINISHER_REST_PAUSE_REOPEN_EDIT_FINISH=PASS');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
 

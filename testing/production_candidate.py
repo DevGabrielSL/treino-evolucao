@@ -847,3 +847,8 @@ for name in ('index.html', 'app.js', 'sw.js', 'integrity.js'):
         assert source.count(install) == 1
         source = source[:source.index(install)] + (root / 'testing/principal_update_worker.js').read_text()
     p.write_text(source)
+
+# Apply the mission layouts after assembling the original workout flows.
+mission_patch = root / 'testing/principal_mission_patch.py'
+exec(compile(mission_patch.read_text(), str(mission_patch), 'exec'),
+     {'root': root, 'dist': dist, 'shutil': shutil})
