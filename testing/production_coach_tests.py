@@ -34,7 +34,7 @@ for text in ('balancedPlan(m.entities', 'historySummary(coachPlan.history)', 're
 for name in ('sw.js', 'integrity.js'):
     content = (dist / name).read_text()
     assert "'./balanced_coach.js?v=121'" in content
-    assert 'shell-v205-brand' in content
+    assert 'shell-v206-deck-art' in content
     assert "'./principal_variety.js?v=131'" in content
     assert "'./principal_dose.js?v=131'" in content
     assert "'./principal_live.js?v=198'" in content
@@ -46,13 +46,13 @@ for name in ('sw.js', 'integrity.js'):
     assert "'./relic-group-scenes.webp'" in content
     assert "'./relic-supino-card.webp'" in content
     assert "'./principal_relics_art.css?v=194'" in content
-assert 'v1.6.13 Edição tropical' in (dist / 'index.html').read_text()
+assert 'v1.6.14 Edição tropical' in (dist / 'index.html').read_text()
 assert 'principal_relics.css?v=169' in (dist / 'index.html').read_text()
 assert (dist / 'relic-emblem.svg').is_file()
 assert (dist / 'relic-group-scenes.webp').is_file()
 assert (dist / 'relic-supino-card.webp').is_file()
 assert 'relic-group-scenes.webp' in (dist / 'principal_relics_art.css').read_text()
-assert 'app.js?v=205' in (dist / 'index.html').read_text()
+assert 'app.js?v=206' in (dist / 'index.html').read_text()
 assert 'relic-ex-supino' in app
 assert 'relic-ex-supino' in (dist / 'principal_cards.js').read_text()
 for file in dist.glob('*.js'):

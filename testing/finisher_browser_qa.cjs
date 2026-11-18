@@ -123,11 +123,16 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('#coach-form').isVisible(),false);
  await page.waitForFunction(()=>document.querySelector('.mission-cover')?.naturalWidth>0);
  assert.equal(await page.locator('.mission-list [data-preset-id]').count(),3);
+ const coverImages=page.locator('.mission-feature img,.mission-list img');
+ assert.deepEqual(await coverImages.evaluateAll(images=>images.map(image=>image.getAttribute('src'))),
+  ['./deck-cover-01.webp','./deck-cover-02.webp','./deck-cover-03.webp','./deck-cover-04.webp']);
+ await page.waitForFunction(()=>[...document.querySelectorAll('.mission-feature img,.mission-list img')].every(image=>image.naturalWidth>0));
+
  await page.locator('[data-preset-id="rpg_deck_01"]').click();
  const firstCards=page.locator('.proposal-list .sport-card');
  assert.deepEqual(await firstCards.locator('h3').allTextContents(),['Crucifixo de peito','Supino inclinado','Supino reto','Supino declinado','Rosca Scott','Rosca direta','Rosca martelo','Elevação lateral']);
- const imageNames=['crucifixo-maquina-inclinada','supino-inclinado-halteres','supino-reto-barra','supino-declinado-maquina','rosca-martelo','elevacao-lateral-polia'];
- const cards=firstCards.filter({has:page.locator('.exercise-card-image')});assert.equal(await cards.count(),6);
+ const imageNames=['crucifixo-maquina-inclinada','supino-inclinado-halteres','supino-reto-barra','supino-declinado-maquina','rosca-scott-maquina','rosca-direta-polia','rosca-martelo','elevacao-lateral-polia'];
+ const cards=firstCards.filter({has:page.locator('.exercise-card-image')});assert.equal(await cards.count(),8);
  for(let i=0;i<imageNames.length;i++){
   const img=cards.nth(i).locator('.exercise-card-image');await img.scrollIntoViewIfNeeded();
   await page.waitForFunction(src=>[...document.images].some(im=>im.getAttribute('src')===src&&im.complete&&im.naturalWidth>0),'./exercise-'+imageNames[i]+'.webp');
@@ -137,7 +142,7 @@ const assert=require('node:assert/strict');
 
  }
  await cards.first().scrollIntoViewIfNeeded();console.log('UPLOADED_CARD_SCREENSHOT_JPEG='+(await cards.first().screenshot({type:'jpeg',quality:55})).toString('base64'));
- console.log('UPLOADED_ART_SIX_CORRECT_LOADED_UNCROPPED=PASS');
+ console.log('DECK_ONE_ART_EIGHT_CORRECT_LOADED_UNCROPPED=PASS');
  await page.locator('[data-coach-action="clear"]').click();await page.locator('[data-preset-id="rpg_deck_02"]').click();
  const secondImages=['puxada-alta','remada-articulada-apoio','puxada-alta-unilateral','remada-alta-apoio-peito','triceps-frances-polia-barra-v','triceps-polia-barra-v','triceps-testa-barra-v','crucifixo-inverso-maquina'];
  const secondCards=page.locator('.proposal-list .sport-card.has-exercise-art');assert.equal(await secondCards.count(),8);
@@ -181,7 +186,7 @@ const assert=require('node:assert/strict');
  await page.getByRole('button',{name:'Iniciar treino',exact:true}).click();
  await page.locator('.focus-session [role="timer"]').first().waitFor();
  await page.locator('.mission-next').click();
- await page.locator('.mission-exercise-art[src="./mission-incline.webp"]').waitFor();
+ await page.locator('.mission-exercise-art[src="./exercise-supino-inclinado-halteres.webp"]').waitFor();
  await page.waitForFunction(()=>document.querySelector('.mission-exercise-art')?.naturalWidth>0);
  assert.equal(await page.locator('.focus-exercise-name').innerText(),'SUPINO INCLINADO');
  assert.equal(await page.locator('#quick-set-form').isVisible(),true);

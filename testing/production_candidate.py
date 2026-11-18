@@ -857,3 +857,8 @@ exec(compile(mission_patch.read_text(), str(mission_patch), 'exec'),
 brand_patch = root / 'testing/principal_brand_patch.py'
 exec(compile(brand_patch.read_text(), str(brand_patch), 'exec'),
      {'root': root, 'dist': dist, 'shutil': shutil})
+
+# Install the four deck covers and the reviewed illustrations for Deck 1.
+deck_art_patch = root / 'testing/principal_deck_art_patch.py'
+exec(compile(deck_art_patch.read_text(), str(deck_art_patch), 'exec'),
+     {'root': root, 'dist': dist, 'shutil': shutil})
