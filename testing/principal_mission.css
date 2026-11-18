@@ -102,15 +102,26 @@ body[data-realm="workout"]::before {
 }
 #app .focus-session-title p { display: none; }
 #app .focus-session .session-metrics {
-  grid-template-columns: minmax(0,1fr) auto;
-  margin: 2px 0 0;
-  text-align: center;
+  grid-template-columns: minmax(0,1.15fr) minmax(0,1fr);
+  gap: 6px;
+  margin: 5px 0 0;
+  align-items: stretch;
 }
-#app .focus-session .session-clock { background: transparent; align-items: center; }
-#app .focus-session .session-clock span, #app .focus-session .session-clock small { display: none; }
-#app .focus-session .session-clock:not(:has(strong)) small { display: block; }
-#app .focus-session .session-clock strong { font-size: 25px; }
-#app .focus-session .session-clock strong::before { content: "◷ "; }
+#app .focus-session .session-clock,
+#app .focus-session .last-set-clock {
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid #654360;
+  border-radius: 8px;
+  background: #281a30;
+}
+#app .focus-session .session-clock { border-color: #a96a53; }
+#app .focus-session .session-metrics span,
+#app .focus-session .session-metrics small { color: #e4cfdf; }
+#app .focus-session .session-clock strong { color: #ffb581 !important; font-size: clamp(20px,5.6vw,28px); }
+#app .focus-session .session-clock.is-paused strong { color: #e4cfdf !important; }
+#app .focus-session .last-set-clock strong { color: #83f2dd !important; font-size: clamp(17px,4.6vw,23px); }
 #app .focus-session .session-targets progress { height: 9px; }
 #app .focus-session .session-targets small { font-size: 10px; }
 #app .focus-entry { padding: 10px; margin-top: 0; }

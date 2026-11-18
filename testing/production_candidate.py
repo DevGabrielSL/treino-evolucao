@@ -726,9 +726,8 @@ s = s[:start] + ''' const current=active?panel(`<div class="focus-session-top">
 s = replace_once(s, 'current+renderLastSetClock(active,activeSets)+renderTrainingTools', 'current+renderTrainingTools')
 start = s.index(" return '<div class=\"session-clock\"><small>'+")
 end = s.index('\n', start)
-s = s[:start] + ''' return '<div class="session-clock"><span>Tempo de treino</span><strong role="timer" aria-label="Tempo decorrido" data-session-clock="'+e(start)+'" data-clock-session="'+e(session.id)+'">'+sessionClockLabel(seconds)+'</strong><small>'+(session.started_at?'Início do treino: ':'Contagem iniciada: ')+e(time)+'</small></div>';''' + s[end:]
-s = replace_once(s, '<span>Desde a última série salva</span>', '<span>Desde a última série</span>')
-s = replace_once(s, " · contado desde o registro</small>", "</small>")
+s = s[:start] + ''' const startLabel=(session.started_at?'Início do treino: ':'Contagem iniciada: ')+time;
+ return '<div class="session-clock'+(session.clock_paused_at?' is-paused':'')+'" title="'+e(startLabel)+'"><span>Tempo de treino</span><strong role="timer" aria-label="Tempo de treino" data-session-clock="'+e(start)+'" data-clock-session="'+e(session.id)+'">'+sessionClockLabel(seconds)+'</strong>'+(session.started_at?'':'<small>'+e(startLabel)+'</small>')+'</div>';''' + s[end:]
 s = replace_once(s, '<p class="focus-equipment">', '<div class="focus-equipment-row"><p class="focus-equipment">')
 s = replace_once(s, "</p>${renderLiveGuidance(active,selected,m)}${renderLoadReference(active,selected,m)}${unitButton}${entry}", "</p>${unitButton}</div>${renderLiveGuidance(active,selected,m)}${renderLoadReference(active,selected,m)}${entry}")
 s = replace_once(s, '<div class="load-reference"><span>Último treino compatível · ', '<div class="load-reference"><div class="load-reference-value"><span>Último treino · ')
@@ -862,3 +861,12 @@ exec(compile(brand_patch.read_text(), str(brand_patch), 'exec'),
 deck_art_patch = root / 'testing/principal_deck_art_patch.py'
 exec(compile(deck_art_patch.read_text(), str(deck_art_patch), 'exec'),
      {'root': root, 'dist': dist, 'shutil': shutil})
+
+for name in ('index.html', 'app.js', 'integrity.js', 'sw.js'):
+    path = dist / name
+    path.write_text(path.read_text()
+                    .replace('shell-v206-deck-art', 'shell-v207-workout-clocks')
+                    .replace('app.js?v=206', 'app.js?v=207')
+                    .replace('index.html?release=206', 'index.html?release=207')
+                    .replace('principal_mission.css?v=206', 'principal_mission.css?v=207')
+                    .replace('v1.6.14', 'v1.6.15'))

@@ -3,11 +3,18 @@ const finisherDrafts=new Map();
 function renderFinisherSummary(session,sets){
  return '<div class="finisher-summary"><strong>Bloco final</strong>'+finisherProgress(session,sets).map(g=>'<span>'+e(g.name)+': '+g.done+' / '+g.target+(g.timed?' s':' reps')+'</span>').join('')+'</div>';
 }
+function lastSetClockLabel(seconds){
+ const label=sessionClockLabel(seconds);
+ return seconds!==null&&seconds<3600?label.slice(3):label;
+}
 function renderLastSetClock(session,sets){
  const last=lastRecordedSet(session,sets);
- if(!last)return '<div class="last-set-clock"><span>Descanso</span><small>'+ (sets.some(s=>s.session_id===session.id)?'As séries anteriores não têm horário registrado.':'A contagem começa ao salvar a primeira série.')+'</small></div>';
- const time=new Date(last.recorded_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
- return '<div class="last-set-clock"><span>Desde a última série salva</span><strong role="timer" aria-label="Tempo de descanso" data-last-set-clock="'+e(last.recorded_at)+'">'+sessionClockLabel(sessionClockSeconds(last.recorded_at))+'</strong><small>Última série às '+e(time)+' · contado desde o registro</small></div>';
+ const seconds=sessionClockSeconds(last?.recorded_at);
+ const label='Desde a última série';
+ const detail=last?'':sets.some(s=>s.session_id===session.id)?'Séries sem horário':'Aguardando a primeira série';
+ return '<div class="last-set-clock"><span>'+label+'</span><strong role="timer" aria-label="'+label+'"'+
+  (last?' data-last-set-clock="'+e(last.recorded_at)+'"':'')+'>'+lastSetClockLabel(seconds)+'</strong>'+
+  (detail?'<small>'+detail+'</small>':'')+'</div>';
 }
 function renderFinisher(session,m){
  const goals=finisherProgress(session,m.sets),goal=goals.find(g=>g.key===finisherSelected&&!g.timed)||goals[0],draft=finisherDrafts.get(session.id+':'+goal.key)||{};
