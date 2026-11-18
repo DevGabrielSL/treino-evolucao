@@ -12,6 +12,8 @@ import { HistoryScreen } from './ui/HistoryScreen';
 import { PhoneScreen } from './ui/PhoneScreen';
 import { DialogHost } from './ui/Dialog';
 import { startSheets } from './engine/sheets';
+import { useUpdateReady, applyUpdate } from './engine/updates';
+import { RefreshCw } from 'lucide-react';
 import { MissionComplete } from './ui/Rewards';
 import { Sky } from './ui/Sky';
 import { FxLayer } from './fx/FxLayer';
@@ -25,6 +27,7 @@ export default function App() {
   const [intro, setIntro] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const updateReady = useUpdateReady();
   const toastMsg = useCallback((m: string) => { setNote(m); setTimeout(() => setNote(n => (n === m ? null : n)), 3200); }, []);
   useEffect(() => { if (store.status === 'ready') startSheets(); }, [store.status]);
   const [complete, setComplete] = useState<{ sessionId: string; reward: XpReward } | null>(null);
@@ -69,6 +72,16 @@ export default function App() {
       {import.meta.env.VITE_DEMO === "1" && !showWorkout && <div className="fixed left-1/2 -translate-x-1/2 bottom-[88px] z-[45] chip text-[10px] rounded-full bg-black/70 border border-white/15 px-3 py-1 text-haze pointer-events-none">Demonstração · dados fictícios</div>}
       <AnimatePresence>{complete && <MissionComplete data={complete} model={model} onClose={() => setComplete(null)} />}</AnimatePresence>
       <DialogHost />
+      <AnimatePresence>
+        {updateReady && !intro && (
+          <motion.div initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }} role="status"
+            className="fixed top-[max(env(safe-area-inset-top),8px)] inset-x-3 z-[88] max-w-lg mx-auto flex items-center gap-3 rounded-2xl bg-night/95 border border-aqua/50 px-3 py-2.5 shadow-[0_10px_40px_-10px_rgba(30,232,214,.6)]">
+            <RefreshCw size={18} className="text-aqua shrink-0" />
+            <span className="flex-1 text-sm leading-tight"><b className="font-hud text-[15px]">Nova versão pronta.</b><br /><span className="text-haze text-xs">{active ? 'Seu treino fica salvo; atualize quando quiser.' : 'Toque para carregar as novidades.'}</span></span>
+            <button onClick={applyUpdate} className="chip text-xs rounded-lg bg-aqua text-night px-3 py-2">Atualizar</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {note && !error && (
           <motion.div role="status" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}

@@ -51,6 +51,16 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   for (let i = work.length - 1; i > 0; i--) { if (Date.parse(work[i].recorded_at) - Date.parse(work[i - 1].recorded_at) <= 5 * 60000) combo++; else break; }
   if (work.length && Date.now() - Date.parse(work.at(-1).recorded_at) > 5 * 60000) combo = 0;
 
+  // Tela sempre acesa enquanto a missão estiver aberta (o navegador libera ao sair ou minimizar).
+  useEffect(() => {
+    const nav: any = navigator; if (!nav.wakeLock) return;
+    let lock: any = null, alive = true;
+    const acquire = async () => { try { if (alive && document.visibilityState === 'visible') { lock = await nav.wakeLock.request('screen'); } } catch { /* economia de bateria ou permissão */ } };
+    const onVis = () => { if (document.visibilityState === 'visible') acquire(); };
+    acquire(); document.addEventListener('visibilitychange', onVis);
+    return () => { alive = false; document.removeEventListener('visibilitychange', onVis); lock?.release?.().catch?.(() => {}); };
+  }, [session.id]);
+
   useEffect(() => onReward((r) => {
     if (!r) return;
     if (!r.finished) fx.flyXp(registerRef.current, `+${r.gain}`);

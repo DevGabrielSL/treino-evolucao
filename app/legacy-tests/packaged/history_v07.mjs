@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import {emptyDocument,commit,validateDocument} from '../store.js';
+import {compute} from '../metrics.js';
+import {defaultHistoryFilters,sanitizeHistoryFilters,searchHistory,compareHistoryPeriods,renderHistoryBrowser,renderHistoryResults} from '../history.js';
+import {renderProgressV06,overview} from '../insights.js';
+let count=0;
+const t=(name,fn)=>{fn();count++;console.log('PASS '+name);};
+const today='2026-10-23';
+const doc=commit(emptyDocument(),d=>{
+ d.overlay.exercises.push({id:'ex1',name:'Supino <script>'},{id:'ex2',name:'Remada e bíceps'});
+ d.overlay.exercise_variants.push({id:'v1',exercise_id:'ex1',equipment_or_variation:'barra',unit:'kg',unit_confirmed:true},{id:'v2',exercise_id:'ex1',equipment_or_variation:'máquina',unit:'kg',unit_confirmed:true},{id:'v3',exercise_id:'ex2',equipment_or_variation:'halter',unit:'kg',unit_confirmed:true});
+ d.overlay.sessions.push({id:'s0',name:'Antigo',date:'2026-08-22',status:'completed',notes:'base'},{id:'s1',name:'Peito & Tríceps',date:'2026-09-01',status:'completed',notes:'focado'},
+ {id:'s2',name:'Superior <img src=x onerror=alert(1)>',date:'2026-09-24',status:'completed',notes:'carga normal'},
+ {id:'s3',name:'Costas A',date:'2026-10-12',status:'completed',notes:'pump forte'},
+ {id:'s4',name:'Inferior B',date:'2026-10-22',status:'in_progress',notes:'treino aberto'},
+ {id:'s5',name:'Cardio',date:'2026-10-23',status:'completed',notes:''},
+ {id:'s6',name:'Futuro',date:'2026-10-24',status:'completed',notes:''},
+ {id:'s7',name:'Cancelado',date:'2026-10-13',status:'cancelled',notes:''});
+ const add=(id,session_id,date,exercise_id,variant_id,load_value,repetitions,rir=2,set_type='effective')=>d.overlay.sets.push({id,session_id,date,exercise_id,variant_id,load_value,repetitions,rir,set_type});
+ add('s0a','s0','2026-08-22','ex1','v1',10,10);
+ add('s1a','s1','2026-09-01','ex1','v1',15,10);
+ add('s2a','s2','2026-09-24','ex1','v1',20,10);
+ add('s2b','s2','2026-09-24','ex1','v2',30,10);
+ add('s3a','s3','2026-10-12','ex2','v3',35,8,1);
+ add('s3b','s3','2026-10-12','ex2','v3',10,12,3,'warmup');
+ add('s4a','s4','2026-10-22','ex1','v1',70,12);
+ add('s5a','s5','2026-10-23','ex2','v3',null,8,null,'other');
+ add('s6a','s6','2026-10-24','ex1','v1',100,10);
+});
+const m=compute(doc),before=JSON.stringify(doc);
+t('Estado de teste válido',()=>assert.equal(validateDocument(doc),true));
+t('Filtro padrão mantém todas as sessões',()=>assert.equal(searchHistory(m,{},today).total,8));
+t('Ordenação recentes na frente',()=>assert.equal(searchHistory(m,{},today).rows[0].id,'s6'));
+t('Status concluído exclui rascunhos e canceladas',()=>assert.equal(searchHistory(m,{status:'completed'},today).total,6));
+t('Status em andamento',()=>assert.equal(searchHistory(m,{status:'in_progress'},today).rows[0].id,'s4'));
+t('Filtro 30 dias inclui dia inicial',()=>assert.equal(searchHistory(m,{period:'30'},today).rows.some(s=>s.id==='s2'),true));
+t('Filtro 30 dias exclui anterior',()=>assert.equal(searchHistory(m,{period:'30'},today).rows.some(s=>s.id==='s1'),false));
+t('Filtro 30 dias exclui futuro',()=>assert.equal(searchHistory(m,{period:'30'},today).rows.some(s=>s.id==='s6'),false));
+t('Filtro 90 dias inclui início de setembro',()=>assert.equal(searchHistory(m,{period:'90'},today).rows.some(s=>s.id==='s1'),true));
+t('Busca ignora acentos',()=>assert.deepEqual(searchHistory(m,{query:'biceps'},today).rows.map(x=>x.id),['s5','s3']));
+t('Busca por texto de exercício',()=>assert.equal(searchHistory(m,{query:'supino'},today).total,5));
+t('Busca por equipamento',()=>assert.equal(searchHistory(m,{query:'maquina'},today).rows[0].id,'s2'));
+t('Busca por observação',()=>assert.equal(searchHistory(m,{query:'pump'},today).rows[0].id,'s3'));
+t('Busca por nome do treino',()=>assert.equal(searchHistory(m,{query:'COSTAS'},today).rows[0].id,'s3'));
+t('Busca por data ISO',()=>assert.equal(searchHistory(m,{query:'2026-10-12'},today).rows[0].id,'s3'));
+t('Filtro variante exata preserva equipamentos separados',()=>assert.deepEqual(searchHistory(m,{variant:'v2'},today).rows.map(x=>x.id),['s2']));
+t('Combinação de status e variante',()=>assert.equal(searchHistory(m,{variant:'v1',status:'in_progress'},today).total,1));
+t('Combinação de período e busca',()=>assert.equal(searchHistory(m,{period:'30',query:'supino'},today).total,2));
+t('Período customizado inclusivo',()=>assert.deepEqual(searchHistory(m,{period:'custom',from:'2026-09-01',to:'2026-09-24'},today).rows.map(x=>x.id),['s2','s1']));
+t('Período customizado com apenas início',()=>assert.equal(searchHistory(m,{period:'custom',from:'2026-10-22'},today).total,3));
+t('Período customizado com apenas fim',()=>assert.equal(searchHistory(m,{period:'custom',to:'2026-09-23'},today).total,2));
+t('Datas invertidas retornam erro, nunca dados',()=>assert.match(searchHistory(m,{period:'custom',from:'2026-10-23',to:'2026-10-01'},today).error,/inicial/));
+t('Datas inválidas rejeitadas pelo saneador',()=>assert.equal(sanitizeHistoryFilters({period:'custom',from:'2026-02-30'}).from,''));
+t('Status inventado não aceito',()=>assert.equal(sanitizeHistoryFilters({status:'unknown'}).status,'all'));
+t('Ordenação mais antigos primeiro',()=>assert.equal(searchHistory(m,{sort:'oldest'},today).rows[0].id,'s0'));
+t('Ordenação mais séries primeiro',()=>assert.deepEqual(searchHistory(m,{sort:'sets'},today).rows.slice(0,2).map(x=>x.id),['s3','s2']));
+t('Paginação limite de 3',()=>assert.equal(searchHistory(m,{},today,3).rows.length,3));
+t('Paginação 3 páginas',()=>assert.equal(searchHistory(m,{},today,3).pages,3));
+t('Paginação última página 2 registros',()=>assert.equal(searchHistory(m,{page:2},today,3).rows.length,2));
+t('Paginação fora do intervalo fica na última página',()=>assert.equal(searchHistory(m,{page:999},today,3).page,2));
+t('Ordenação determinística página 2',()=>assert.equal(searchHistory(m,{page:1},today,3).rows[0].id,'s7'));
+t('Tamanho inválido rejeitado',()=>assert.throws(()=>searchHistory(m,{},today,101),/Tamanho/));
+t('Comparação 30 dias usa janelas contíguas',()=>{const x=compareHistoryPeriods(m,'30',today);assert.equal(x.current.from,'2026-09-24');assert.equal(x.previous.to,'2026-09-23');assert.equal(x.previous.from,'2026-08-25');});
+t('Comparação 30 dias exclui futuro, rascunho e cancelamento',()=>assert.equal(compareHistoryPeriods(m,'30',today).current.completed,3));
+t('Comparação 30 dias séries efetivas exclui rascunho',()=>assert.equal(compareHistoryPeriods(m,'30',today).current.sets,3));
+t('Comparação 30 dias ignora aquecimento',()=>assert.equal(compareHistoryPeriods(m,'30',today).current.sets,3));
+t('Comparação usa janela anterior equivalente',()=>assert.equal(compareHistoryPeriods(m,'30',today).previous.completed,1));
+t('Comparação delta exato',()=>assert.equal(compareHistoryPeriods(m,'30',today).delta.completed,2));
+t('Comparação inclui exercícios distintos sem somar variantes',()=>assert.equal(compareHistoryPeriods(m,'30',today).current.exercises,2));
+t('RIR médio só com amostras válidas',()=>assert.equal(compareHistoryPeriods(m,'30',today).current.rirAvg,5/3));
+t('Comparação não existe no período todo',()=>assert.equal(compareHistoryPeriods(m,'all',today),null));
+t('Comparação não existe na faixa customizada',()=>assert.equal(compareHistoryPeriods(m,'custom',today),null));
+t('90 dias usa janela anterior de 90',()=>assert.equal(compareHistoryPeriods(m,'90',today).period,90));
+t('180 dias usa janela anterior de 180',()=>assert.equal(compareHistoryPeriods(m,'180',today).period,180));
+t('Dados pessoais não foram modificados durante consultas',()=>assert.equal(JSON.stringify(doc),before));
+t('UI neutraliza script em exercício',()=>assert.ok(renderHistoryBrowser(m,{query:'supino'}).includes('Supino &lt;script&gt;')));
+t('UI neutraliza HTML no nome do treino',()=>assert.ok(!renderHistoryResults(m,{}).includes('<img src=x')));
+t('UI neutraliza valor injetado no campo de pesquisa',()=>assert.ok(renderHistoryBrowser(m,{query:'"><script>'}).includes('&quot;&gt;&lt;script&gt;')));
+t('UI indica resultados vazios',()=>assert.match(renderHistoryResults(m,{query:'inexistente'}),/Nenhuma sessão/));
+t('UI alerta datas invertidas',()=>assert.match(renderHistoryResults(m,{period:'custom',from:'2026-10-20',to:'2026-10-01'}),/role="alert"/));
+t('UI somente mostra comparação em filtro adequado',()=>assert.match(renderHistoryResults(m,{period:'30'}),/Comparar períodos equivalentes/));
+t('UI não compara quando filtrada por status',()=>assert.ok(!renderHistoryResults(m,{period:'30',status:'completed'}).includes('Comparar períodos equivalentes')));
+t('UI traz navegação detalhada',()=>assert.match(renderHistoryResults(m,{query:'costas'}),/data-open-session="s3"/));
+t('Indicadores v0.6 permanecem válidos',()=>assert.equal(overview(m,'30',today).completed,3));
+t('Render do painel v0.6 sem falhar',()=>assert.match(renderProgressV06(m),/Evolução dos seus treinos/));
+console.log('TOTAL_HISTORY_TESTS='+count);

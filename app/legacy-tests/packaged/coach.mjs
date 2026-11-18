@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {parseGoal,groupLabel,suggestExercises,parseSeriesMessage} from '../coach_logic.js';
+import {emptyDocument,commit,validateDocument} from '../store.js';
+import {compute} from '../metrics.js';
+import {planOutbound} from '../sheet_sync_core.js';
+let passed=0;function ok(n,f){f();console.log('PASS',n);passed++;}
+ok('Recognize chest',()=>assert.deepEqual(parseGoal('Hoje quero treinar peito'),['peito']));
+ok('Recognize chest/triceps',()=>assert.deepEqual(parseGoal('peito e tríceps'),['peito','triceps']));
+ok('Reject unknown',()=>assert.throws(()=>parseGoal('oi'),/grupo/));
+ok('Accent label',()=>assert.equal(groupLabel(['biceps']),'Bíceps'));
+let d=emptyDocument();d=commit(d,x=>{
+ x.overlay.exercises.push({id:'ex1',name:'Supino reto'},{id:'ex2',name:'Crucifixo na máquina'},{id:'ex3',name:'Voador inverso'},{id:'ex4',name:'Tríceps Polia 2'});
+ x.overlay.exercise_variants.push({id:'a',exercise_id:'ex1',equipment_or_variation:'Barra',unit:'kg',unit_confirmed:true},{id:'b',exercise_id:'ex1',equipment_or_variation:'Outra barra',unit:'kg',unit_confirmed:true},{id:'c',exercise_id:'ex2',equipment_or_variation:'Peck deck',unit:'plaquetas',unit_confirmed:true},{id:'d',exercise_id:'ex3',equipment_or_variation:'Máquina',unit:'plaquetas',unit_confirmed:true},{id:'e',exercise_id:'ex4',equipment_or_variation:'Polia 2',unit:'plaquetas',unit_confirmed:true});
+ x.overlay.sessions.push({id:'past',name:'Superiores',date:'2026-10-21',status:'completed'});
+ x.overlay.sets.push({id:'set1',session_id:'past',date:'2026-10-21',exercise_id:'ex1',variant_id:'a',set_type:'effective',set_number:1,load_value:50,repetitions:10,rir:2});
+});
+ok('App state valid',()=>assert.equal(validateDocument(d),true));
+let p=suggestExercises(compute(d).entities,['peito'],{limit:5});
+ok('Chest chooses supino',()=>assert.ok(p.some(x=>x.variant_id==='a')));
+ok('Keep one variant per exercise',()=>assert.equal(p.filter(x=>x.name==='Supino reto').length,1));
+ok('Chest excludes reverse fly',()=>assert.ok(!p.some(x=>x.variant_id==='d')));
+ok('Preserve existing equipment and unit',()=>assert.equal(p.find(x=>x.variant_id==='c').unit,'plaquetas'));
+ok('Latest load only for exact variant',()=>assert.equal(p.find(x=>x.variant_id==='a').last.load_value,50));
+let q=suggestExercises(compute(d).entities,['peito','triceps']);
+ok('Mixed plan includes triceps',()=>assert.ok(q.some(x=>x.variant_id==='e')));
+ok('Normal set parse',()=>assert.deepEqual(((x)=>[x.load_value,x.repetitions,x.rir])(parseSeriesMessage('50 kg 10 reps RIR 2','kg')),[50,10,2]));
+ok('Compact set parse',()=>assert.equal(parseSeriesMessage('50 x 10 RIR 2','kg').repetitions,10));
+ok('Decimal comma and RIR interval',()=>assert.deepEqual(((x)=>[x.load_value,x.rir,x.notes])(parseSeriesMessage('6,5 plaquetas 12 reps rir 1-2','plaquetas')),[6.5,1.5,'RIR informado: 1-2']));
+ok('Load missing prevents write',()=>assert.throws(()=>parseSeriesMessage('12 reps rir 2'),/carga/));
+ok('Wrong unit prevents write',()=>assert.throws(()=>parseSeriesMessage('50 kg 10 reps','plaquetas'),/Unidade/));
+ok('Negative RIR range rejects',()=>assert.throws(()=>parseSeriesMessage('50 kg 10 reps rir 3-1','kg'),/RIR/));
+ok('Warmup type',()=>assert.equal(parseSeriesMessage('aquecimento 20kg 12 reps','kg').set_type,'warmup'));
+ok('Drop type',()=>assert.equal(parseSeriesMessage('drop set 20kg 12 reps','kg').set_type,'drop_set'));
+ok('RIR optional',()=>assert.equal(parseSeriesMessage('50kg 10 reps','kg').rir,null));
+ok('Upper bound',()=>assert.throws(()=>parseSeriesMessage('50kg 501 reps','kg'),/carga|repet/));
+let n=emptyDocument();const data={Treinos:[['Data']],Series:[['Data']],Peso:[['Data']]};
+n=commit(n,x=>{
+ x.overlay.exercises.push({id:'ex',name:'Supino'});
+ x.overlay.exercise_variants.push({id:'v',exercise_id:'ex',unit:'kg',unit_confirmed:true,equipment_or_variation:'Barra'});
+ x.overlay.sessions.push({id:'s',date:'2026-10-26',name:'Peito · Assistente',status:'in_progress',planned_variant_ids:['v'],provenance:{source:'android_local'}});
+ x.overlay.sets.push({id:'set',date:'2026-10-26',session_id:'s',exercise_id:'ex',variant_id:'v',set_type:'effective',set_number:1,load_value:50,repetitions:10,rir:2,provenance:{source:'android_local'}});
+});
+ok('Draft validated',()=>assert.equal(validateDocument(n),true));
+ok('Draft sets do not upload',()=>assert.equal(planOutbound(n,data).Series.length,0));
+n=commit(n,x=>{x.overlay.sessions[0].status='completed';});
+ok('Completed session uploaded',()=>assert.equal(planOutbound(n,data).Treinos.length,1));
+ok('Completed set uploaded',()=>assert.equal(planOutbound(n,data).Series.length,1));
+console.log('COACH_TESTS='+passed);
