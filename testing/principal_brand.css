@@ -1,0 +1,81 @@
+:root {
+  --brand-night: #180e22;
+  --brand-sunset: #ffbd8b;
+  --brand-pink: #f46bad;
+  --brand-white: #fff5e9;
+  --brand-display: Impact, "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+}
+.mission-brand-hero {
+  position: relative;
+  margin-inline: -8px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--brand-night);
+}
+.mission-brand-hero .mission-cover {
+  width: 100%;
+  margin: 0;
+  object-position: center;
+}
+.mission-brand-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(95deg, #180e22ec, #180e2270 37%, transparent 68%);
+  pointer-events: none;
+}
+.brand-wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: var(--brand-white);
+  font-family: var(--brand-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: clamp(21px, 6vw, 36px);
+  line-height: .92;
+  letter-spacing: -.045em;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #180e22;
+}
+.brand-wordmark span:last-child { color: var(--brand-sunset); }
+.mission-brand-hero .brand-wordmark {
+  position: absolute;
+  top: 12%;
+  left: 5%;
+  z-index: 1;
+}
+.brand-wordmark::after {
+  content: "";
+  width: 63%;
+  height: 4px;
+  margin-top: 7px;
+  background: var(--brand-pink);
+  transform: skew(-18deg);
+}
+#app .rpg-launch {
+  background: linear-gradient(0deg,#180e22 4%,#180e22bd 61%,#180e2257),
+    url('./brand-waterfront.webp') 63% center / cover no-repeat;
+}
+#app .launch-content {
+  background: #180e22d8;
+  border: 1px solid #815874;
+  padding: 30px 20px;
+}
+#app .launch-emblem {
+  border: 0;
+  background: transparent;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 15px;
+  padding: 0;
+}
+#app .launch-emblem img {
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+}
+#app .launch-content .brand-wordmark { align-items: center; font-size: clamp(28px,8vw,42px); }
+#app .launch-status { margin-top: 16px; }
+.brand b { font-family: var(--brand-display); font-style: italic; }

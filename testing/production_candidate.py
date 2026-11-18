@@ -852,3 +852,8 @@ for name in ('index.html', 'app.js', 'sw.js', 'integrity.js'):
 mission_patch = root / 'testing/principal_mission_patch.py'
 exec(compile(mission_patch.read_text(), str(mission_patch), 'exec'),
      {'root': root, 'dist': dist, 'shutil': shutil})
+
+# Apply the new identity to the installed app and the mission screen.
+brand_patch = root / 'testing/principal_brand_patch.py'
+exec(compile(brand_patch.read_text(), str(brand_patch), 'exec'),
+     {'root': root, 'dist': dist, 'shutil': shutil})
