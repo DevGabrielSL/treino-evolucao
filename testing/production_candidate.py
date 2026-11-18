@@ -829,3 +829,21 @@ for name in ('index.html', 'manifest.webmanifest', 'sw.js', 'integrity.js', 'app
         entries = ['principal_coastal.css', *coastal_assets]
         source = source.replace("'./app.js?v=202'", "'./app.js?v=202'," + ','.join(repr('./' + asset) for asset in entries))
     p.write_text(source)
+
+# Activate the principal update as soon as its complete offline shell is ready.
+for name in ('index.html', 'app.js', 'sw.js', 'integrity.js'):
+    p = dist / name
+    source = (p.read_text().replace('shell-v202-coastal', 'shell-v203-coastal-update')
+              .replace('app.js?v=202', 'app.js?v=203')
+              .replace('principal_coastal.css', 'principal_coastal.css?v=203'))
+    if name == 'index.html':
+        source = source.replace('v1.6.10 Relíquias ilustradas', 'v1.6.11 Edição tropical')
+    if name == 'app.js':
+        source = source.replace('Treino & Evolução · v1.6.10', 'Treino & Evolução · v1.6.11')
+        source = source.replace("register('./sw.js',{scope:'./'})",
+                                "register('./sw.js',{scope:'./',updateViaCache:'none'})")
+    if name == 'sw.js':
+        install = "self.addEventListener('install',"
+        assert source.count(install) == 1
+        source = source[:source.index(install)] + (root / 'testing/principal_update_worker.js').read_text()
+    p.write_text(source)

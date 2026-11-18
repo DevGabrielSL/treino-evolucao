@@ -836,6 +836,7 @@ jobs:
           node testing/principal_transport_tests.mjs
           python3 testing/production_candidate.py /tmp/treino-production-candidate
           node testing/production_candidate_tests.mjs /tmp/treino-production-candidate
+          node testing/principal_update_worker_tests.mjs /tmp/treino-production-candidate
           node testing/principal_transport_integration.mjs /tmp/treino-production-candidate
           node testing/production_session_tests.mjs /tmp/treino-production-candidate
           python3 testing/production_coach_tests.py /tmp/treino-production-candidate
