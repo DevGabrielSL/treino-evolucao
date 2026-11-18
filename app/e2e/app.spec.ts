@@ -4,20 +4,29 @@ import { readFileSync } from 'node:fs';
 // Cada teste começa com um navegador limpo (sem dados), como um aparelho novo.
 
 const problems: string[] = [];
+// Registra violações da política de segurança (CSP) com a origem de quem as causou.
+const recordCsp = () => {
+  (window as any).__csp = [];
+  document.addEventListener('securitypolicyviolation', (e: any) => (window as any).__csp.push({ directive: e.violatedDirective, source: e.sourceFile || '', blocked: e.blockedURI || '' }));
+};
 function watch(page: Page) {
   problems.length = 0;
   page.on('pageerror', e => problems.push('erro de página: ' + e.message));
   page.on('console', m => {
     const t = m.text();
-    if (m.type() === 'error' && !/accounts\.google\.com|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED|ERR_TUNNEL|Failed to load resource/.test(t)) problems.push('console: ' + t);
-    if (/Content Security Policy/i.test(t)) problems.push('CSP: ' + t);
+    if (m.type() === 'error' && !/accounts\.google\.com|Content Security Policy|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED|ERR_TUNNEL|ERR_FAILED|Failed to load resource/.test(t)) problems.push('console: ' + t);
   });
 }
-async function boot(page: Page) {
+async function boot(page: Page, { google = false } = {}) {
   watch(page);
+  await page.addInitScript(recordCsp);
+  // O app carrega o login do Google ao abrir (como o app anterior). Nos testes do app ele fica
+  // bloqueado, para o resultado não depender da rede; há um teste próprio para o Google abaixo.
+  if (!google) await page.route(/accounts\.google\.com/, r => r.abort());
   await page.goto('./');
   await expect(page.getByText('Mapa · toque num distrito')).toBeVisible();
 }
+const cspViolations = (page: Page) => page.evaluate(() => (window as any).__csp || []).catch(() => []);
 async function startFeaturedMission(page: Page) {
   await page.getByRole('button', { name: 'Iniciar missão' }).first().click();
   await page.getByText('Toque para começar').click();
@@ -36,7 +45,23 @@ async function registerSet(page: Page, load: string, reps: string) {
   await page.getByRole('button', { name: 'Minimizar' }).click();
 }
 
-test.afterEach(() => { expect(problems, problems.join('\n')).toEqual([]); });
+test.afterEach(async ({ page }, info) => {
+  if (info.title.startsWith('Google:')) return;
+  expect(problems, problems.join('\n')).toEqual([]);
+  expect(await cspViolations(page)).toEqual([]);
+});
+
+test('Google: o login carrega e nenhuma violação de segurança vem do código do app', async ({ page }) => {
+  await boot(page, { google: true });
+  const loaded = await page.waitForFunction(() => Boolean((window as any).google?.accounts?.oauth2), null, { timeout: 15000 }).then(() => true, () => false);
+  test.skip(!loaded, 'Sem acesso ao Google neste ambiente.');
+  const all: { directive: string; source: string; blocked: string }[] = await cspViolations(page);
+  const origin = new URL(page.url()).origin;
+  test.info().annotations.push({ type: 'csp', description: JSON.stringify(all) });
+  // O script do Google tenta inserir estilos internos, bloqueados pela política (comportamento já existente no app anterior).
+  expect(all.filter(v => v.source.startsWith(origin))).toEqual([]);
+  expect(problems, problems.join('\n')).toEqual([]);
+});
 
 test('abre sem erros, mostra o mapa e as quatro missões', async ({ page }) => {
   await boot(page);
