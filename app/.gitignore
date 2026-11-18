@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 dist-demo
+e2e/.dist-b
+test-results
+playwright-report

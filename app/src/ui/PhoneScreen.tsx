@@ -423,6 +423,7 @@ function AboutApp() {
       <p className="text-sm text-haze">Sem servidor próprio e sem anúncios. Seus treinos ficam no celular (IndexedDB) e, se você autorizar, na sua planilha Google. O cache offline guarda só os arquivos do programa, nunca o seu histórico.</p>
       <p className="text-sm text-haze mt-2">XP, níveis, conquistas, recordes e atributos são calculados a partir do histórico: não criam dados novos nem são enviados à planilha.</p>
       <p className="text-[11px] text-haze mt-3">Nunca publique backups ou a pasta privado/ em repositórios públicos.</p>
+      <p className="num text-[11px] text-haze mt-3" data-testid="release">Versão {String(import.meta.env.VITE_RELEASE || 'local').slice(0, 12)}</p>
     </Card>
   );
 }

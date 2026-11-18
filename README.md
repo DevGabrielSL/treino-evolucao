@@ -4,7 +4,12 @@ Aplicativo pessoal PWA de registro de treinos. O código é público, mas os dad
 
 Os arquivos públicos do app serão publicados na raiz do repositório para uso com GitHub Pages.
 
-## Nova interface (pasta `app/`)
+## Estrutura
 
-A partir desta versão, o GitHub Pages publica o app em React + Vite da pasta `app/` (veja `app/README.md`).
-Os pacotes e patches das versões anteriores continuam no repositório como **bateria de regressões**: o workflow ainda monta e testa a lógica por eles e, antes de publicar, confere que o app novo usa exatamente esses mesmos módulos.
+- `app/` — o aplicativo (React + Vite). Veja `app/README.md`.
+- `app/src/legacy/` — lógica de dados, backup, Google Sheets e assistente (fonte única).
+- `app/legacy-tests/` — regressões da lógica; `app/e2e/` — testes de ponta a ponta no navegador.
+- `production/coordinator/` — coordenador em Apps Script da planilha.
+- `integration/tests/`, `quality/`, `testing/` — testes históricos ainda em uso pela bateria de regressões.
+
+A publicação (GitHub Actions) roda as regressões e os testes de ponta a ponta antes de publicar. Se algo falhar, nada é publicado.
