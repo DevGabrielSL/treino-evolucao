@@ -15,7 +15,7 @@ import { parseGoal } from '../legacy/coach_logic.js';
 import { getState, commitDirect } from './store';
 import { authorized, fetchCoachPlanRows } from '../legacy/sheet_sync_browser.js';
 import { SHEET_ID } from '../legacy/sheets_config.js';
-import { undoLastDraftSet, lastDraftSet } from '../legacy/coach_commands.js';
+import { undoLastDraftSet, lastDraftSet, correctLastDraftSet } from '../legacy/coach_commands.js';
 import { restTimer } from '../legacy/principal_rest.js';
 
 export { PRESET_DECKS, liveGuidance, nextPending, loadUnits, restTimer, lastDraftSet, FINISHER_GOALS, finisherProgress, plankElapsed, replacementFor };
@@ -122,10 +122,12 @@ export async function confirmUnit(session: any, variant: any, unit: string): Pro
   return created.id;
 }
 
-export type SetInput = { load: number; reps: number; kind: 'effective' | 'warmup'; drops?: { load: number; reps: number }[] };
+export type SetInput = { load: number; reps: number; kind: 'effective' | 'warmup'; rir?: number | null; drops?: { load: number; reps: number }[] };
 
 export async function logSet(session: any, variant: any, model: any, input: SetInput) {
-  const { load, reps, kind, drops = [] } = input;
+  const { load, reps, kind, drops = [], rir = null } = input;
+  // O coordenador da planilha aceita RIR de 0 a 10 (mesma faixa do assistente).
+  if (rir !== null && (!Number.isInteger(rir) || rir < 0 || rir > 10)) throw new Error('RIR deve ser um número inteiro de 0 a 10.');
   if (!Number.isInteger(reps) || reps < 1 || reps > 500 || !(load >= 0) || load > 10000) throw new Error('Confira carga e repetições.');
   if (!session.planned_variant_ids?.includes(variant.id)) throw new Error('Escolha um exercício desta missão.');
   if (drops.length && kind !== 'effective') throw new Error('Use Trabalho para registrar um drop set.');
@@ -139,7 +141,7 @@ export async function logSet(session: any, variant: any, model: any, input: SetI
     const row = {
       recorded_at: new Date().toISOString(), id: makeId('set'), date: s.date, session_id: s.id, session_name_original: s.name,
       exercise_id: variant.exercise_id, variant_id: variant.id, set_type: kind, set_type_original: null, set_number: number,
-      load_value: load, load_unit_original: variant.unit, repetitions: reps, rir: null, rpe: null, legacy_volume_index: null,
+      load_value: load, load_unit_original: variant.unit, repetitions: reps, rir, rpe: null, legacy_volume_index: null,
       discomfort: null, notes: null, provenance: { source: 'android_local' },
     };
     d.overlay.sets.push(row, ...drops.map((p, i) => ({ ...row, id: makeId('set'), set_type: 'drop_set', set_number: number + i + 1, load_value: p.load, repetitions: p.reps, rir: null, notes: 'Drop de ' + row.id })));
@@ -147,6 +149,12 @@ export async function logSet(session: any, variant: any, model: any, input: SetI
   if (restTimer.state(session.id).auto) restTimer.start(session.id);
 }
 
+/** Corrige a última série deste treino (mesma regra do comando "corrigir última" do assistente). */
+export async function correctLast(session: any, v: { load: number; reps: number; rir: number | null; kind: string }) {
+  if (!Number.isInteger(v.reps) || v.reps < 1 || v.reps > 500 || !(v.load >= 0) || v.load > 10000) throw new Error('Confira carga e repetições.');
+  if (v.rir !== null && (!Number.isInteger(v.rir) || v.rir < 0 || v.rir > 10)) throw new Error('RIR deve ser um número inteiro de 0 a 10.');
+  await perform(d => correctLastDraftSet(d, session.id, { load_value: v.load, repetitions: v.reps, rir: v.rir, set_type: v.kind }), 'Última série corrigida.');
+}
 export async function undoLast(session: any) { await perform(d => undoLastDraftSet(d, session.id), 'Última série desfeita.'); }
 
 export async function finishMission(session: any) {

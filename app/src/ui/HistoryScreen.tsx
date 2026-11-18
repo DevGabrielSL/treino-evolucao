@@ -170,7 +170,7 @@ function SessionSheet({ model, id, onClose, onError, onGoWorkout }: { model: any
                   {rows.map((r: any, i: number) => (
                     <li key={r.id} className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1.5">
                       <span className={`num text-[11px] font-bold rounded px-1.5 ${r.set_type === 'warmup' ? 'bg-aqua/20 text-aqua' : r.set_type === 'drop_set' ? 'bg-violet/25 text-violet' : 'bg-gold/20 text-gold'}`}>{r.set_type === 'warmup' ? 'AQ' : r.set_type === 'drop_set' ? 'DROP' : `S${i + 1}`}</span>
-                      <span className="num font-bold flex-1">{r.load_value != null ? nf(r.load_value) : '—'} <span className="text-xs text-haze">{r.load_unit_original}</span> × {r.repetitions ?? '—'}</span>
+                      <span className="num font-bold flex-1">{r.load_value != null ? nf(r.load_value) : '—'} <span className="text-xs text-haze">{r.load_unit_original}</span> × {r.repetitions ?? '—'}{r.rir != null && <span className="text-[11px] text-aqua ml-1.5">RIR {r.rir}</span>}</span>
                       {isLocalSet(r.id) && <>
                         <button onClick={() => setEdit({ id: r.id, unit: r.load_unit_original || v?.unit, load: String(r.load_value ?? ''), reps: String(r.repetitions ?? ''), type: r.set_type })} aria-label="Corrigir série" className="size-8 grid place-items-center rounded-md bg-white/10"><Pencil size={14} /></button>
                         <button onClick={() => run(async () => { if (await ask('Remover esta série do treino local?', { ok: 'Remover', danger: true })) await deleteSet(r.id); })} aria-label="Remover série" className="size-8 grid place-items-center rounded-md bg-white/10 text-pink"><Trash2 size={14} /></button>

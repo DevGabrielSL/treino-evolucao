@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2, X } from 'lucide-react';
-import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, confirmUnit, finishMission, cancelMission, togglePause, undoLast, lastDraftSet, workoutElapsed } from '../engine/workout';
+import { Pencil, Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2, X } from 'lucide-react';
+import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { onReward } from '../engine/store';
 import { xp, rankFor } from '../game/progress';
@@ -28,6 +28,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const exercise = model.exerciseMap.get(variant?.exercise_id);
   const guide = liveGuidance(session, current, entities);
   const sessionSets = model.sets.filter((s: any) => s.session_id === session.id);
+  const lastId = lastDraftSet(doc, session.id)?.id;
   const mySets = sessionSets.filter((s: any) => s.variant_id === current).sort((a: any, b: any) => (a.set_number || 0) - (b.set_number || 0));
   const totalTarget = ids.reduce((n, id) => n + (liveGuidance(session, id, entities).target || 0), 0);
   const totalDone = ids.reduce((n, id) => { const g = liveGuidance(session, id, entities); return n + Math.min(g.resolved, g.target ?? g.resolved); }, 0);
@@ -71,11 +72,13 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const [load, setLoad] = useState<string>('');
   const [reps, setReps] = useState<string>('');
   const [kind, setKind] = useState<'effective' | 'warmup'>('effective');
+  const [rir, setRir] = useState<number | null>(null);
+  const [editLast, setEditLast] = useState<any>(null);
   useEffect(() => { // ao trocar de alvo, pré-preenche com a última série deste treino ou a referência
     const base = mySets.at(-1) || ref;
     setLoad(base?.load_value != null ? String(base.load_value) : '');
     setReps(base?.repetitions != null ? String(base.repetitions) : String(guide.dose?.min ?? ''));
-    setKind('effective'); setDrops([]);
+    setKind('effective'); setDrops([]); setRir(null); setEditLast(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
 
@@ -86,21 +89,23 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
 
   async function run(fn: () => Promise<any>) { if (busy) return; setBusy(true); try { await fn(); } catch (e) { onError(e); } finally { setBusy(false); } }
 
-  async function submit() {
-    const l = Number(String(load).replace(',', '.')), r = Number(reps);
+  async function submit(repeat?: { load: number; reps: number }) {
+    const l = repeat ? repeat.load : Number(String(load).replace(',', '.')), r = repeat ? repeat.reps : Number(reps);
+    const k = repeat ? 'effective' : kind;
     const done = new Set(entities.sessions.filter((x: any) => x.status === 'completed').map((x: any) => x.id));
     const prevBest = Math.max(-Infinity, ...model.sets.filter((x: any) => done.has(x.session_id) && x.variant_id === variant?.id && x.set_type === 'effective' && typeof x.load_value === 'number').map((x: any) => x.load_value),
       ...sessionSets.filter((x: any) => x.variant_id === variant?.id && x.set_type === 'effective').map((x: any) => x.load_value));
     await run(async () => {
-      const dropList = drops.map(d => ({ load: Number(String(d.load).replace(',', '.')), reps: Number(d.reps) }));
+      const dropList = repeat ? [] : drops.map(d => ({ load: Number(String(d.load).replace(',', '.')), reps: Number(d.reps) }));
       if (dropList.some(d => !Number.isFinite(d.load) || !d.reps)) throw new Error('Preencha carga e repetições de cada redução.');
-      await logSet(session, variant, model, { load: l, reps: r, kind, drops: dropList });
-      setDrops([]);
+      await logSet(session, variant, model, { load: l, reps: r, kind: k, rir: k === 'effective' ? rir : null, drops: dropList });
+      setDrops([]); setRir(null);
+      if (repeat) { setLoad(String(l)); setReps(String(r)); }
       sfx.set();
-      if (kind === 'effective' && variant?.unit_confirmed && Number.isFinite(prevBest) && l > prevBest) {
+      if (k === 'effective' && variant?.unit_confirmed && Number.isFinite(prevBest) && l > prevBest) {
         setTimeout(() => { sfx.pr(); fx.stamp('Novo recorde', `${exercise?.name}: ${nf(prevBest)} → ${nf(l)} ${variant.unit}`); fx.confetti(); }, 350);
-      } else if (kind === 'effective' && combo + 1 >= 2) { sfx.combo(combo + 1); }
-      if (kind === 'effective' && auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 90); setRestOpen(true); }
+      } else if (k === 'effective' && combo + 1 >= 2) { sfx.combo(combo + 1); }
+      if (k === 'effective' && auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 90); setRestOpen(true); }
     });
   }
   // Depois de gravar: avança para o próximo alvo quando a meta deste foi atingida
@@ -233,9 +238,18 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                     </button>
                   ))}
                 </div>
+                {kind === 'effective' && <RirPicker value={rir} onChange={setRir} />}
                 {kind === 'effective' && <DropRows drops={drops} setDrops={setDrops} unit={variant?.unit} />}
                 {kind === 'effective' && drops.length < 8 && <button onClick={() => setDrops([...drops, { load: '', reps: '' }])} className="mt-2 chip text-xs text-violet border border-violet/40 rounded-lg px-3 py-1.5">+ Drop set (redução de carga)</button>}
-                <motion.button ref={registerRef} whileTap={{ scale: .95 }} disabled={busy || !load || !reps} onClick={submit}
+                {(() => {
+                  const lastEff = mySets.filter((x: any) => x.set_type === 'effective' && x.load_value != null && x.repetitions).at(-1);
+                  return lastEff && !drops.length && kind === 'effective' && (
+                    <button disabled={busy} onClick={() => submit({ load: lastEff.load_value, reps: lastEff.repetitions })} className="mt-3 w-full h-12 rounded-xl bg-white/10 border border-white/15 chip text-sm flex items-center justify-center gap-2 disabled:opacity-40">
+                      <RotateCcw size={16} /> Repetir série · {nf(lastEff.load_value)} {variant?.unit} × {lastEff.repetitions}{rir !== null ? ` · RIR ${rir === 5 ? '5+' : rir}` : ''}
+                    </button>
+                  );
+                })()}
+                <motion.button ref={registerRef} whileTap={{ scale: .95 }} disabled={busy || !load || !reps} onClick={() => submit()}
                   className="btn-sunset shine mt-3 w-full h-16 rounded-2xl text-[1.7rem] disabled:opacity-40">
                   Registrar série
                 </motion.button>
@@ -248,11 +262,25 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                   <motion.li key={s.id} initial={{ opacity: 0, x: -16, backgroundColor: 'rgba(255,197,77,.25)' }} animate={{ opacity: 1, x: 0, backgroundColor: 'rgba(255,255,255,.04)' }} transition={{ duration: .5 }}
                     className="flex items-center gap-3 rounded-lg px-3 py-2">
                     <span className={`num text-xs font-bold rounded px-1.5 py-0.5 ${s.set_type === 'warmup' ? 'bg-aqua/20 text-aqua' : s.set_type === 'drop_set' ? 'bg-violet/25 text-violet' : 'bg-gold/20 text-gold'}`}>{s.set_type === 'warmup' ? 'AQ' : s.set_type === 'drop_set' ? 'DROP' : `S${i + 1}`}</span>
-                    <span className="num text-lg font-bold flex-1">{nf(s.load_value)} <span className="text-sm text-haze">{s.load_unit_original}</span> × {s.repetitions}</span>
+                    <span className="num text-lg font-bold flex-1">{nf(s.load_value)} <span className="text-sm text-haze">{s.load_unit_original}</span> × {s.repetitions}{s.rir != null && <span className="text-xs text-aqua ml-2">RIR {s.rir}</span>}</span>
                     {s.xp_load_reference && <span className="chip text-[10px] text-cash">Carga superada</span>}
+                    {lastId === s.id && <button onClick={() => setEditLast({ load: String(s.load_value ?? ''), reps: String(s.repetitions ?? ''), rir: s.rir ?? null, kind: s.set_type })} aria-label="Corrigir última série" className="size-8 grid place-items-center rounded-md bg-white/10"><Pencil size={14} /></button>}
                   </motion.li>
                 ))}
               </ul>
+            )}
+            {editLast && (
+              <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-2">
+                <p className="hud-label text-gold text-[11px]">Corrigir última série</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <input inputMode="decimal" value={editLast.load} onChange={e => setEditLast({ ...editLast, load: e.target.value })} className="num rounded-lg bg-black/40 px-3 py-2 text-lg" aria-label="Carga corrigida" />
+                  <input inputMode="numeric" value={editLast.reps} onChange={e => setEditLast({ ...editLast, reps: e.target.value })} className="num rounded-lg bg-black/40 px-3 py-2 text-lg" aria-label="Repetições corrigidas" />
+                  <select value={editLast.kind} onChange={e => setEditLast({ ...editLast, kind: e.target.value })} className="rounded-lg bg-black/40 px-2 py-2" aria-label="Tipo corrigido"><option value="effective">Trabalho</option><option value="warmup">Aquecimento</option></select>
+                </div>
+                <RirPicker value={editLast.rir} onChange={(v: number | null) => setEditLast({ ...editLast, rir: v })} />
+                <div className="grid grid-cols-2 gap-2"><button onClick={() => setEditLast(null)} className="h-11 rounded-xl bg-white/10 chip">Cancelar</button>
+                  <button onClick={() => run(async () => { await correctLast(session, { load: Number(String(editLast.load).replace(',', '.')), reps: Number(editLast.reps), rir: editLast.rir, kind: editLast.kind }); setEditLast(null); })} className="h-11 rounded-xl btn-sunset">Salvar correção</button></div>
+              </div>
             )}
           </div>
         </motion.section>
@@ -378,5 +406,22 @@ export function Sheet({ children, onClose, title }: any) {
         {children}
       </motion.div>
     </motion.div>
+  );
+}
+
+/** Esforço da série: repetições que ainda daria para fazer (RIR). Opcional. */
+function RirPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const opts: [number, string][] = [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5+']];
+  return (
+    <div className="mt-3">
+      <p className="text-[11px] text-haze">Esforço (opcional): quantas repetições <b className="text-cream">ainda sobravam</b>?</p>
+      <div className="grid grid-cols-6 gap-1.5 mt-1.5" role="radiogroup" aria-label="Repetições em reserva (RIR)">
+        {opts.map(([v, l]) => (
+          <button key={v} role="radio" aria-checked={value === v} aria-label={`RIR ${l}`} onClick={() => onChange(value === v ? null : v)}
+            className={`h-10 rounded-lg num font-bold ${value === v ? (v === 0 ? 'bg-pink text-night' : 'bg-aqua text-night') : 'bg-black/40 border border-white/10'}`}>{l}</button>
+        ))}
+      </div>
+      <p className="text-[10px] text-haze mt-1">0 = não dava mais nenhuma · 5+ = sobrou bastante</p>
+    </div>
   );
 }
