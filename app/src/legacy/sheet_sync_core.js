@@ -140,7 +140,7 @@ export function stageInbound(doc,raw){
   const key=variantKey(exName,str(r[3]),str(r[7]));let variant=variants.get(key);if(!variant){variant={id:'sheet_variant_'+row,exercise_id:exercise.id,equipment_or_variation:str(r[3])||'Variação não informada',unit:str(r[7])||'reps',unit_confirmed:Boolean(str(r[7])),comparison_policy:'match_same_variant_only'};next.overlay.exercise_variants.push(variant);variants.set(key,variant);add.exercise_variants++;}
   const reportedRir=parseReportedRir(r[9]);
   const set={id:str(r[14])||'sheet_set_'+row,date:date(r[0]),session_id:sess.id,exercise_id:exercise.id,variant_id:variant.id,set_type:kind(r[4]),set_number:number(r[5]),load_value:number(r[6]),repetitions:number(r[8]),rir:reportedRir.value,rpe:number(r[10]),legacy_volume_index:number(r[11]),discomfort:str(r[12])||null,notes:str(r[13]),provenance:{sheet:'Series',row,...(reportedRir.estimated?{rir_reported_text:reportedRir.reported,rir_estimated_midpoint:true}:{})}};
-  const seconds=timedSeconds(str(r[7]),set.notes);if(seconds!==null){set.duration_ms=Math.round(seconds*1000);set.finisher_key='plank';}
+  const seconds=timedSeconds(str(r[7]),set.notes);if(seconds!==null){set.duration_ms=Math.round(seconds*1000);if(/^Bloco final · Prancha · /.test(set.notes||''))set.finisher_key='plank';}
   if(set.repetitions!==null&&!Number.isInteger(set.repetitions))throw new Error('Repetições decimais na linha '+row);
   next.overlay.sets.push(set);add.sets++;
  }

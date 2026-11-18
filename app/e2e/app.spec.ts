@@ -166,6 +166,27 @@ test('missão personalizada com relato de prontidão', async ({ page }) => {
   await expect(page.getByText('Missão em andamento')).toBeVisible();
 });
 
+test('série por tempo no roteiro (prancha)', async ({ page }) => {
+  await boot(page);
+  await page.getByRole('button', { name: /Missão personalizada/ }).click();
+  await page.getByRole('button', { name: 'Core', exact: true }).click();
+  await page.getByRole('button', { name: 'Montar missão' }).click();
+  await page.getByRole('button', { name: 'Iniciar', exact: true }).click();
+  await page.getByText('Toque para começar').click();
+  await page.getByRole('button', { name: /Prancha frontal/ }).first().click();
+  await expect(page.getByText(/Meta:\s*20–30 segundos/)).toBeVisible();
+  await page.getByLabel('Segundos realizados').fill('31,5');
+  await page.getByRole('button', { name: 'Salvar tempo' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await expect(page.getByText(/⏱ 31,5/)).toBeVisible();
+  // cronômetro
+  await page.getByRole('button', { name: 'Iniciar cronômetro' }).click();
+  await page.waitForTimeout(1300);
+  await page.getByRole('button', { name: 'Parar e salvar' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await expect(page.getByText(/^T2$/)).toBeVisible();
+});
+
 test('relato de dor bloqueia a montagem da missão', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: /Missão personalizada/ }).click();

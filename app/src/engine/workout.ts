@@ -149,6 +149,30 @@ export async function logSet(session: any, variant: any, model: any, input: SetI
   if (restTimer.state(session.id).auto) restTimer.start(session.id);
 }
 
+/** Série por tempo (ex.: prancha no roteiro). Formato aceito pelo coordenador da planilha:
+ *  unidade "segundos", carga 0, repetições vazias e nota "Tempo · N segundos". */
+export async function logTimed(session: any, planned: any, seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 1 || seconds > 3600) throw new Error('Informe de 1 a 3600 segundos.');
+  if (!session.planned_variant_ids?.includes(planned.id)) throw new Error('Escolha um exercício desta missão.');
+  const secs = Math.round(seconds * 100) / 100;
+  await perform(d => {
+    const s = d.overlay.sessions.find((x: any) => x.id === session.id && x.status === 'in_progress');
+    if (!s) throw new Error('O treino já foi concluído; não é possível adicionar séries.');
+    const all = [...(d.base?.entities?.exercise_variants || []), ...d.overlay.exercise_variants];
+    let v = all.find((x: any) => x.exercise_id === planned.exercise_id && x.unit === 'segundos' && x.equipment_or_variation === planned.equipment_or_variation);
+    if (!v) { const id = makeId('variant'); v = { id, exercise_id: planned.exercise_id, equipment_or_variation: planned.equipment_or_variation, unit: 'segundos', unit_confirmed: true, comparison_group_id: id, comparison_policy: 'match_same_variant_only', provenance: { source: 'android_local' } }; d.overlay.exercise_variants.push(v); }
+    const sets = [...(d.base?.entities?.sets || []), ...d.overlay.sets];
+    const number = sets.filter((x: any) => x.session_id === s.id && x.variant_id === v.id).reduce((n: number, x: any) => Math.max(n, x.set_number || 0), 0) + 1;
+    d.overlay.sets.push({
+      recorded_at: new Date().toISOString(), id: makeId('set'), date: s.date, session_id: s.id, session_name_original: s.name,
+      exercise_id: v.exercise_id, variant_id: v.id, planned_variant_id: planned.id, set_type: 'core', set_type_original: null, set_number: number,
+      load_value: 0, load_unit_original: 'segundos', repetitions: null, rir: null, rpe: null, legacy_volume_index: null, discomfort: null,
+      duration_ms: Math.round(secs * 1000), notes: `Tempo · ${secs.toFixed(2)} segundos`, provenance: { source: 'android_local' },
+    });
+  }, 'Tempo salvo no celular.');
+  if (restTimer.state(session.id).auto) restTimer.start(session.id);
+}
+
 /** Corrige a última série deste treino (mesma regra do comando "corrigir última" do assistente). */
 export async function correctLast(session: any, v: { load: number; reps: number; rir: number | null; kind: string }) {
   if (!Number.isInteger(v.reps) || v.reps < 1 || v.reps > 500 || !(v.load >= 0) || v.load > 10000) throw new Error('Confira carga e repetições.');

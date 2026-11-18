@@ -75,7 +75,7 @@ function operation_(input){
   numeric.forEach(function(c){var n=r.values[c];if(n!==''&&n!==null&&(typeof n!=='number'||!Number.isFinite(n)||n<0))syncError_('INVALID_NUMBER');});
   if(r.tab==='Treinos'&&(!r.values[2]||r.values[3]!=='Concluído'))syncError_('INVALID_SESSION');
   var timed=r.tab==='Series'&&r.values[7]==='segundos';
-  var timeMatch=timed&&/^Bloco final · Prancha · (\d+(?:\.\d+)?) segundos$/.exec(String(r.values[13]||''));
+  var timeMatch=timed&&/^(?:Bloco final · Prancha|Tempo) · (\d+(?:\.\d+)?) segundos$/.exec(String(r.values[13]||''));
   var validTime=!!timeMatch&&Number(timeMatch[1])>0&&Number.isFinite(Number(timeMatch[1]))&&r.values[8]===''&&r.values[6]===0;
   if(r.tab==='Series'&&(!r.values[1]||!r.values[2]||!r.values[7]||(timed?!validTime:(!Number.isInteger(r.values[8])||r.values[8]<1||r.values[8]>500))||(r.values[9]!==''&&r.values[9]>10)||(r.values[10]!==''&&r.values[10]>10)))syncError_('INVALID_SET');
   if(r.tab==='Peso'&&(!(r.values[1]>0)||r.values[1]>500||r.values[3]!==''||r.values[4]!==''))syncError_('INVALID_WEIGHT');

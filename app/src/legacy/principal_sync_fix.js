@@ -1,6 +1,6 @@
 export function timedSeconds(unit,notes){
  if(unit!=='segundos')return null;
- const match=/^Bloco final · Prancha · (\d+(?:\.\d+)?) segundos$/.exec(String(notes||''));
+ const match=/^(?:Bloco final · Prancha|Tempo) · (\d+(?:\.\d+)?) segundos$/.exec(String(notes||''));
  const n=match?Number(match[1]):NaN;
  return Number.isFinite(n)&&n>0?n:null;
 }

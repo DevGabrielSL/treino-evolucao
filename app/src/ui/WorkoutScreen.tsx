@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Pencil, Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2, X } from 'lucide-react';
-import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed } from '../engine/workout';
+import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, logTimed, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { onReward } from '../engine/store';
 import { xp, rankFor } from '../game/progress';
@@ -29,7 +29,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const guide = liveGuidance(session, current, entities);
   const sessionSets = model.sets.filter((s: any) => s.session_id === session.id);
   const lastId = lastDraftSet(doc, session.id)?.id;
-  const mySets = sessionSets.filter((s: any) => s.variant_id === current).sort((a: any, b: any) => (a.set_number || 0) - (b.set_number || 0));
+  const mySets = sessionSets.filter((s: any) => (s.planned_variant_id || s.variant_id) === current).sort((a: any, b: any) => (a.set_number || 0) - (b.set_number || 0));
   const totalTarget = ids.reduce((n, id) => n + (liveGuidance(session, id, entities).target || 0), 0);
   const totalDone = ids.reduce((n, id) => { const g = liveGuidance(session, id, entities); return n + Math.min(g.resolved, g.target ?? g.resolved); }, 0);
   const elapsed = workoutElapsed(session);
@@ -208,7 +208,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
           )}
 
           <div className="p-3">
-            {needsUnit ? (
+            {needsUnit && !timed ? (
               <div>
                 <p className="hud-label text-gold">Confirme a unidade de carga</p>
                 <p className="text-sm text-haze mt-1">Como a carga é medida neste equipamento? Isso evita comparar valores diferentes.</p>
@@ -223,7 +223,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                 </div>
               </div>
             ) : timed ? (
-              <p className="text-sm text-haze">A sugestão deste exercício usa segundos. O registro por tempo ainda não está disponível; não registre segundos como repetições. Use "Pular uma série" no menu ⋮ do exercício ou o bloco final para a prancha.</p>
+              <TimedEntry dose={guide.dose} busy={busy} onSave={(secs: number) => run(async () => { await logTimed(session, variant, secs); sfx.set(); if (auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 90); setRestOpen(true); } })} />
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -261,10 +261,10 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                 {mySets.map((s: any, i: number) => (
                   <motion.li key={s.id} initial={{ opacity: 0, x: -16, backgroundColor: 'rgba(255,197,77,.25)' }} animate={{ opacity: 1, x: 0, backgroundColor: 'rgba(255,255,255,.04)' }} transition={{ duration: .5 }}
                     className="flex items-center gap-3 rounded-lg px-3 py-2">
-                    <span className={`num text-xs font-bold rounded px-1.5 py-0.5 ${s.set_type === 'warmup' ? 'bg-aqua/20 text-aqua' : s.set_type === 'drop_set' ? 'bg-violet/25 text-violet' : 'bg-gold/20 text-gold'}`}>{s.set_type === 'warmup' ? 'AQ' : s.set_type === 'drop_set' ? 'DROP' : `S${i + 1}`}</span>
-                    <span className="num text-lg font-bold flex-1">{nf(s.load_value)} <span className="text-sm text-haze">{s.load_unit_original}</span> × {s.repetitions}{s.rir != null && <span className="text-xs text-aqua ml-2">RIR {s.rir}</span>}</span>
+                    <span className={`num text-xs font-bold rounded px-1.5 py-0.5 ${s.set_type === 'warmup' ? 'bg-aqua/20 text-aqua' : s.set_type === 'drop_set' ? 'bg-violet/25 text-violet' : 'bg-gold/20 text-gold'}`}>{s.set_type === 'warmup' ? 'AQ' : s.set_type === 'drop_set' ? 'DROP' : s.duration_ms != null ? `T${i + 1}` : `S${i + 1}`}</span>
+                    <span className="num text-lg font-bold flex-1">{s.duration_ms != null ? <>⏱ {nf(s.duration_ms / 1000, 1)} <span className="text-sm text-haze">s</span></> : <>{nf(s.load_value)} <span className="text-sm text-haze">{s.load_unit_original}</span> × {s.repetitions}{s.rir != null && <span className="text-xs text-aqua ml-2">RIR {s.rir}</span>}</>}</span>
                     {s.xp_load_reference && <span className="chip text-[10px] text-cash">Carga superada</span>}
-                    {lastId === s.id && <button onClick={() => setEditLast({ load: String(s.load_value ?? ''), reps: String(s.repetitions ?? ''), rir: s.rir ?? null, kind: s.set_type })} aria-label="Corrigir última série" className="size-8 grid place-items-center rounded-md bg-white/10"><Pencil size={14} /></button>}
+                    {lastId === s.id && s.duration_ms == null && <button onClick={() => setEditLast({ load: String(s.load_value ?? ''), reps: String(s.repetitions ?? ''), rir: s.rir ?? null, kind: s.set_type })} aria-label="Corrigir última série" className="size-8 grid place-items-center rounded-md bg-white/10"><Pencil size={14} /></button>}
                   </motion.li>
                 ))}
               </ul>
@@ -422,6 +422,32 @@ function RirPicker({ value, onChange }: { value: number | null; onChange: (v: nu
         ))}
       </div>
       <p className="text-[10px] text-haze mt-1">0 = não dava mais nenhuma · 5+ = sobrou bastante</p>
+    </div>
+  );
+}
+
+/** Registro por tempo: cronômetro ou digitação dos segundos. */
+function TimedEntry({ dose, busy, onSave }: { dose: any; busy: boolean; onSave: (secs: number) => void }) {
+  const [start, setStart] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [manual, setManual] = useState('');
+  useEffect(() => { if (start === null) return; const t = setInterval(() => setNow(Date.now()), 100); return () => clearInterval(t); }, [start]);
+  const secs = start === null ? 0 : (now - start) / 1000;
+  const inRange = dose && secs >= dose.min && secs <= dose.max;
+  return (
+    <div>
+      <p className="text-sm text-haze">Meta: <b className="text-cream">{dose?.min}–{dose?.max} segundos</b>. Encerre antes se perder a posição.</p>
+      <div className="mt-3 rounded-2xl bg-black/40 border border-white/10 p-4 text-center">
+        <p className={`num font-extrabold text-6xl ${inRange ? 'text-cash' : 'text-cream'}`} role="timer" aria-label="Cronômetro">{secs.toFixed(1)}<span className="text-2xl text-haze"> s</span></p>
+        {start === null
+          ? <button onClick={() => { setStart(Date.now()); setNow(Date.now()); }} className="mt-3 w-full h-14 rounded-xl bg-aqua text-night font-display uppercase text-2xl">Iniciar cronômetro</button>
+          : <button onClick={() => { const v = Math.max(1, Math.round(((Date.now() - start) / 1000) * 100) / 100); setStart(null); onSave(v); }} className="mt-3 w-full h-14 rounded-xl btn-sunset text-2xl">Parar e salvar</button>}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <input inputMode="decimal" value={manual} onChange={e => setManual(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="ou digite os segundos" aria-label="Segundos realizados" className="num flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2.5 text-lg" />
+        <button disabled={busy || !manual} onClick={() => { const v = Number(manual.replace(',', '.')); setManual(''); onSave(v); }} className="px-4 rounded-xl bg-white/10 chip text-sm disabled:opacity-40">Salvar tempo</button>
+      </div>
+      <p className="text-[11px] text-haze mt-2">Séries por tempo contam para a meta de séries, mas não somam XP (mesma regra da prancha do bloco final).</p>
     </div>
   );
 }
