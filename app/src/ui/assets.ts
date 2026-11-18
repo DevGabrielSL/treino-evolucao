@@ -2,3 +2,4 @@
 const urls = import.meta.glob('../assets/art/*', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const byName = Object.fromEntries(Object.entries(urls).map(([k, v]) => [k.split('/').pop()!, v]));
 export function asset(path: string) { const name = path.split('/').pop()!; return byName[name] || path; }
+export function hasAsset(name: string) { return name in byName; }

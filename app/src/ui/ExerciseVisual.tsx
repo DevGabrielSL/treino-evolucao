@@ -1,17 +1,17 @@
 import { exerciseArt } from '../legacy/principal_exercise_art.js';
 import { classifyExercise } from '../legacy/balanced_coach.js';
-import { asset } from './assets';
+import { asset, hasAsset } from './assets';
 
-// Só as ilustrações no estilo litoral/neon entram; as cartas do tema antigo ("forja") ficam de fora
-// para não quebrar a identidade visual. Os demais exercícios usam um cartão gerado.
-const TROPICAL = new Set(['crucifixo-maquina-inclinada', 'elevacao-lateral-polia', 'rosca-direta-polia', 'rosca-martelo', 'rosca-scott-maquina', 'supino-declinado-maquina', 'supino-inclinado-halteres', 'supino-reto-barra']);
+// Usa a ilustração do exercício quando ela existe em src/assets/art (estilo litoral/neon).
+// Para adicionar uma nova, basta salvar o arquivo com o nome exercise-<slug>.webp (ver docs/ILUSTRACOES.md).
+// Os demais exercícios usam um cartão gerado.
 const COVER: Record<string, string> = { peito: '01', biceps: '01', costas: '02', triceps: '02', ombros: '03', pernas: '04', core: '03' };
 const LABEL: Record<string, string> = { peito: 'Peito', biceps: 'Bíceps', costas: 'Costas', triceps: 'Tríceps', ombros: 'Ombros', pernas: 'Pernas', core: 'Core' };
 
 export function exerciseImage(name?: string, equipment?: string) {
   const src: string | undefined = exerciseArt(name || '', equipment || '')?.src;
   const slug = src?.match(/exercise-(.+)\.webp$/)?.[1];
-  return slug && TROPICAL.has(slug) ? asset(src!) : null;
+  return slug && hasAsset(`exercise-${slug}.webp`) ? asset(src!) : null;
 }
 
 export function ExerciseVisual({ name, equipment, size = 'lg', className = '' }: { name?: string; equipment?: string; size?: 'sm' | 'lg'; className?: string }) {

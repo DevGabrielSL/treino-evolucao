@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarDays, ChevronRight, Copy, Pencil, Play, Search, Trash2, TrendingUp } from 'lucide-react';
+import { CalendarDays, ChevronRight, Copy, Pencil, Play, Search, Share2, Trash2, TrendingUp } from 'lucide-react';
+import { shareMission } from '../fx/shareCard';
 import { searchHistory, compareHistoryPeriods, defaultHistoryFilters } from '../legacy/history.js';
 import { classifyExercise } from '../legacy/balanced_coach.js';
 import { loadUnits } from '../legacy/principal_unit.js';
@@ -197,6 +198,7 @@ function SessionSheet({ model, id, onClose, onError, onGoWorkout }: { model: any
         <div className="grid grid-cols-2 gap-2 mt-4 mb-2">
           {s.status === 'completed' && <button disabled={!!activeSession(model)} onClick={() => run(async () => { await repeatSession(id); onClose(); onGoWorkout(); })} className="h-12 rounded-xl btn-sunset text-lg flex items-center justify-center gap-1.5 disabled:opacity-40"><Play size={16} className="fill-current" />Repetir</button>}
           <button onClick={() => run(async () => { await templateFromSession(id, s.name); onClose(); })} className="h-12 rounded-xl bg-white/10 chip text-sm flex items-center justify-center gap-1.5"><Copy size={15} />Salvar como modelo</button>
+          {s.status === 'completed' && <button onClick={() => run(() => shareMission(model, id))} className="col-span-2 h-12 rounded-xl bg-white/10 chip text-sm flex items-center justify-center gap-1.5"><Share2 size={15} />Compartilhar cartão da missão</button>}
         </div>
       </div>
     </Sheet>
