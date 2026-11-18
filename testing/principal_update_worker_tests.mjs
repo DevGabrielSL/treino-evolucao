@@ -8,7 +8,7 @@ const code = readFileSync(join(dist, 'sw.js'), 'utf8');
 const index = readFileSync(join(dist, 'index.html'), 'utf8');
 const scope = 'https://example.com/treino-evolucao/';
 const oldCache = 'treino-evolucao-android-shell-v205-brand';
-const currentCache = 'treino-evolucao-android-shell-v207-workout-clocks';
+const currentCache = 'treino-evolucao-android-shell-v208-mission-effects';
 
 function setup({html = index, brokenAsset = false} = {}) {
   const listeners = new Map();
@@ -46,7 +46,7 @@ function setup({html = index, brokenAsset = false} = {}) {
     }
   };
   const fetch = async (request, options) => {
-    assert.equal(request, scope + 'index.html?release=207');
+    assert.equal(request, scope + 'index.html?release=208');
     assert.equal(options.cache, 'reload');
     return new Response(html);
   };
@@ -72,7 +72,7 @@ const offlineEntry = await upgrade.dispatch('fetch', {
 assert.equal(await offlineEntry.text(), index);
 assert.equal(upgrade.dispatch('fetch', {method: 'GET', url: 'https://sheets.googleapis.com/'}), undefined);
 
-for (const input of [{html: index.replace('app.js?v=207', 'app.js?v=206')}, {brokenAsset: true}]) {
+for (const input of [{html: index.replace('app.js?v=208', 'app.js?v=207')}, {brokenAsset: true}]) {
   const failed = setup(input);
   await assert.rejects(failed.dispatch('install'));
   assert.deepEqual(failed.calls, []);

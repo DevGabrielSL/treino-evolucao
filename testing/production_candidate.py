@@ -340,12 +340,13 @@ function renderFinishSummary(session,entities){
  const start=Date.parse(session.started_at||session.clock_started_at||'');
  const end=Date.parse(session.finished_at||'');
  const duration=Number.isFinite(start)&&Number.isFinite(end)?sessionClockLabel(Math.max(0,Math.floor((end-start)/1000))):'Tempo não registrado';
- return panel('<h2>Treino concluído</h2><p>'+e(session.name)+'</p><p><strong>'+e(duration)+'</strong></p>'+
- '<p>'+summary.work+' série(s) de trabalho · '+summary.warmup+' aquecimento(s)</p>'+
+ return panel('<header class="mission-finish-hero"><h2 id="mission-finish-title" tabindex="-1">Treino concluído</h2><p>'+e(session.name)+'</p></header>'+
+ '<dl class="mission-finish-stats"><div><dt>Tempo ativo</dt><dd>'+e(duration)+'</dd></div>'+
+ '<div><dt>Séries de trabalho</dt><dd>'+summary.work+'</dd></div><div><dt>Aquecimentos</dt><dd>'+summary.warmup+'</dd></div></dl>'+
  '<p>'+summary.drops+' redução(ões) de drop · '+summary.skipped+' série(s) pulada(s)</p>'+
  (summary.pending.length?'<p>'+summary.pending.reduce((n,item)=>n+item.remaining,0)+' série(s) planejada(s) ficaram pendentes.</p>':'')+
  '<p class="text-small">Treino salvo no aparelho. Confira a confirmação de envio ao Google Sheets.</p>'+
- '<button class="btn block" data-page="data">Ver sincronização</button>','deck-recap');
+ '<button class="btn block" data-page="data">Ver sincronização</button>','deck-recap mission-finish');
 }
 '''
 s=s.replace('function renderCoach(',helper+'\nfunction renderCoach(',1)
@@ -503,7 +504,11 @@ p=dist/'app.js';s=p.read_text()
 s="import {xpReward,showXpReward} from './principal_xp.js?v=195';\n"+s
 old="const nextGeneration=await saveSnapshot(next,storageGeneration);doc=next;storageGeneration=nextGeneration;saved=true;notify(message);render();return true;"
 assert s.count(old)==1
-s=s.replace(old,"const nextGeneration=await saveSnapshot(next,storageGeneration);const reward=xpReward(merged(doc),merged(next));doc=next;storageGeneration=nextGeneration;saved=true;notify(message);render();showXpReward(reward);return true;")
+s=s.replace(old,"""const nextGeneration=await saveSnapshot(next,storageGeneration);
+ const reward=xpReward(merged(doc),merged(next));
+ doc=next;storageGeneration=nextGeneration;saved=true;
+ if(reward){$('#toast').hidden=true;clearTimeout(toastTimer);}else notify(message);
+ render();showXpReward(reward);return true;""")
 p.write_text(s)
 p=dist/'principal_focus.css';p.write_text(p.read_text()+'\n'+(root/'testing/principal_xp.css').read_text())
 for name in ('sw.js','integrity.js','index.html'):
@@ -550,7 +555,7 @@ for name in ('app.js','sw.js','integrity.js'):
 # Reward a higher comparable load and allow removing a slot from the active plan.
 p=dist/'app.js';s=p.read_text()
 s=replace_once(s,"import {xpReward,showXpReward}","import {markLoadBonus,xpReward,showXpReward}")
-s=replace_once(s,"const next=commit(doc,mutate);const nextGeneration=await saveSnapshot(next,storageGeneration);const reward=", """const previous=merged(doc);
+s=replace_once(s,"const next=commit(doc,mutate);const nextGeneration=await saveSnapshot(next,storageGeneration);", """const previous=merged(doc);
  const previousSetIds=new Set(previous.sets.map(row=>row.id));
  const next=commit(doc,draft=>{
   mutate(draft);
@@ -562,7 +567,7 @@ s=replace_once(s,"const next=commit(doc,mutate);const nextGeneration=await saveS
     ||previous.exercise_variants.find(item=>item.id===row.variant_id);
    markLoadBonus(row,session,variant,previous);
   }
- });const nextGeneration=await saveSnapshot(next,storageGeneration);const reward=""")
+ });const nextGeneration=await saveSnapshot(next,storageGeneration);""")
 s=replace_once(s,"function renderTrainingTools(active,selected,m){","""function renderTrainingTools(active,selected,m){
  if(!selected)return panel('<h2>Roteiro sem exercícios</h2><p>Você pode seguir para o bloco final ou concluir o treino.</p>','focus-entry');""")
 s=replace_once(s,"active?.planned_variant_ids?.length?active.planned_variant_ids:(coachPlan?.items||[]).map(x=>x.variant_id)","active?(active.planned_variant_ids||[]):(coachPlan?.items||[]).map(x=>x.variant_id)")
@@ -870,3 +875,24 @@ for name in ('index.html', 'app.js', 'integrity.js', 'sw.js'):
                     .replace('index.html?release=206', 'index.html?release=207')
                     .replace('principal_mission.css?v=206', 'principal_mission.css?v=207')
                     .replace('v1.6.14', 'v1.6.15'))
+
+# Publish the updated feedback and completion screen as one offline shell.
+for name in ('index.html', 'app.js', 'integrity.js', 'sw.js'):
+    path = dist / name
+    source = (path.read_text()
+              .replace('shell-v207-workout-clocks', 'shell-v208-mission-effects')
+              .replace('app.js?v=207', 'app.js?v=208')
+              .replace('index.html?release=207', 'index.html?release=208')
+              .replace('principal_xp.js?v=197', 'principal_xp.js?v=208')
+              .replace('principal_focus.css?v=199', 'principal_focus.css?v=208')
+              .replace('principal_mission.css?v=207', 'principal_mission.css?v=208')
+              .replace('v1.6.15', 'v1.6.16'))
+    if name == 'index.html':
+        source = replace_once(source, '<div role="status" aria-live="polite" class="toast"',
+                              '<div id="xp-status" class="xp-status" role="status"></div>\n'
+                              '<div role="status" aria-live="polite" class="toast"')
+    if name == 'app.js':
+        source = replace_once(source, 'salvar localmente não confirma o envio.\');render();}',
+                              'salvar localmente não confirma o envio.\');render();'
+                              "$('#mission-finish-title')?.focus();}")
+    path.write_text(source)
