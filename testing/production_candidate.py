@@ -802,3 +802,30 @@ for name in ('app.js','sw.js','integrity.js','index.html'):
   assert s.count(needle)==1
   s=s.replace(needle,"'./principal_transport.js?v=201',"+needle)
  p.write_text(s)
+
+# Apply the coastal theme to the principal distribution.
+shutil.copy2(root / 'testing/principal_coastal.css', dist)
+coastal_assets = ['coastal-training.webp', 'coastal-city.webp']
+for name in coastal_assets:
+    shutil.copy2(root / 'testing/assets' / name, dist)
+for size in (192, 512):
+    shutil.copy2(root / f'testing/assets/icon-coastal-{size}.png', dist / 'icons')
+for name in ('index.html', 'manifest.webmanifest', 'sw.js', 'integrity.js', 'app.js'):
+    p = dist / name
+    source = p.read_text()
+    source = (source.replace('shell-v201-sync-network', 'shell-v202-coastal')
+              .replace('app.js?v=201', 'app.js?v=202')
+              .replace('manifest.webmanifest?v=150', 'manifest.webmanifest?v=202')
+              .replace('icon-rpg-', 'icon-coastal-'))
+    if name in ('index.html', 'manifest.webmanifest'):
+        source = source.replace('#10171e', '#100d1c')
+    if name == 'index.html':
+        source = source.replace('</head>', '<link rel="stylesheet" href="./principal_coastal.css">\n</head>')
+        source = source.replace('Emblema de cristal esmeralda e escudo dourado', 'Ícone do Treino &amp; Evolução')
+        source = source.replace('SUA PRÓXIMA JORNADA', 'SUA PRÓXIMA MISSÃO')
+    if name == 'app.js':
+        source = source.replace('SALA DE ESTRATÉGIA', 'SUA PRÓXIMA MISSÃO')
+    if name in ('sw.js', 'integrity.js'):
+        entries = ['principal_coastal.css', *coastal_assets]
+        source = source.replace("'./app.js?v=202'", "'./app.js?v=202'," + ','.join(repr('./' + asset) for asset in entries))
+    p.write_text(source)
