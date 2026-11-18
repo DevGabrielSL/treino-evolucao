@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "@fontsource/anton/400.css";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
+@import "@fontsource/barlow-condensed/800.css";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+
+@theme {
+  --font-display: "Anton", "Impact", sans-serif;
+  --font-hud: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+  --color-night: #0b0716;
+  --color-dusk: #170d2a;
+  --color-plum: #2a1342;
+  --color-pink: #ff2e93;
+  --color-flame: #ff6b3d;
+  --color-gold: #ffc54d;
+  --color-aqua: #1ee8d6;
+  --color-violet: #8d5cff;
+  --color-cream: #fff4e6;
+  --color-haze: #bfaed3;
+  --color-cash: #7cf29a;
+}
+
+@layer base {
+  :root { color-scheme: dark; }
+  html, body, #root { min-height: 100%; }
+  body {
+    margin: 0; background: var(--color-night); color: var(--color-cream);
+    font-family: var(--font-body); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  button { cursor: pointer; }
+}
+
+/* Céu ao entardecer fixo atrás de todas as telas */
+.sky {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% 108%, rgba(255,107,61,.34), transparent 60%),
+    radial-gradient(90% 50% at 85% 0%, rgba(141,92,255,.22), transparent 60%),
+    radial-gradient(70% 40% at 0% 30%, rgba(255,46,147,.16), transparent 65%),
+    linear-gradient(180deg, #0b0716 0%, #12091f 55%, #1c0c26 100%);
+}
+.sky::after { /* scanlines discretas, efeito "tela de jogo" */
+  content: ""; position: absolute; inset: 0; opacity: .05;
+  background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px);
+}
+
+.sunset-text {
+  background: linear-gradient(180deg, #ffe08a 0%, #ffb347 38%, #ff6b3d 62%, #ff2e93 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  padding: .18em 0 .14em; margin: -.18em 0 -.14em; /* acentos (Ã, Í) e cedilha não são cortados */
+  filter: drop-shadow(0 3px 0 rgba(40,6,40,.85)) drop-shadow(0 0 18px rgba(255,46,147,.35));
+}
+.title-slash { position: relative; display: inline-block; isolation: isolate; }
+.title-slash::before {
+  content: ""; position: absolute; z-index: -1; left: -.3em; right: -.35em; bottom: .08em; height: .42em;
+  background: linear-gradient(90deg, var(--color-pink), var(--color-flame));
+  transform: skewX(-18deg); border-radius: 2px; opacity: .9;
+}
+.panel {
+  background: linear-gradient(180deg, rgba(42,19,66,.72), rgba(23,13,42,.78));
+  border: 1px solid rgba(255,255,255,.08); border-radius: 18px;
+  box-shadow: 0 10px 40px -12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(14px);
+}
+.cut { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%); }
+.hud-label { font-family: var(--font-hud); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: .72rem; }
+.btn-sunset {
+  background: linear-gradient(95deg, #ff2e93 0%, #ff6b3d 55%, #ffb347 100%);
+  color: #1a0620; font-family: var(--font-display); letter-spacing: .04em; text-transform: uppercase;
+  box-shadow: 0 8px 28px -6px rgba(255,46,147,.65), inset 0 -3px 0 rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.btn-sunset:active { transform: translateY(1px) scale(.99); }
+.chip { font-family: var(--font-hud); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.duotone { filter: saturate(1.15) contrast(1.05); }
+.duotone-wrap { position: relative; overflow: hidden; }
+.duotone-wrap::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(141,92,255,.10), rgba(255,46,147,.18) 60%, rgba(11,7,22,.85)); mix-blend-mode: normal; }
+.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+.num { font-family: var(--font-hud); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+@keyframes drift { from { transform: translate3d(-3%, -2%, 0) scale(1); } to { transform: translate3d(3%, 2%, 0) scale(1.08); } }
+@keyframes shine { 0%, 60% { transform: translateX(-120%) skewX(-20deg); } 100% { transform: translateX(260%) skewX(-20deg); } }
+.shine { position: relative; overflow: hidden; }
+.shine::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); animation: shine 3.2s ease-in-out infinite; }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.pop { animation: pop .35s ease-out; }
