@@ -60,6 +60,7 @@ const suite = [
   ['testing/principal_variety_tests.mjs', null],
   ['testing/principal_cancel_tests.mjs', null],
   ['testing/diagnostico_conexao_tests.mjs', null],
+  ['testing/timed_sets_tests.mjs', 'TIMED_SETS_TESTS=9'],
 ];
 
 let failed = 0;
