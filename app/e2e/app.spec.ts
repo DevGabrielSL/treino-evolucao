@@ -107,6 +107,29 @@ test('missão completa: unidade, séries, drop set, pular, concluir e histórico
   await expect(page.getByText('Concluída').first()).toBeVisible();
 });
 
+test('esforço (RIR), repetir série e corrigir a última série', async ({ page }) => {
+  await boot(page);
+  await startFeaturedMission(page);
+  await confirmKg(page);
+  await page.getByLabel('Carga · kg', { exact: true }).fill('42,5');
+  await page.getByLabel('Repetições', { exact: true }).fill('10');
+  await page.getByRole('radio', { name: 'RIR 2' }).click();
+  await page.getByRole('button', { name: 'Registrar série' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await expect(page.getByText('RIR 2')).toBeVisible();
+  // repetir num toque
+  await page.getByRole('button', { name: /Repetir série · 42,5 kg × 10/ }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await expect(page.getByText(/2\/24 séries/)).toBeVisible();
+  // corrigir a última
+  await page.getByRole('button', { name: 'Corrigir última série' }).click();
+  await page.getByLabel('Repetições corrigidas').fill('8');
+  await page.getByRole('radio', { name: 'RIR 0' }).last().click();
+  await page.getByRole('button', { name: 'Salvar correção' }).click();
+  await expect(page.getByText('RIR 0')).toBeVisible();
+  await expect(page.locator('li', { hasText: '× 8' })).toBeVisible();
+});
+
 test('treino em andamento sobrevive a recarregar a página', async ({ page }) => {
   await boot(page);
   await startFeaturedMission(page);
