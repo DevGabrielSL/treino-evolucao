@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {recoverCoordinatorExchange} from './principal_transport.js';
+const op={protocol:1,action:'append',operationId:'operation_network_001',expectedRevision:6,records:[{tab:'Peso',values:['2026-11-18',80,'','','','','weight_1']}]};
+let count=0;const test=async(name,fn)=>{await fn();count++;console.log('PASS '+name)};
+await test('Resposta perdida depois de gravar recupera recibo sem duplicar',async()=>{
+ const receipts=new Map(),calls=[],delays=[];let writes=0;
+ const result=await recoverCoordinatorExchange(op,async request=>{calls.push(request);if(!receipts.has(request.operationId)){writes++;receipts.set(request.operationId,{done:true,response:{result:{ok:true,receipt:{operationId:request.operationId}}}});throw new TypeError('Failed to fetch');}return receipts.get(request.operationId);},{wait:async ms=>delays.push(ms)});
+ assert.equal(writes,1);assert.equal(calls.length,2);assert.deepEqual(calls[0],calls[1]);assert.equal(result.response.result.receipt.operationId,op.operationId);assert.deepEqual(delays,[750]);
+});
+await test('Falha anterior à execução repete conteúdo capturado',async()=>{let n=0;const seen=[];await recoverCoordinatorExchange(op,async request=>{seen.push(request);if(++n<3)throw new TypeError('NetworkError when attempting to fetch resource.');return true;},{wait:async()=>{}});assert.equal(n,3);assert.ok(seen.every(x=>JSON.stringify(x)===JSON.stringify(op)))});
+await test('Fila não é alterada pelo transporte ou pelo chamador',async()=>{const original=structuredClone(op),source=structuredClone(op),seen=[];let n=0;await recoverCoordinatorExchange(source,async request=>{seen.push(structuredClone(request));request.records[0].values[1]=99;if(++n===1){source.records[0].values[1]=90;throw new TypeError('Failed to fetch')}return true;},{wait:async()=>{}});assert.deepEqual(seen,[original,original]);assert.deepEqual(op,original)});
+await test('Falhas persistentes param em três e informam resultado não confirmado',async()=>{let n=0;await assert.rejects(recoverCoordinatorExchange(op,async()=>{n++;throw new TypeError('Failed to fetch')},{wait:async()=>{}}),e=>e.code==='COORDINATOR_NETWORK_ERROR'&&/confirmar/.test(e.message)&&!/Failed to fetch/.test(e.message));assert.equal(n,3)});
+for(const issue of [new Error('A sessão Google expirou.'),Object.assign(new Error('UNCERTAIN'),{code:'COORDINATOR_UNCERTAIN'}),new TypeError('Cannot read properties of undefined')])await test('Não repete '+issue.message,async()=>{let n=0;await assert.rejects(recoverCoordinatorExchange(op,async()=>{n++;throw issue},{wait:async()=>{}}),e=>e===issue);assert.equal(n,1)});
+await test('Leituras interrompidas recuperam sem criar operação de escrita',async()=>{const seen=[];await recoverCoordinatorExchange({protocol:1,action:'read'},async request=>{seen.push(request);if(seen.length===1)throw new TypeError('Load failed');return {done:true};},{wait:async()=>{}});assert.deepEqual(seen,[{protocol:1,action:'read'},{protocol:1,action:'read'}])});
+console.log('PRINCIPAL_TRANSPORT_TESTS='+count);

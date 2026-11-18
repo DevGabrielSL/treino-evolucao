@@ -785,3 +785,20 @@ for name in ('sw.js','integrity.js','index.html'):
 for name in ('app.js','sheet_sync_browser.js','automatic_sync.js','sw.js','integrity.js','index.html'):
  p=dist/name
  p.write_text(p.read_text().replace('shell-v199-workout-layout','shell-v200-sync-rejection').replace('app.js?v=199','app.js?v=200').replace('coordinator_client.js?v=196','coordinator_client.js?v=200'))
+
+# Recover interrupted coordinator exchanges with the original persisted operation.
+shutil.copy2(root/'testing/principal_transport.js',dist/'principal_transport.js')
+p=dist/'sheet_sync_browser.js'
+s=p.read_text()
+s="import {recoverCoordinatorExchange} from './principal_transport.js?v=201';\n"+s
+old="const execution=await request('https://script.googleapis.com/v1/scripts/'+encodeURIComponent(COORDINATOR_DEPLOYMENT_ID)+':run',{method:'POST',body:{function:'coordinateSync',parameters:[operation],devMode:false},fetchImpl});"
+new="const execution=await recoverCoordinatorExchange(operation,captured=>request('https://script.googleapis.com/v1/scripts/'+encodeURIComponent(COORDINATOR_DEPLOYMENT_ID)+':run',{method:'POST',body:{function:'coordinateSync',parameters:[captured],devMode:false},fetchImpl}));"
+assert s.count(old)==1
+p.write_text(s.replace(old,new))
+for name in ('app.js','sw.js','integrity.js','index.html'):
+ p=dist/name;s=p.read_text().replace('shell-v200-sync-rejection','shell-v201-sync-network').replace('app.js?v=200','app.js?v=201').replace('sheet_sync_browser.js?v=196','sheet_sync_browser.js?v=201')
+ if name in ('sw.js','integrity.js'):
+  needle="'./sheet_sync_browser.js?v=201'"
+  assert s.count(needle)==1
+  s=s.replace(needle,"'./principal_transport.js?v=201',"+needle)
+ p.write_text(s)
