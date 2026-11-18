@@ -11,6 +11,7 @@ on:
       - 'assistant-v105/**'
       - 'integration/**'
       - 'testing/**'
+      - 'app/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
@@ -866,12 +867,41 @@ jobs:
           node testing/diagnostico_conexao_tests.mjs
           cp testing/diagnostico_conexao.html dist/diagnostico_conexao.html
           cp testing/diagnostico_conexao.js dist/diagnostico_conexao.js
+      - name: Conferir que o app novo usa exatamente a lógica testada acima
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 app/scripts/verify_legacy.py
+      - name: Preparar Node para o app novo
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Montar o app novo (React + Vite) e o modo offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          npm ci
+          npm run build
+          test -f dist/index.html
+          test -f dist/sw.js
+          test -f dist/manifest.webmanifest
+          test -f dist/icons/icon-mission-192.png
+          grep -q 'treino-evolucao-android-shell-react-' dist/sw.js
+          grep -q 'Content-Security-Policy' dist/index.html
+          cp ../testing/diagnostico_conexao.html dist/diagnostico_conexao.html
+          cp ../testing/diagnostico_conexao.js dist/diagnostico_conexao.js
+          ! find dist -type f \( -iname '*historico*' -o -iname '*estado_operacional*' -o -iname '*privado*' \) | grep -q .
+          ! grep -rq 'session_demo' dist
+          echo 'APP_REACT_BUILD=OK; NO_PRIVATE_DATA=TRUE'
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato de publicação
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: app/dist
       - name: Publicar aplicativo
         id: deployment
         uses: actions/deploy-pages@v4
