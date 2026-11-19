@@ -10,6 +10,7 @@ import { weightInsights, recoveryInsights, recoveryRecords } from '../legacy/bod
 import { dateLocal } from '../legacy/metrics.js';
 import { soundOn, setSound, sfx } from '../fx/sfx';
 import { autoRest, setAutoRest } from './RestOverlay';
+import { progressionOn, setProgression } from '../engine/progression';
 import { ExerciseVisual } from './ExerciseVisual';
 import { ask } from './Dialog';
 import { nf } from './format';
@@ -363,7 +364,7 @@ function RegisterExercise({ model, onError }: { model: any; onError: (e: any) =>
 function SettingsApp({ doc, onError, toast }: Ctx) {
   const [busy, run] = useRun(onError);
   const [goal, setGoal] = useState(doc.settings.weekly_goal);
-  const [snd, setSnd] = useState(soundOn()), [rest, setRest] = useState(autoRest());
+  const [snd, setSnd] = useState(soundOn()), [rest, setRest] = useState(autoRest()), [prog, setProg] = useState(progressionOn());
   const [persist, setPersist] = useState<string>('Verificando…');
   const [diag, setDiag] = useState<any>(null);
   useEffect(() => { storageInfo().then((s: any) => setPersist(s.persistent === true ? 'Ativo' : s.persistent === false ? 'Não garantido' : 'Indisponível')).catch(() => setPersist('Não verificado')); }, []);
@@ -380,6 +381,10 @@ function SettingsApp({ doc, onError, toast }: Ctx) {
       <Card title="Jogo">
         <label className="flex items-center justify-between py-1.5"><span>Efeitos sonoros</span><input type="checkbox" checked={snd} onChange={e => { setSound(e.target.checked); setSnd(e.target.checked); if (e.target.checked) sfx.set(); }} className="size-5 accent-[#ff2e93]" /></label>
         <label className="flex items-center justify-between py-1.5"><span>Descanso automático após cada série</span><input type="checkbox" checked={rest} onChange={e => { setAutoRest(e.target.checked); setRest(e.target.checked); }} className="size-5 accent-[#1ee8d6]" /></label>
+      </Card>
+      <Card title="Treino">
+        <label className="flex items-center justify-between gap-3 py-1.5"><span>Sugestão de progressão de carga</span><input type="checkbox" checked={prog} onChange={e => { setProgression(e.target.checked); setProg(e.target.checked); }} className="size-5 accent-[#7cf29a]" /></label>
+        <p className="text-[11px] text-haze leading-snug">Opcional. Compara a última vez em cada exercício com a faixa de repetições: sugere subir um degrau quando todas as séries chegaram ao topo da faixa e sobraram repetições (RIR 1 ou mais); sem RIR, espera 2 treinos seguidos no topo. A carga só muda se você tocar em “Usar”. Dor ou técnica ruim valem mais que a sugestão.</p>
       </Card>
       <Card title="Armazenamento">
         <Row k="Proteção contra limpeza automática" v={persist} />

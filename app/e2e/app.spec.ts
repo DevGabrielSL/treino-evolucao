@@ -148,6 +148,45 @@ test('esforço (RIR), repetir série e corrigir a última série', async ({ page
   await expect(page.locator('li', { hasText: '× 8' })).toBeVisible();
 });
 
+test('sugestão de progressão (opcional): sobe um degrau depois do topo da faixa com RIR', async ({ page }) => {
+  await boot(page);
+  await page.getByRole('button', { name: 'Celular' }).click();
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByLabel('Sugestão de progressão de carga').check();
+  await page.getByRole('button', { name: 'Missões' }).click();
+
+  await startFeaturedMission(page);
+  await confirmKg(page);
+  await expect(page.getByTestId('progression')).toHaveCount(0); // sem histórico, sem sugestão
+  for (let i = 0; i < 2; i++) {
+    await page.getByLabel('Carga · kg', { exact: true }).fill('40');
+    await page.getByLabel('Repetições', { exact: true }).fill('20');
+    await page.getByRole('radio', { name: 'RIR 2' }).click();
+    await page.getByRole('button', { name: 'Registrar série' }).click();
+    await page.getByRole('button', { name: 'Minimizar' }).click();
+  }
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByRole('heading', { name: /Missão\s*concluída/i })).toBeHidden();
+
+  // mesmo deck de novo: o briefing já mostra a seta e o treino sugere 42,5 kg
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.getByRole('button', { name: 'Distrito Orla do Sol' }).click({ force: true });
+  await expect(page.getByText(/Deck 01 · Orla do Sol/)).toBeVisible();
+  await page.getByRole('button', { name: 'Briefing' }).click();
+  await expect(page.getByText('↑ 42,5 kg').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar missão' }).last().click();
+  await page.getByText('Toque para começar').click();
+  const hint = page.getByTestId('progression');
+  await expect(hint).toHaveAttribute('data-kind', 'subir');
+  await expect(hint).toContainText('Suba para 42,5 kg');
+  // a carga só muda com o toque
+  await expect(page.getByLabel('Carga · kg', { exact: true })).toHaveValue(/^40$/);
+  await hint.getByRole('button', { name: /Usar 42,5/ }).click();
+  await expect(page.getByLabel('Carga · kg', { exact: true })).toHaveValue(/^42[.,]5$/);
+});
+
 test('treino em andamento sobrevive a recarregar a página', async ({ page }) => {
   await boot(page);
   await startFeaturedMission(page);

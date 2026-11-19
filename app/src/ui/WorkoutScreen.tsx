@@ -12,6 +12,8 @@ import { ask } from './Dialog';
 import { ExerciseOptions, DropRows, FinisherPanel, type Drop } from './WorkoutExtras';
 import { clock, nf } from './format';
 import { Sheet } from './Sheet';
+import { progressionHint, progressionOn } from '../engine/progression';
+import { TrendingUp } from 'lucide-react';
 export { Sheet };
 
 type Props = { model: any; doc: any; session: any; onExit: () => void; onError: (e: any) => void; onFinished: (sessionId: string) => void };
@@ -85,6 +87,8 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   }, [current]);
 
   const needsUnit = variant && (variant.unit_confirmed !== true || !loadUnits.includes(variant.unit));
+  // Sugestão de progressão: só com a opção ligada em Ajustes; nunca preenche sozinha.
+  const hint = progressionOn() && !needsUnit ? progressionHint(current, guide.dose, entities, { excludeSession: session.id, today: session.date }) : null;
   const timed = guide.dose?.unit === 'segundos';
   const step = variant?.unit === 'plaquetas' ? 1 : variant?.unit === 'kg/halter' ? 1 : 2.5;
   const rest = restTimer.state(session.id);
@@ -206,6 +210,17 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
               <RotateCcw size={16} className="text-haze shrink-0" />
               <p className="text-sm flex-1"><span className="text-haze">Última vez:</span> <b className="num text-[15px]">{nf(ref.load_value)} {ref.load_unit_original || variant?.unit} × {ref.repetitions}</b></p>
               {!needsUnit && <button onClick={() => { setLoad(String(ref.load_value ?? '')); setReps(String(ref.repetitions ?? '')); }} className="chip text-xs text-gold border border-gold/40 rounded-md px-2 py-1">Usar</button>}
+            </div>
+          )}
+
+          {hint && !timed && (
+            <div data-testid="progression" data-kind={hint.kind} className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/5 ${hint.kind === 'subir' ? 'bg-cash/10' : hint.kind === 'confirmar' ? 'bg-gold/10' : 'bg-black/20'}`}>
+              <TrendingUp size={16} className={`shrink-0 mt-0.5 ${hint.kind === 'subir' ? 'text-cash' : hint.kind === 'confirmar' ? 'text-gold' : 'text-haze'}`} />
+              <div className="flex-1 min-w-0">
+                <p className="font-hud font-bold text-[15px] leading-tight">{hint.title}</p>
+                <p className="text-[12px] text-haze leading-snug mt-0.5">{hint.detail}</p>
+              </div>
+              {hint.kind !== 'manter' && <button onClick={() => { setLoad(String(hint.next)); setReps(String(hint.min)); sfx.tap(); }} className="chip text-xs text-cash border border-cash/40 rounded-md px-2 py-1 shrink-0">Usar {nf(hint.next)}</button>}
             </div>
           )}
 
