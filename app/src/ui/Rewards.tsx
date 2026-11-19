@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
-import { liveGuidance } from '../engine/workout';
+import { missionSummary } from '../game/summary';
+import { shareMission } from '../fx/shareCard';
+import { Share2 } from 'lucide-react';
 import { fx } from '../fx/FxLayer';
 import { sfx } from '../fx/sfx';
 import { AnimatePresence, motion, animate } from 'motion/react';
-import { XP_PER_LEVEL, rankFor, records, xp } from '../game/progress';
+import { XP_PER_LEVEL, rankFor } from '../game/progress';
 import type { XpReward } from '../engine/store';
 import { clock, nf } from './format';
 
@@ -35,21 +37,9 @@ export function MissionComplete({ data, model, onClose }: { data: { sessionId: s
   const [stage, setStage] = useState<'stats' | 'level'>('stats');
   useEffect(() => { sfx.complete(); const t = setTimeout(() => fx.confetti(), 450); return () => clearTimeout(t); }, []);
   if (!data) return null;
-  const s = model.entities.sessions.find((x: any) => x.id === data.sessionId);
-  const sets = model.sets.filter((x: any) => x.session_id === data.sessionId);
-  const work = sets.filter((x: any) => ['effective', 'core', 'back_off'].includes(x.set_type));
-  const volume = work.reduce((n: number, x: any) => n + (/^kg/.test(x.load_unit_original || '') && typeof x.load_value === 'number' ? x.load_value * x.repetitions : 0), 0);
-  const prs = records(model.entities).events.filter((e: any) => e.session_id === data.sessionId);
+  const sum = missionSummary(model, data.sessionId);
+  const { session: s, work, volume, prs, ms, missionXp, rating, ratingText } = sum;
   const r = data.reward, levelUp = r && r.to.level > r.from.level;
-  const ms = s?.started_at && s?.finished_at ? Date.parse(s.finished_at) - Date.parse(s.started_at) - (s.clock_paused_ms || 0) : (s?.duration_minutes ?? 0) * 60000;
-  const e = model.entities;
-  const without = { ...e, sets: e.sets.filter((x: any) => x.session_id !== data.sessionId), sessions: e.sessions.filter((x: any) => x.id !== data.sessionId) };
-  const missionXp = xp(e).total - xp(without).total;
-  const ids: string[] = s?.planned_variant_ids || [];
-  const allDone = ids.length > 0 && ids.every(id => { const g = liveGuidance(s, id, e); return g.target === null || g.resolved >= g.target; });
-  const beat = prs.length > 0 || sets.some((x: any) => x.xp_load_reference);
-  const rating = 1 + (allDone ? 1 : 0) + (allDone && beat ? 1 : 0);
-  const ratingText = ['', 'Missão cumprida', 'Missão completa', 'Missão perfeita'][rating];
   return (
     <motion.div className="fixed inset-0 z-[70] grid place-items-center px-5 overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="absolute inset-0 bg-black/85 backdrop-blur" />
@@ -110,6 +100,7 @@ export function MissionComplete({ data, model, onClose }: { data: { sessionId: s
           </motion.div>
         )}
         <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }} onClick={() => { if (levelUp && stage === 'stats') { sfx.level(); fx.confetti(); setStage('level'); } else onClose(); }} className="btn-sunset shine mt-8 w-full h-14 rounded-xl text-2xl">Continuar</motion.button>
+        <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2 }} onClick={() => shareMission(model, data.sessionId).catch(() => {})} className="mt-2 w-full h-12 rounded-xl bg-white/10 border border-white/15 chip text-sm flex items-center justify-center gap-2"><Share2 size={16} /> Compartilhar cartão da missão</motion.button>
       </div>
     </motion.div>
   );

@@ -93,6 +93,12 @@ test('missão completa: unidade, séries, drop set, pular, concluir e histórico
   await page.getByRole('button', { name: 'Concluir missão' }).click();
   await page.getByRole('button', { name: 'Concluir', exact: true }).click();
   await expect(page.getByRole('heading', { name: /Missão\s*concluída/i })).toBeVisible();
+  // cartão compartilhável (no navegador de teste vira download)
+  const card = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Compartilhar cartão da missão' }).click();
+  const png = readFileSync(await (await card).path());
+  expect(png.subarray(1, 4).toString()).toBe('PNG');
+  expect(png.length).toBeGreaterThan(50_000);
   await page.getByRole('button', { name: 'Continuar' }).click();
 
   await page.getByRole('button', { name: 'Histórico' }).click();
