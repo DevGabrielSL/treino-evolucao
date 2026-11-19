@@ -9,6 +9,7 @@ import { AnimatePresence, motion, animate } from 'motion/react';
 import { XP_PER_LEVEL, rankFor } from '../game/progress';
 import type { XpReward } from '../engine/store';
 import { clock, nf } from './format';
+import { tierName } from '../game/season';
 
 export function XpToast({ reward }: { reward: (XpReward & { key: number }) | null }) {
   return (
@@ -33,12 +34,13 @@ function Counter({ to, from = 0, duration = 1.4 }: { to: number; from?: number; 
   return <>{nf(v, 0)}</>;
 }
 
-export function MissionComplete({ data, model, onClose }: { data: { sessionId: string; reward: XpReward } | null; model: any; onClose: () => void }) {
+export function MissionComplete({ data, model, goal = 4, onClose }: { data: { sessionId: string; reward: XpReward } | null; model: any; goal?: number; onClose: () => void }) {
   const [stage, setStage] = useState<'stats' | 'level'>('stats');
   useEffect(() => { sfx.complete(); const t = setTimeout(() => fx.confetti(), 450); return () => clearTimeout(t); }, []);
   if (!data) return null;
-  const sum = missionSummary(model, data.sessionId);
-  const { session: s, work, volume, prs, ms, missionXp, rating, ratingText } = sum;
+  const sum = missionSummary(model, data.sessionId, goal);
+  const { session: s, work, volume, prs, ms, missionXp, rating, ratingText, season } = sum;
+  const tierUp = season.after > season.before;
   const r = data.reward, levelUp = r && r.to.level > r.from.level;
   return (
     <motion.div className="fixed inset-0 z-[70] grid place-items-center px-5 overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -96,6 +98,10 @@ export function MissionComplete({ data, model, onClose }: { data: { sessionId: s
               </div>
               <span className="font-display text-xl text-haze">{r.to.level + 1}</span>
             </div>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1, scale: tierUp ? [1, 1.12, 1] : 1 }} transition={{ delay: 2.1 }} data-testid="season-tier"
+              className={`chip text-[13px] mt-2 ${tierUp ? 'text-aqua' : 'text-haze'}`}>
+              Temporada {season.number > 0 ? season.number : ''} · {tierUp ? `Faixa ${season.before} → ${season.after} · ${tierName(season.after)}` : `Faixa ${season.after} do passe`}
+            </motion.p>
             {levelUp && <motion.p initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 2.4, type: 'spring' }} className="chip text-pink text-lg mt-2">Novo nível · {rankFor(r.to.level)}</motion.p>}
           </motion.div>
         )}

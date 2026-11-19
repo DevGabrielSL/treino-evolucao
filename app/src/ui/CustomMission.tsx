@@ -5,7 +5,7 @@ import { Play, RefreshCw, Sparkles, X } from 'lucide-react';
 import { buildCustomPlan, startPlan, replacementFor, type Readiness } from '../engine/workout';
 import { groupLabel } from '../legacy/coach_logic.js';
 import { ExerciseVisual } from './ExerciseVisual';
-import { Sheet } from './WorkoutScreen';
+import { Sheet } from './Sheet';
 import { asset } from './assets';
 import { nf } from './format';
 

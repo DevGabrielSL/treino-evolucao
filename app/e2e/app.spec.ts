@@ -99,7 +99,19 @@ test('missão completa: unidade, séries, drop set, pular, concluir e histórico
   const png = readFileSync(await (await card).path());
   expect(png.subarray(1, 4).toString()).toBe('PNG');
   expect(png.length).toBeGreaterThan(50_000);
+  await expect(page.getByTestId('season-tier')).toContainText('Temporada');
   await page.getByRole('button', { name: 'Continuar' }).click();
+
+  // mapa evolui: primeira luz da cidade e domínio do distrito concluído
+  await expect(page.getByTestId('city-lights')).toContainText('Cidade 1/10 luzes');
+  await expect(page.getByRole('button', { name: 'Distrito Orla do Sol, domínio 25%' })).toBeVisible();
+  // passe da temporada com desafios e chefão
+  await page.getByTestId('season-card').click();
+  const season = page.getByRole('dialog', { name: 'Temporada' });
+  await expect(season.getByText('Turnê pela cidade')).toBeVisible();
+  await expect(season.getByTestId('season-boss')).toBeVisible();
+  await season.getByRole('button', { name: 'Fechar' }).click();
+  await expect(season).toBeHidden();
 
   await page.getByRole('button', { name: 'Histórico' }).click();
   await expect(page.getByText('Concluída').first()).toBeVisible();

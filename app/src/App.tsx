@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useStore, onReward, type XpReward } from './engine/store';
 import { activeSession } from './engine/workout';
@@ -6,19 +6,26 @@ import { xp, weeklyRhythm } from './game/progress';
 import { TopHud } from './ui/Hud';
 import { BottomNav, type Tab } from './ui/BottomNav';
 import { MissionsScreen } from './ui/MissionsScreen';
-import { WorkoutScreen } from './ui/WorkoutScreen';
-import { CharacterScreen } from './ui/CharacterScreen';
-import { HistoryScreen } from './ui/HistoryScreen';
-import { PhoneScreen } from './ui/PhoneScreen';
 import { DialogHost } from './ui/Dialog';
 import { startSheets } from './engine/sheets';
 import { useUpdateReady, applyUpdate } from './engine/updates';
 import { RefreshCw } from 'lucide-react';
-import { MissionComplete } from './ui/Rewards';
 import { Sky } from './ui/Sky';
 import { FxLayer } from './fx/FxLayer';
 import { MissionIntro } from './ui/MissionIntro';
 import { asset } from './ui/assets';
+
+// Telas secundárias em pedaços separados: a abertura carrega só o essencial.
+// O service worker já guarda todos os pedaços, então continua funcionando offline.
+const CharacterScreen = lazy(() => import('./ui/CharacterScreen').then(m => ({ default: m.CharacterScreen })));
+const HistoryScreen = lazy(() => import('./ui/HistoryScreen').then(m => ({ default: m.HistoryScreen })));
+const PhoneScreen = lazy(() => import('./ui/PhoneScreen').then(m => ({ default: m.PhoneScreen })));
+const WorkoutScreen = lazy(() => import('./ui/WorkoutScreen').then(m => ({ default: m.WorkoutScreen })));
+const MissionComplete = lazy(() => import('./ui/Rewards').then(m => ({ default: m.MissionComplete })));
+
+function ScreenLoading() {
+  return <div className="px-4 pt-10 flex justify-center" aria-busy="true"><span className="size-8 rounded-full border-2 border-white/15 border-t-aqua animate-spin" /></div>;
+}
 
 export default function App() {
   const store = useStore();
@@ -51,17 +58,19 @@ export default function App() {
     <div className="max-w-lg mx-auto min-h-dvh relative">
       <Sky dim={!!showWorkout} />
       {showWorkout ? (
-        <WorkoutScreen key={active.id} model={model} doc={doc} session={active} onExit={() => setInWorkout(false)} onError={onError}
-          onFinished={(id) => { setComplete({ sessionId: id, reward: lastReward.current }); setInWorkout(true); }} />
+        <Suspense fallback={<ScreenLoading />}><WorkoutScreen key={active.id} model={model} doc={doc} session={active} onExit={() => setInWorkout(false)} onError={onError}
+          onFinished={(id) => { setComplete({ sessionId: id, reward: lastReward.current }); setInWorkout(true); }} /></Suspense>
       ) : (
         <>
           <TopHud xp={xp(model.entities)} rhythm={weeklyRhythm(model.entities, goal)} />
           <AnimatePresence mode="wait">
             <motion.main key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .2 }}>
+              <Suspense fallback={<ScreenLoading />}>
               {tab === 'missoes' && <MissionsScreen model={model} goal={goal} active={active} onResume={() => setInWorkout(true)} onStarted={(deck) => { setIntro(deck); setInWorkout(true); }} onError={onError} />}
               {tab === 'personagem' && <CharacterScreen model={model} goal={goal} />}
               {tab === 'historico' && <HistoryScreen model={model} onError={onError} onGoWorkout={goWorkout} />}
               {tab === 'mais' && <PhoneScreen onError={onError} toast={toastMsg} onGoWorkout={goWorkout} />}
+              </Suspense>
             </motion.main>
           </AnimatePresence>
           <BottomNav tab={tab} onTab={(t) => { setTab(t); if (t === 'missoes') setInWorkout(true); window.scrollTo(0, 0); }} live={!!active} />
@@ -70,7 +79,7 @@ export default function App() {
       <AnimatePresence>{intro && <MissionIntro deck={intro} onDone={() => setIntro(null)} />}</AnimatePresence>
       <FxLayer />
       {import.meta.env.VITE_DEMO === "1" && !showWorkout && <div className="fixed left-1/2 -translate-x-1/2 bottom-[88px] z-[45] chip text-[10px] rounded-full bg-black/70 border border-white/15 px-3 py-1 text-haze pointer-events-none">Demonstração · dados fictícios</div>}
-      <AnimatePresence>{complete && <MissionComplete data={complete} model={model} onClose={() => setComplete(null)} />}</AnimatePresence>
+      <Suspense fallback={null}><AnimatePresence>{complete && <MissionComplete data={complete} model={model} goal={goal} onClose={() => setComplete(null)} />}</AnimatePresence></Suspense>
       <DialogHost />
       <AnimatePresence>
         {updateReady && !intro && (
