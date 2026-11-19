@@ -12,6 +12,7 @@ import { Sparkles } from 'lucide-react';
 import { nf } from './format';
 import { cityLights, districtControl } from '../game/season';
 import { SeasonCard } from './SeasonPanel';
+import { progressionHint, progressionOn } from '../engine/progression';
 
 type Props = { model: any; goal: number; active: any; onResume: () => void; onError: (e: any) => void; onStarted: (deck: any) => void };
 
@@ -156,6 +157,7 @@ function Objective({ label, value, target }: { label: string; value: number; tar
 
 function Briefing({ deck, model, active, starting, onClose, onStart }: any) {
   const plan = useMemo(() => planFor(deck.id, model), [deck.id, model]);
+  const prog = progressionOn();
   return (
     <motion.div className="fixed inset-0 z-50 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -182,6 +184,7 @@ function Briefing({ deck, model, active, starting, onClose, onStart }: any) {
                 <div className="text-right">
                   <p className="num font-bold text-gold">3×{item.dose?.min}–{item.dose?.max}</p>
                   {item.last && <p className="num text-[11px] text-haze">últ. {nf(item.last.load_value)} {item.unit}</p>}
+                  {prog && (() => { const h = progressionHint(item.variant_id, item.dose, model.entities); return h?.kind === 'subir' ? <p className="num text-[11px] text-cash">↑ {nf(h.next)} {item.unit}</p> : null; })()}
                 </div>
               </motion.li>
             );

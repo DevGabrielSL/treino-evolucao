@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error', optimizeDeps: { noDiscovery: true, include: [] } });
 const S = await server.ssrLoadModule('/src/game/season.ts');
 const { PRESET_DECKS } = await server.ssrLoadModule('/src/legacy/principal_presets.js');
+const P = await server.ssrLoadModule('/src/engine/progression.ts');
 
 let failed = 0, passed = 0;
 async function test(name, fn) { try { await fn(); passed++; console.log('ok -', name); } catch (e) { failed++; console.error('FALHOU -', name, '\n', e); } }
@@ -94,6 +95,65 @@ await test('luzes da cidade acendem por total de missões', () => {
   assert.deepEqual(S.cityLights(0), { lit: 0, total: 10, next: S.CITY_UNLOCKS[0], missing: 1 });
   const l = S.cityLights(12); assert.equal(l.lit, 4); assert.equal(l.next.at, 15); assert.equal(l.missing, 3);
   assert.equal(S.cityLights(500).next, null);
+});
+
+// ---------- sugestão de progressão ----------
+const DOSE = { min: 8, max: 12, unit: 'repetições' };
+function hist(sessions, unit = 'kg') {
+  const e = { sessions: [], sets: [], exercises: [{ id: 'e1', name: 'Supino' }], exercise_variants: [{ id: 'v1', exercise_id: 'e1', unit, unit_confirmed: true, equipment_or_variation: 'Máquina' }] };
+  sessions.forEach(([date, rows], i) => {
+    const id = 'p' + i; e.sessions.push({ id, date, name: 'X', status: 'completed', finished_at: date + 'T20:00:00Z' });
+    rows.forEach(([load, reps, rir = null, type = 'effective'], k) => e.sets.push({ id: `${id}_${k}`, session_id: id, date, variant_id: 'v1', exercise_id: 'e1', set_type: type, load_value: load, load_unit_original: unit, repetitions: reps, rir }));
+  });
+  return e;
+}
+
+await test('progressão: topo da faixa com RIR ≥ 1 sugere subir um degrau', () => {
+  const h = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[40, 12, 2], [40, 12, 1], [40, 12, 1]]]]));
+  assert.equal(h.kind, 'subir'); assert.equal(h.next, 42.5); assert.equal(h.pct, 6); assert.match(h.detail, /Comece em 8/);
+});
+
+await test('progressão: topo no limite (RIR 0) mantém a carga', () => {
+  const h = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[40, 12, 2], [40, 12, 0]]]]));
+  assert.equal(h.kind, 'manter'); assert.equal(h.next, 40);
+});
+
+await test('progressão: sem RIR pede 2 treinos seguidos no topo', () => {
+  const one = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[40, 12], [40, 12], [40, 12]]]]));
+  assert.equal(one.kind, 'confirmar'); assert.equal(one.next, 42.5);
+  const two = P.progressionHint('v1', DOSE, hist([['2026-11-03', [[40, 12], [40, 12]]], ['2026-11-10', [[40, 12], [40, 12], [40, 12]]]]));
+  assert.equal(two.kind, 'subir');
+});
+
+await test('progressão: dentro ou abaixo da faixa mantém, e só a última sessão decide', () => {
+  const mid = P.progressionHint('v1', DOSE, hist([['2026-11-03', [[40, 12, 2], [40, 12, 2]]], ['2026-11-10', [[42.5, 10, 2], [42.5, 9, 2]]]]));
+  assert.equal(mid.kind, 'manter'); assert.equal(mid.current, 42.5); assert.match(mid.detail, /\+1 repetição/);
+  const low = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[50, 6], [50, 5], [50, 9]]]]));
+  assert.equal(low.kind, 'manter'); assert.match(low.detail, /abaixo de 8/);
+});
+
+await test('progressão: avalia a carga mais alta; aquecimento e drop não contam', () => {
+  const h = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[20, 15, null, 'warmup'], [40, 12, 1], [40, 12, 1], [30, 15, null, 'drop_set'], [35, 10, 3]]]]));
+  assert.equal(h.kind, 'subir'); assert.equal(h.current, 40);
+  const single = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[40, 12, 2]]]]));
+  assert.equal(single.kind, 'manter'); assert.match(single.detail, /pelo menos 2/);
+});
+
+await test('progressão: degraus por unidade e aviso de salto grande', () => {
+  assert.equal(P.loadStep('kg', 40), 2.5); assert.equal(P.loadStep('kg', 100), 5);
+  assert.equal(P.loadStep('kg/lado', 20), 1.25); assert.equal(P.loadStep('kg/halter', 10), 2); assert.equal(P.loadStep('plaquetas', 5), 1);
+  const h = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[8, 12, 2], [8, 12, 2]]]], 'kg/halter'));
+  assert.equal(h.next, 10); assert.equal(h.pct, 25); assert.match(h.detail, /salto é de 25%/);
+});
+
+await test('progressão: não sugere sem unidade confirmada, por tempo, sem histórico ou na sessão atual', () => {
+  const e = hist([['2026-11-10', [[40, 12, 2], [40, 12, 2]]]]);
+  assert.equal(P.progressionHint('v1', { ...DOSE, unit: 'segundos' }, e), null);
+  assert.equal(P.progressionHint('v1', null, e), null);
+  assert.equal(P.progressionHint('v1', DOSE, e, { excludeSession: 'p0' }), null);
+  assert.equal(P.progressionHint('v1', DOSE, e, { today: '2026-11-09' }), null);
+  e.exercise_variants[0].unit_confirmed = false; assert.equal(P.progressionHint('v1', DOSE, e), null);
+  assert.equal(P.progressionHint('v1', DOSE, hist([['2026-11-10', [[10, 12, 2], [10, 12, 2]]]], 'peso corporal')), null);
 });
 
 await server.close();
