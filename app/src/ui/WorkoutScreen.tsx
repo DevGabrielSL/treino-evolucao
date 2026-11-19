@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Pencil, Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2, X } from 'lucide-react';
+import { Pencil, Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2 } from 'lucide-react';
 import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, logTimed, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { onReward } from '../engine/store';
@@ -11,6 +11,8 @@ import { RestOverlay, autoRest, setAutoRest } from './RestOverlay';
 import { ask } from './Dialog';
 import { ExerciseOptions, DropRows, FinisherPanel, type Drop } from './WorkoutExtras';
 import { clock, nf } from './format';
+import { Sheet } from './Sheet';
+export { Sheet };
 
 type Props = { model: any; doc: any; session: any; onExit: () => void; onError: (e: any) => void; onFinished: (sessionId: string) => void };
 
@@ -396,18 +398,6 @@ function Summary({ session, entities, ids, sets }: any) {
   );
 }
 function Row({ k, v, warn }: any) { return <div className="flex items-baseline gap-2"><span className="text-haze font-hud">{k}</span><span className="flex-1 border-b border-dotted border-white/20" /><b className={warn ? 'text-gold' : ''}>{v}</b></div>; }
-
-export function Sheet({ children, onClose, title }: any) {
-  return (
-    <motion.div className="fixed inset-0 z-50 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <motion.div className="relative rounded-t-[24px] bg-dusk border-t border-white/10 p-4 pb-[max(env(safe-area-inset-bottom),20px)]" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}>
-        <div className="flex items-center justify-between mb-4"><h3 className="font-display uppercase text-2xl">{title}</h3><button onClick={onClose} aria-label="Fechar" className="size-9 grid place-items-center rounded-full bg-white/10"><X size={18} /></button></div>
-        {children}
-      </motion.div>
-    </motion.div>
-  );
-}
 
 /** Esforço da série: repetições que ainda daria para fazer (RIR). Opcional. */
 function RirPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {

@@ -40,6 +40,8 @@ jobs:
         run: npm ci
       - name: Regressões da lógica (armazenamento, backup, Sheets, assistente)
         run: node legacy-tests/run.mjs
+      - name: Testes da camada de jogo (temporadas e mapa)
+        run: node game-tests/run.mjs
       - name: Montar o app e o modo offline
         env:
           VITE_RELEASE: ${{ github.sha }}

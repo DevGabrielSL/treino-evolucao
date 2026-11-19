@@ -8,7 +8,7 @@ Os arquivos públicos do app serão publicados na raiz do repositório para uso 
 
 - `app/` — o aplicativo (React + Vite). Veja `app/README.md`.
 - `app/src/legacy/` — lógica de dados, backup, Google Sheets e assistente (fonte única).
-- `app/legacy-tests/` — regressões da lógica; `app/e2e/` — testes de ponta a ponta no navegador.
+- `app/legacy-tests/` — regressões da lógica; `app/game-tests/` — temporadas, domínio dos distritos e luzes da cidade; `app/e2e/` — testes de ponta a ponta no navegador.
 - `production/coordinator/` — coordenador em Apps Script da planilha.
 - `integration/tests/`, `quality/`, `testing/` — testes históricos ainda em uso pela bateria de regressões.
 

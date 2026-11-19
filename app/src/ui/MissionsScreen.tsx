@@ -10,6 +10,8 @@ import { asset } from './assets';
 import { CustomMission } from './CustomMission';
 import { Sparkles } from 'lucide-react';
 import { nf } from './format';
+import { cityLights, districtControl } from '../game/season';
+import { SeasonCard } from './SeasonPanel';
 
 type Props = { model: any; goal: number; active: any; onResume: () => void; onError: (e: any) => void; onStarted: (deck: any) => void };
 
@@ -43,6 +45,8 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
   const weekStart = (() => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toLocaleDateString('en-CA'); })();
   const weekSets = model.eff.filter((s: any) => s.date >= weekStart).length;
   const weekPR = records(entities).events.some((e: any) => e.date >= weekStart);
+  const control = useMemo(() => districtControl(entities), [entities]);
+  const city = cityLights(entities.sessions.filter((s: any) => s.status === 'completed').length);
 
   async function go(deck: any) {
     if (starting) return;
@@ -66,8 +70,13 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
 
       {/* Mapa da cidade */}
       <section>
-        <CityMap pins={decks.map((d: any) => ({ cover: d.cover, doneThisWeek: !!d.last && d.last >= weekStart }))}
+        <CityMap pins={decks.map((d: any, i: number) => ({ cover: d.cover, doneThisWeek: !!d.last && d.last >= weekStart, control: control[i] }))} lit={city.lit}
           selected={sel.index} recommended={featured.index} onSelect={(i) => { sfx.tap(); setSelected(i); }} />
+        <div className="mt-2 flex items-center gap-2 px-1 text-[11px] chip" data-testid="city-lights">
+          <span className="text-gold">Cidade {city.lit}/{city.total} luzes</span>
+          <span className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden"><span className="block h-full bg-gradient-to-r from-gold to-pink" style={{ width: `${(city.lit / city.total) * 100}%` }} /></span>
+          <span className="text-haze truncate">{city.next ? `${city.next.label} em ${city.missing} ${city.missing === 1 ? 'missão' : 'missões'}` : 'Cidade toda acesa'}</span>
+        </div>
       </section>
 
       {/* Missão selecionada */}
@@ -102,6 +111,8 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
         <span className="flex-1"><b className="font-display uppercase text-xl leading-[1.1] block">Missão personalizada</b><span className="text-xs text-haze">Escolha o foco e conte como está: o assistente monta o roteiro.</span></span>
         <ChevronRight className="text-haze" />
       </button>
+
+      <SeasonCard model={model} goal={goal} />
 
       {/* Metas da semana */}
       <section className="panel p-4">

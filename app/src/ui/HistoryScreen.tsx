@@ -8,7 +8,7 @@ import { loadUnits } from '../legacy/principal_unit.js';
 import { deleteSet, editSession, editSet, isLocalSession, isLocalSet, repeatSession, templateFromSession } from '../engine/edits';
 import { activeSession } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
-import { Sheet } from './WorkoutScreen';
+import { Sheet } from './Sheet';
 import { ask } from './Dialog';
 import { clock, nf } from './format';
 

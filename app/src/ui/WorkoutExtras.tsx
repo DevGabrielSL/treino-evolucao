@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeftRight, Ban, Minus, Plus, RotateCcw, Search, SkipForward, Trash2, Timer, Pause, Play } from 'lucide-react';
 import { changePlan, confirmUnit, loadUnits, liveGuidance, FINISHER_GOALS, finisherProgress, plankElapsed, recordFinisher, plank, removeFinisherRow } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
-import { Sheet } from './WorkoutScreen';
+import { Sheet } from './Sheet';
 import { ask } from './Dialog';
 import { clock, nf } from './format';
 

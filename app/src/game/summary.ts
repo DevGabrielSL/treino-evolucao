@@ -2,10 +2,11 @@
 import { liveGuidance, PRESET_DECKS } from '../engine/workout';
 import { records, xp } from './progress';
 import { classifyExercise } from '../legacy/balanced_coach.js';
+import { seasonOf, seasonProgress } from './season';
 
 const COVER: Record<string, string> = { peito: '01', biceps: '01', costas: '02', triceps: '02', ombros: '03', core: '03', pernas: '04' };
 
-export function missionSummary(model: any, sessionId: string) {
+export function missionSummary(model: any, sessionId: string, goal = 4) {
   const e = model.entities;
   const session = e.sessions.find((x: any) => x.id === sessionId);
   const sets = model.sets.filter((x: any) => x.session_id === sessionId);
@@ -23,5 +24,8 @@ export function missionSummary(model: any, sessionId: string) {
   const deck = PRESET_DECKS.findIndex((d: any) => d.name === session?.name);
   const group = classifyExercise(model.exerciseMap.get(work[0]?.exercise_id)) || 'peito';
   const cover = deck >= 0 ? `deck-cover-0${deck + 1}.webp` : `deck-cover-${COVER[group] || '01'}.webp`;
-  return { session, sets, work, volume, prs, ms: Math.max(0, ms), missionXp, rating, ratingText, cover };
+  // Passe da temporada antes e depois desta missão (mesmo período da missão).
+  const info = seasonOf(session?.date || undefined);
+  const season = { number: info.number, name: info.name, before: seasonProgress(without, goal, info).tier, after: seasonProgress(e, goal, info).tier };
+  return { session, sets, work, volume, prs, ms: Math.max(0, ms), missionXp, rating, ratingText, cover, season };
 }
