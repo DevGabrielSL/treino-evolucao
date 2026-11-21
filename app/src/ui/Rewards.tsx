@@ -10,6 +10,7 @@ import { XP_PER_LEVEL, rankFor } from '../game/progress';
 import type { XpReward } from '../engine/store';
 import { clock, hhmm, nf } from './format';
 import { tierName } from '../game/season';
+import { missionRanked } from '../game/ranked';
 
 export function XpToast({ reward }: { reward: (XpReward & { key: number }) | null }) {
   return (
@@ -41,6 +42,7 @@ export function MissionComplete({ data, model, goal = 4, onClose }: { data: { se
   const sum = missionSummary(model, data.sessionId, goal);
   const { session: s, work, volume, prs, ms, missionXp, rating, ratingText, season } = sum;
   const tierUp = season.after > season.before;
+  const rk = missionRanked(model.entities, data.sessionId, goal);
   const r = data.reward, levelUp = r && r.to.level > r.from.level;
   return (
     <motion.div className="fixed inset-0 z-[70] grid place-items-center px-5 overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -103,6 +105,10 @@ export function MissionComplete({ data, model, goal = 4, onClose }: { data: { se
               className={`chip text-[13px] mt-2 ${tierUp ? 'text-aqua' : 'text-haze'}`}>
               Temporada {season.number > 0 ? season.number : ''} · {tierUp ? `Faixa ${season.before} → ${season.after} · ${tierName(season.after)}` : `Faixa ${season.after} do passe`}
             </motion.p>
+            {rk && <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.3 }} data-testid="ranked-result"
+              className={`chip text-[13px] mt-1 ${rk.promoted ? 'text-gold' : 'text-cash'}`}>
+              Ranqueada +{rk.delta} pts · {rk.promoted ? `subiu para ${rk.promoted}!` : rk.label}
+            </motion.p>}
             {levelUp && <motion.p initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 2.4, type: 'spring' }} className="chip text-pink text-lg mt-2">Novo nível · {rankFor(r.to.level)}</motion.p>}
           </motion.div>
         )}

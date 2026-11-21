@@ -14,6 +14,7 @@ import { cityLights, districtControl } from '../game/season';
 import { SeasonCard } from './SeasonPanel';
 import { isMission } from '../engine/home';
 import { HomeCard, DailyCard } from './HomePanel';
+import { RankedCard } from './RankedPanel';
 import { progressionHint, progressionOn } from '../engine/progression';
 
 type Props = { model: any; goal: number; active: any; onResume: () => void; onError: (e: any) => void; onStarted: (deck: any) => void };
@@ -118,6 +119,7 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
       <DailyCard model={model} active={active} onStarted={onStarted} onError={onError} />
       <HomeCard model={model} active={active} onStarted={onStarted} onError={onError} />
 
+      <RankedCard model={model} goal={goal} />
       <SeasonCard model={model} goal={goal} />
 
       {/* Metas da semana */}
@@ -189,7 +191,7 @@ function Briefing({ deck, model, active, starting, onClose, onStart }: any) {
                 <div className="text-right">
                   <p className="num font-bold text-gold">3×{item.dose?.min}–{item.dose?.max}</p>
                   {item.last && <p className="num text-[11px] text-haze">últ. {nf(item.last.load_value)} {item.unit}</p>}
-                  {prog && (() => { const h = progressionHint(item.variant_id, item.dose, model.entities); return h?.kind === 'subir' ? <p className="num text-[11px] text-cash">↑ {nf(h.next)} {item.unit}</p> : null; })()}
+                  {prog && (() => { const h = progressionHint(item.variant_id, item.dose, model.entities); return h?.kind === 'subir' ? <p className="num text-[11px] text-cash">↑ {nf(h.next)} {item.unit}</p> : h?.kind === 'reduzir' ? <p className="num text-[11px] text-pink">↓ {nf(h.next)} {item.unit}</p> : null; })()}
                 </div>
               </motion.li>
             );

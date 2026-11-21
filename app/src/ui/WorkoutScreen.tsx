@@ -9,12 +9,13 @@ import { fx } from '../fx/FxLayer';
 import { sfx, soundOn, setSound } from '../fx/sfx';
 import { RestOverlay, autoRest, setAutoRest } from './RestOverlay';
 import { ask } from './Dialog';
-import { ExerciseOptions, DropRows, FinisherPanel, type Drop } from './WorkoutExtras';
+import { ExerciseOptions, DropRows, FinisherPanel, AddExercise, type Drop } from './WorkoutExtras';
 import { clock, nf } from './format';
 import { Sheet } from './Sheet';
 import { progressionHint, progressionOn } from '../engine/progression';
 import { finisherMarks } from '../engine/finisherMarks';
-import { TrendingUp } from 'lucide-react';
+import { notifyRestEnd } from '../fx/notify';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 export { Sheet };
 
 type Props = { model: any; doc: any; session: any; onExit: () => void; onError: (e: any) => void; onFinished: (sessionId: string) => void };
@@ -42,6 +43,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [busy, setBusy] = useState(false);
   const [restOpen, setRestOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [drops, setDrops] = useState<Drop[]>([]);
   const [finisher, setFinisher] = useState(() => { try { return sessionStorage.getItem('workout-finisher-session') === session.id || Boolean(session.finisher_plank_started_at) || model.sets.some((x: any) => x.session_id === session.id && x.finisher_key); } catch { return false; } });
@@ -189,7 +191,11 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
             </button>
           );
         })}
+        <button onClick={() => setAddOpen(true)} aria-label="Adicionar exercício" className="shrink-0 w-[74px] rounded-xl border-2 border-dashed border-aqua/50 text-aqua grid place-items-center bg-aqua/5">
+          <span className="flex flex-col items-center gap-1"><Plus size={22} /><span className="chip text-[10px] leading-tight text-center">Adicionar</span></span>
+        </button>
       </div>
+      {addOpen && <AddExercise model={model} session={session} onClose={() => setAddOpen(false)} onAdded={(id: string) => { setSelected(id); setAddOpen(false); }} onError={onError} />}
 
       {/* Cartão do exercício */}
       <AnimatePresence mode="wait">
@@ -213,13 +219,13 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
           )}
 
           {hint && !timed && (
-            <div data-testid="progression" data-kind={hint.kind} className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/5 ${hint.kind === 'subir' ? 'bg-cash/10' : hint.kind === 'confirmar' ? 'bg-gold/10' : 'bg-black/20'}`}>
-              <TrendingUp size={16} className={`shrink-0 mt-0.5 ${hint.kind === 'subir' ? 'text-cash' : hint.kind === 'confirmar' ? 'text-gold' : 'text-haze'}`} />
+            <div data-testid="progression" data-kind={hint.kind} className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/5 ${hint.kind === 'subir' ? 'bg-cash/10' : hint.kind === 'confirmar' ? 'bg-gold/10' : hint.kind === 'reduzir' ? 'bg-pink/10' : 'bg-black/20'}`}>
+              {hint.kind === 'reduzir' ? <TrendingDown size={16} className="shrink-0 mt-0.5 text-pink" /> : <TrendingUp size={16} className={`shrink-0 mt-0.5 ${hint.kind === 'subir' ? 'text-cash' : hint.kind === 'confirmar' ? 'text-gold' : 'text-haze'}`} />}
               <div className="flex-1 min-w-0">
                 <p className="font-hud font-bold text-[15px] leading-tight">{hint.title}</p>
                 <p className="text-[12px] text-haze leading-snug mt-0.5">{hint.detail}</p>
               </div>
-              {hint.kind !== 'manter' && <button onClick={() => { setLoad(String(hint.next)); setReps(String(hint.min)); sfx.tap(); }} className="chip text-xs text-cash border border-cash/40 rounded-md px-2 py-1 shrink-0">Usar {nf(hint.next)}</button>}
+              {hint.kind !== 'manter' && <button onClick={() => { setLoad(String(hint.next)); setReps(String(hint.min)); sfx.tap(); }} className={`chip text-xs rounded-md px-2 py-1 shrink-0 border ${hint.kind === 'reduzir' ? 'text-pink border-pink/40' : 'text-cash border-cash/40'}`}>Usar {nf(hint.next)}</button>}
             </div>
           )}
 
@@ -323,7 +329,8 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
         {optionsOpen && variant && <ExerciseOptions model={model} session={session} current={current} onClose={() => setOptionsOpen(false)} onSelect={setSelected} onError={onError} />}
       </AnimatePresence>
       <AnimatePresence>
-        {restOpen && <RestOverlay sessionId={session.id} since={lastAt} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1} de ${guide.target}` : `${exercise?.name} · série extra ou próximo alvo`} onClose={() => setRestOpen(false)} />}
+        <RestAlarm sessionId={session.id} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1}` : `${exercise?.name || 'próximo exercício'}`} overlay={restOpen} />
+      {restOpen && <RestOverlay sessionId={session.id} since={lastAt} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1} de ${guide.target}` : `${exercise?.name} · série extra ou próximo alvo`} onClose={() => setRestOpen(false)} />}
       </AnimatePresence>
       <AnimatePresence>
         {menu && (
@@ -460,5 +467,35 @@ function TimedEntry({ dose, busy, onSave }: { dose: any; busy: boolean; onSave: 
       </div>
       <p className="text-[11px] text-haze mt-2">Séries por tempo contam para a meta de séries, mas não somam XP (mesma regra da prancha do bloco final).</p>
     </div>
+  );
+}
+
+/** Alarme do descanso: funciona com a tela cheia aberta ou minimizada (antes só tocava na tela cheia). */
+function RestAlarm({ sessionId, next, overlay }: { sessionId: string; next: string; overlay: boolean }) {
+  const [, tick] = useState(0);
+  const [flash, setFlash] = useState(false);
+  const was = useRef(false), lastBeep = useRef(-1);
+  useEffect(() => { const t = setInterval(() => tick(x => x + 1), 250); return () => clearInterval(t); }, []);
+  const st = restTimer.state(sessionId);
+  useEffect(() => {
+    if (st.running && st.remaining <= 3 && st.remaining > 0 && lastBeep.current !== st.remaining) { lastBeep.current = st.remaining; sfx.tick(); }
+    // Fim natural (o cronômetro chegou a zero). "Pular" zera sem alarme.
+    if (was.current && !st.running && st.endsAt !== null) {
+      sfx.restEnd(); notifyRestEnd(next);
+      if (!overlay) { setFlash(true); setTimeout(() => setFlash(false), 4000); }
+    }
+    if (st.remaining > 3) lastBeep.current = -1;
+    was.current = st.running;
+  });
+  return (
+    <AnimatePresence>
+      {flash && (
+        <motion.button data-testid="rest-flash" onClick={() => setFlash(false)} initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }}
+          className="fixed top-[max(env(safe-area-inset-top),10px)] inset-x-3 z-[80] rounded-2xl px-4 py-3 text-left bg-gradient-to-r from-pink via-flame to-gold text-night shadow-[0_0_40px_rgba(255,46,147,.6)]">
+          <motion.span className="block font-display uppercase text-2xl leading-tight" animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: .6 }}>Descanso acabou!</motion.span>
+          <span className="block font-hud font-bold text-sm">A seguir: {next}</span>
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }

@@ -39,6 +39,8 @@ export function presetItems(deck){return deck.items.map(value=>{
  dose.label=`Sugestão: 3 série(s) de ${dose.min}–${dose.max} repetições`;
  return {group,name,equipment,unit,exercise_id:'preset_ex_'+key,variant_id:'preset_var_'+key,is_catalog:true,last:null,dose};
 });}
+/** Catálogo completo dos decks (para adicionar exercício durante o treino). */
+export function catalogItems(){return presetItems({items:Object.keys(registry)});}
 export function presetPlan(id,entities,today,readiness={}){
  const deck=PRESET_DECKS.find(x=>x.id===id);if(!deck)throw new Error('Deck pronto não encontrado.');
  const adjustment=readinessAdjustment(readiness);if(adjustment.blocked)throw new Error(adjustment.summary);

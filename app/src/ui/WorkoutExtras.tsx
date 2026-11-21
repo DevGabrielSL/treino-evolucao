@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeftRight, Ban, Minus, Plus, RotateCcw, Search, SkipForward, Trash2, Timer, Pause, Play } from 'lucide-react';
-import { changePlan, confirmUnit, loadUnits, liveGuidance, FINISHER_GOALS, finisherProgress, plankElapsed, recordFinisher, plank, removeFinisherRow } from '../engine/workout';
+import { addToPlan, doseForAdded, changePlan, confirmUnit, loadUnits, liveGuidance, FINISHER_GOALS, finisherProgress, plankElapsed, recordFinisher, plank, removeFinisherRow } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { ask } from './Dialog';
 import { clock, nf } from './format';
-import { finisherMarks, type Mark } from '../engine/finisherMarks';
+import { finisherMarks, plankBestSingle, type Mark } from '../engine/finisherMarks';
+import { sfx } from '../fx/sfx';
+import { catalogItems } from '../legacy/principal_presets.js';
+import { homeCatalog } from '../engine/home';
 
 /* ---------- Opções do exercício atual ---------- */
 export function ExerciseOptions({ model, session, current, onClose, onSelect, onError }: { model: any; session: any; current: string; onClose: () => void; onSelect: (id: string) => void; onError: (e: any) => void }) {
@@ -89,6 +92,15 @@ export function FinisherPanel({ model, session, onError }: { model: any; session
   const run = async (fn: () => Promise<any>) => { try { await fn(); } catch (e) { onError(e); } };
   const secs = Math.floor(plankElapsed(session, model.sets) / 1000);
   const marks = { abs: finisherMarks(model.entities, 'abs', session.id), plank: finisherMarks(model.entities, 'plank', session.id) };
+  // Maior série única: compara o trecho atual (cronômetro rodando) e os trechos já salvos hoje.
+  const savedRows = model.sets.filter((s: any) => s.session_id === session.id && s.finisher_key === 'plank');
+  const savedSecs = Math.floor(savedRows.reduce((n: number, s: any) => n + (s.duration_ms || 0), 0) / 1000);
+  const currentSecs = running ? Math.max(0, secs - savedSecs) : 0;
+  const todayBest = Math.max(0, ...savedRows.map((s: any) => Math.round((s.duration_ms || 0) / 1000)));
+  const single = plankBestSingle(model.entities, session.id);
+  const singleRecord = single ? Math.max(currentSecs, todayBest) > single.value : false;
+  const celebrated = useRef(false);
+  useEffect(() => { if (singleRecord && !celebrated.current) { celebrated.current = true; sfx.pr(); } }, [singleRecord]);
   const recent = model.sets.filter((s: any) => s.session_id === session.id && FINISHER_GOALS.some((g: any) => g.key === s.finisher_key)).slice(-4).reverse();
   return (
     <section className="mx-3 mt-3 panel p-4">
@@ -113,6 +125,11 @@ export function FinisherPanel({ model, session, onError }: { model: any; session
         </div>
         <div className="flex-1"><b className="font-hud text-lg">Prancha</b><p className={`num text-2xl font-extrabold ${marks.plank.last && secs > marks.plank.last.value ? 'text-cash' : ''}`}>{clock(secs * 1000)}</p>
           <VsLast done={secs} last={marks.plank.last} best={marks.plank.best} fmt={(n: number) => clock(n * 1000)} unit="s" testid="plank-vs" compact />
+          <p data-testid="plank-single" className={`num text-[12px] mt-1 ${singleRecord ? 'text-cash font-bold' : 'text-haze'}`}>
+            {singleRecord ? `Recorde de série: ${clock(Math.max(currentSecs, todayBest) * 1000)}! (antes ${clock(single!.value * 1000)})`
+              : running ? `Série atual ${clock(currentSecs * 1000)}${single ? ` · maior série ${clock(single.value * 1000)}` : ''}`
+              : single ? `Maior série: ${clock(single.value * 1000)} (${single.date.slice(8, 10)}/${single.date.slice(5, 7)})${todayBest ? ` · hoje ${clock(todayBest * 1000)}` : ''}` : todayBest ? `Maior série hoje: ${clock(todayBest * 1000)}` : 'Maior série: registre a primeira.'}
+          </p>
           {paused && <p className="text-[11px] text-haze">Retome o treino para continuar.</p>}</div>
         <button disabled={paused} onClick={() => run(() => plank(session, !running))} className={`h-12 px-4 rounded-xl chip text-sm flex items-center gap-1 disabled:opacity-40 ${running ? 'bg-gold text-night' : 'bg-aqua text-night'}`}>{running ? <><Pause size={16} />Salvar trecho</> : <><Play size={16} />{secs ? 'Continuar' : 'Iniciar'}</>}</button>
       </div>
@@ -143,5 +160,51 @@ function VsLast({ done, last, best, fmt, unit, testid, compact }: { done: number
         {ahead ? `Superou a última em +${unit === 's' ? fmt(diff) : diff + ' ' + unit}!` : diff === 0 && done > 0 ? 'Empatou com a última. Mais uma!' : `Faltam ${unit === 's' ? fmt(-diff) : -diff + ' ' + unit} para superar`}
       </p>
     </div>
+  );
+}
+
+/* ---------- Adicionar exercício durante o treino ---------- */
+export function AddExercise({ model, session, onClose, onAdded, onError }: { model: any; session: any; onClose: () => void; onAdded: (id: string) => void; onError: (e: any) => void }) {
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const norm = (x: string) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const options = useMemo(() => {
+    const occupied = new Set((session.planned_variant_ids || []).flatMap((id: string) => [id, ...(session.prior_planned_variants?.[id] || [])]));
+    const used = new Set<string>();
+    const mine = model.entities.exercise_variants.filter((v: any) => !occupied.has(v.id)).map((v: any) => {
+      const e = model.exerciseMap.get(v.exercise_id); if (!e) return null;
+      used.add(norm(e.name) + '|' + norm(v.equipment_or_variation));
+      return { key: v.id, name: e.name, equipment: v.equipment_or_variation, unit: v.unit, mine: true, item: { variant_id: v.id, unit: v.unit, is_catalog: false } };
+    }).filter(Boolean);
+    const known = new Set(model.entities.exercise_variants.map((v: any) => v.id));
+    const catalog = [...catalogItems(), ...homeCatalog(model.entities)].filter((i: any) => !occupied.has(i.variant_id) && !known.has(i.variant_id) && !used.has(norm(i.name) + '|' + norm(i.equipment)))
+      .map((i: any) => ({ key: i.variant_id, name: i.name, equipment: i.equipment, unit: i.unit, mine: false, item: { ...i, is_catalog: true } }));
+    return [...mine, ...catalog].filter((o: any) => !q || norm(`${o.name} ${o.equipment}`).includes(norm(q)))
+      .sort((a: any, b: any) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name, 'pt-BR')).slice(0, 80);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model, session, q]);
+  const add = async (o: any) => {
+    if (busy) return; setBusy(true);
+    try {
+      const dose = o.item.dose || doseForAdded({ id: o.item.variant_id, unit: o.unit }, model.entities);
+      const id = await addToPlan(session, { ...o.item, dose }, model); sfx.set(); onAdded(id);
+    } catch (e) { onError(e); } finally { setBusy(false); }
+  };
+  return (
+    <Sheet onClose={onClose} title="Adicionar exercício">
+      <div className="flex items-center gap-2 rounded-xl bg-black/40 border border-white/10 px-3"><Search size={16} className="text-haze" /><input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar exercício ou equipamento" aria-label="Buscar exercício" className="flex-1 bg-transparent py-2.5 outline-none" /></div>
+      <p className="text-[11px] text-haze mt-2">Entra no fim do roteiro com 3 séries (ou a faixa que você usou da última vez). Seus exercícios aparecem primeiro.</p>
+      <ul className="mt-2 max-h-[52vh] overflow-y-auto no-scrollbar space-y-1.5">
+        {options.map((o: any) => (
+          <li key={o.key}><button disabled={busy} onClick={() => add(o)} className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-2 text-left disabled:opacity-50">
+            <div className="duotone-wrap size-11 rounded-lg shrink-0"><ExerciseVisual name={o.name} equipment={o.equipment} size="sm" /></div>
+            <span className="flex-1 min-w-0"><b className="font-hud block truncate">{o.name}</b><span className="text-[11px] text-haze truncate block">{o.equipment} · {o.unit === 'a confirmar' ? 'unidade a confirmar' : o.unit}</span></span>
+            {!o.mine && <span className="chip text-[10px] text-aqua shrink-0">catálogo</span>}
+            <Plus size={18} className="text-aqua shrink-0" />
+          </button></li>
+        ))}
+        {!options.length && <p className="text-sm text-haze text-center py-6">Nada encontrado. Cadastre um exercício novo no app Modelos do Celular.</p>}
+      </ul>
+    </Sheet>
   );
 }

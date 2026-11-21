@@ -11,6 +11,7 @@ import { dateLocal } from '../legacy/metrics.js';
 import { soundOn, setSound, sfx } from '../fx/sfx';
 import { autoRest, setAutoRest } from './RestOverlay';
 import { progressionOn, setProgression } from '../engine/progression';
+import { notifySupported, restNotifyOn, setRestNotify } from '../fx/notify';
 import { ExerciseVisual } from './ExerciseVisual';
 import { ask } from './Dialog';
 import { nf } from './format';
@@ -364,7 +365,7 @@ function RegisterExercise({ model, onError }: { model: any; onError: (e: any) =>
 function SettingsApp({ doc, onError, toast }: Ctx) {
   const [busy, run] = useRun(onError);
   const [goal, setGoal] = useState(doc.settings.weekly_goal);
-  const [snd, setSnd] = useState(soundOn()), [rest, setRest] = useState(autoRest()), [prog, setProg] = useState(progressionOn());
+  const [snd, setSnd] = useState(soundOn()), [rest, setRest] = useState(autoRest()), [prog, setProg] = useState(progressionOn()), [notify, setNotify] = useState(restNotifyOn());
   const [persist, setPersist] = useState<string>('Verificando…');
   const [diag, setDiag] = useState<any>(null);
   useEffect(() => { storageInfo().then((s: any) => setPersist(s.persistent === true ? 'Ativo' : s.persistent === false ? 'Não garantido' : 'Indisponível')).catch(() => setPersist('Não verificado')); }, []);
@@ -382,9 +383,15 @@ function SettingsApp({ doc, onError, toast }: Ctx) {
         <label className="flex items-center justify-between py-1.5"><span>Efeitos sonoros</span><input type="checkbox" checked={snd} onChange={e => { setSound(e.target.checked); setSnd(e.target.checked); if (e.target.checked) sfx.set(); }} className="size-5 accent-[#ff2e93]" /></label>
         <label className="flex items-center justify-between py-1.5"><span>Descanso automático após cada série</span><input type="checkbox" checked={rest} onChange={e => { setAutoRest(e.target.checked); setRest(e.target.checked); }} className="size-5 accent-[#1ee8d6]" /></label>
       </Card>
+      <Card title="Alarme do descanso">
+        <p className="text-[12px] text-haze leading-snug">O fim do descanso toca 3 rajadas fortes e vibra, mesmo com a tela de descanso minimizada. O volume é o de <b>mídia</b> do celular (não o da campainha).</p>
+        <button onClick={() => sfx.restEnd()} className="mt-2 w-full h-11 rounded-xl bg-white/10 chip text-sm">Testar alarme</button>
+        {notifySupported() && <label className="flex items-center justify-between gap-3 py-1.5 mt-2"><span>Notificar com o app em segundo plano</span><input type="checkbox" checked={notify} onChange={async e => setNotify(await setRestNotify(e.target.checked))} className="size-5 accent-[#7cf29a]" /></label>}
+        {notifySupported() && <p className="text-[11px] text-haze leading-snug">Útil se você trocar de app durante o descanso. Com a tela bloqueada, o Android pode atrasar o aviso.</p>}
+      </Card>
       <Card title="Treino">
         <label className="flex items-center justify-between gap-3 py-1.5"><span>Sugestão de progressão de carga</span><input type="checkbox" checked={prog} onChange={e => { setProgression(e.target.checked); setProg(e.target.checked); }} className="size-5 accent-[#7cf29a]" /></label>
-        <p className="text-[11px] text-haze leading-snug">Opcional. Compara a última vez em cada exercício com a faixa de repetições: sugere subir um degrau quando todas as séries chegaram ao topo da faixa e sobraram repetições (RIR 1 ou mais); sem RIR, espera 2 treinos seguidos no topo. A carga só muda se você tocar em “Usar”. Dor ou técnica ruim valem mais que a sugestão.</p>
+        <p className="text-[11px] text-haze leading-snug">Opcional. Compara a última vez em cada exercício com a faixa de repetições: sugere subir um degrau quando todas as séries chegaram ao topo da faixa e sobraram repetições (RIR 1 ou mais; sem RIR, espera 2 treinos seguidos no topo) e sugere reduzir quando as repetições ficaram abaixo da faixa ou você chegou na falha (RIR 0) em 2 ou mais séries. A carga só muda se você tocar em “Usar”. Dor ou técnica ruim valem mais que a sugestão.</p>
       </Card>
       <Card title="Armazenamento">
         <Row k="Proteção contra limpeza automática" v={persist} />

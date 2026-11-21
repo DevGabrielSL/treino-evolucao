@@ -41,13 +41,7 @@ export async function startPlan(plan: any, model: any): Promise<string> {
   if (plan.adjustment?.blocked) throw new Error('Montagem suspensa pelo relato de dor.');
   const ids = plan.items.map((x: any) => x.variant_id), group = groupLabel(plan.groups), id = makeId('session');
   await perform(d => {
-    const catalog = catalogEntities(plan.items);
-    // Itens com unidade já definida (peso corporal, tempo) dispensam a confirmação de unidade.
-    for (const v of catalog.variants) if (plan.items.some((i: any) => i.variant_id === v.id && i.unit_confirmed === true)) v.unit_confirmed = true;
-    const allEx = [...(d.base?.entities?.exercises || []), ...d.overlay.exercises];
-    const allVar = [...(d.base?.entities?.exercise_variants || []), ...d.overlay.exercise_variants];
-    for (const ex of catalog.exercises) { const existing = allEx.find((x: any) => x.id === ex.id); if (existing && existing.name !== ex.name) throw new Error('Identificador de exercício já está em uso.'); if (!existing) d.overlay.exercises.push(ex); }
-    for (const v of catalog.variants) { const existing = allVar.find((x: any) => x.id === v.id); if (existing && existing.exercise_id !== v.exercise_id) throw new Error('Identificador de variação já está em uso.'); if (!existing) d.overlay.exercise_variants.push(v); }
+    ensureCatalog(d, plan.items);
     const available = new Set([...(d.base?.entities?.exercise_variants || []), ...d.overlay.exercise_variants].map((v: any) => v.id));
     if (ids.some((x: string) => !available.has(x))) throw new Error('Um exercício do roteiro não está mais disponível.');
     d.overlay.sessions.push({
@@ -59,6 +53,44 @@ export async function startPlan(plan: any, model: any): Promise<string> {
     });
   }, 'Missão iniciada e salva no celular.');
   return ids[0];
+}
+
+/** Cria no documento os exercícios/variações de catálogo que ainda não existem. */
+function ensureCatalog(d: any, items: any[]) {
+  const catalog = catalogEntities(items);
+  // Itens com unidade já definida (peso corporal, tempo) dispensam a confirmação de unidade.
+  for (const v of catalog.variants) if (items.some((i: any) => i.variant_id === v.id && i.unit_confirmed === true)) v.unit_confirmed = true;
+  const allEx = [...(d.base?.entities?.exercises || []), ...d.overlay.exercises];
+  const allVar = [...(d.base?.entities?.exercise_variants || []), ...d.overlay.exercise_variants];
+  for (const ex of catalog.exercises) { const existing = allEx.find((x: any) => x.id === ex.id); if (existing && existing.name !== ex.name) throw new Error('Identificador de exercício já está em uso.'); if (!existing) d.overlay.exercises.push(ex); }
+  for (const v of catalog.variants) { const existing = allVar.find((x: any) => x.id === v.id); if (existing && existing.exercise_id !== v.exercise_id) throw new Error('Identificador de variação já está em uso.'); if (!existing) d.overlay.exercise_variants.push(v); }
+}
+
+/** Dose para um exercício adicionado no meio do treino: a última usada para ele, ou uma faixa padrão. */
+export function doseForAdded(variant: any, entities: any) {
+  const prev = (entities.sessions || []).filter((s: any) => s.planned_guidance?.[variant.id]).sort((a: any, b: any) => String(b.date).localeCompare(String(a.date)))[0];
+  if (prev) return { ...prev.planned_guidance[variant.id] };
+  const timed = variant.unit === 'segundos';
+  const [min, max] = timed ? [30, 60] : [8, 12];
+  return { sets: 3, min, max, unit: timed ? 'segundos' : 'repetições', source: 'Adicionado durante o treino; faixa inicial.', effort: timed ? 'Ritmo que mantém a técnica.' : 'Use carga adequada à sua técnica, mantendo repetições em reserva.', label: `Sugestão: 3 série(s) de ${min}–${max} ${timed ? 'segundos' : 'repetições'}` };
+}
+
+/** Adiciona um exercício ao roteiro do treino em andamento (existente ou do catálogo). */
+export async function addToPlan(session: any, item: any, model: any): Promise<string> {
+  const variant = model.variantMap.get(item.variant_id) || { id: item.variant_id, unit: item.unit };
+  const dose = item.dose || doseForAdded(variant, model.entities);
+  await perform(d => {
+    const s = d.overlay.sessions.find((x: any) => x.id === session.id && x.status === 'in_progress');
+    if (!s) throw new Error('Treino encerrado.');
+    if (item.is_catalog) ensureCatalog(d, [item]);
+    const available = new Set([...(d.base?.entities?.exercise_variants || []), ...d.overlay.exercise_variants].map((v: any) => v.id));
+    if (!available.has(item.variant_id)) throw new Error('Exercício indisponível.');
+    const occupied = (s.planned_variant_ids || []).flatMap((id: string) => [id, ...(s.prior_planned_variants?.[id] || [])]);
+    if (occupied.includes(item.variant_id)) throw new Error('Esse exercício já está no roteiro deste treino.');
+    s.planned_variant_ids = [...(s.planned_variant_ids || []), item.variant_id];
+    s.planned_guidance = { ...(s.planned_guidance || {}), [item.variant_id]: dose };
+  }, 'Exercício adicionado ao roteiro.');
+  return item.variant_id;
 }
 
 export type Readiness = { fatigue: string; recovery: string; area: string; pain: string };

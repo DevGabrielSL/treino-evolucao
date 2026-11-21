@@ -253,6 +253,31 @@ test('desafio diário: monta só o que falta e não conta como missão da semana
   await expect(page.getByText('0/4', { exact: true })).toBeVisible();
 });
 
+test('adicionar exercício no meio do treino, alarme do descanso minimizado e ranqueada', async ({ page }) => {
+  await boot(page);
+  await startFeaturedMission(page);
+  await page.getByRole('button', { name: 'Adicionar exercício' }).click();
+  await page.getByLabel('Buscar exercício').fill('polichinelo');
+  await page.getByRole('button', { name: /Polichinelo/ }).click();
+  await expect(page.getByRole('heading', { name: 'Polichinelo' })).toBeVisible();
+  await expect(page.getByLabel('Segundos realizados')).toBeVisible();
+  // registra por tempo, encurta o descanso e minimiza: o aviso aparece mesmo fora da tela cheia
+  await page.getByLabel('Segundos realizados').fill('40');
+  await page.getByRole('button', { name: 'Salvar tempo' }).click();
+  for (let i = 0; i < 10; i++) await page.getByRole('button', { name: '−15s' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await expect(page.getByTestId('rest-flash')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('rest-flash')).toContainText('Descanso acabou!');
+  // conclui e vê a ranqueada
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await expect(page.getByTestId('ranked-result')).toContainText('Ranqueada +12 pts');
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByTestId('rank-label')).toHaveText('Ferro III');
+  await page.getByTestId('ranked-card').click();
+  await expect(page.getByRole('dialog', { name: 'Ranqueada' }).getByTestId('ranked-events')).toContainText('+12');
+});
+
 test('treino em andamento sobrevive a recarregar a página', async ({ page }) => {
   await boot(page);
   await startFeaturedMission(page);
