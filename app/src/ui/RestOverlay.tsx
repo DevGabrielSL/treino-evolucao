@@ -10,7 +10,7 @@ const KEY = 'treino-evolucao-autorest-v1';
 export function autoRest() { try { return localStorage.getItem(KEY) !== 'off'; } catch { return true; } }
 export function setAutoRest(on: boolean) { try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch { /* sem armazenamento */ } }
 
-export function RestOverlay({ sessionId, next, onClose }: { sessionId: string; next: string; onClose: () => void }) {
+export function RestOverlay({ sessionId, next, since = null, onClose }: { sessionId: string; next: string; since?: number | null; onClose: () => void }) {
   const [, tick] = useState(0);
   const was = useRef(true);
   const st = restTimer.state(sessionId);
@@ -21,7 +21,7 @@ export function RestOverlay({ sessionId, next, onClose }: { sessionId: string; n
     was.current = st.running;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st.remaining, st.running]);
-  const total = st.seconds || 90, pct = st.running ? st.remaining / total : 0;
+  const total = st.seconds || 150, pct = st.running ? st.remaining / total : 0;
   const R = 118, C = 2 * Math.PI * R;
   const add = (d: number) => { const left = Math.max(5, st.remaining + d); restTimer.start(sessionId, Math.min(3600, Math.max(10, left))); restTimer.configure(sessionId, total, restTimer.state(sessionId).auto); tick(x => x + 1); };
   return (
@@ -40,7 +40,8 @@ export function RestOverlay({ sessionId, next, onClose }: { sessionId: string; n
             : <motion.span initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="font-display uppercase text-6xl sunset-text">Vai!</motion.span>}
         </div>
       </div>
-      <p className="font-hud text-lg text-haze mt-6 text-center">A seguir: <b className="text-cream">{next}</b></p>
+      {since && <p className="num text-gold mt-5 text-lg" data-testid="since-last-overlay">Desde a última série · <b>{clock(Math.max(0, Date.now() - since))}</b></p>}
+      <p className="font-hud text-lg text-haze mt-3 text-center">A seguir: <b className="text-cream">{next}</b></p>
       {st.running && (
         <div className="mt-6 grid grid-cols-3 gap-2 w-full max-w-xs">
           <button onClick={() => add(-15)} className="num font-bold rounded-xl bg-white/10 py-3">−15s</button>

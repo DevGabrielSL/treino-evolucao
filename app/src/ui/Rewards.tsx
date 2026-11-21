@@ -8,7 +8,7 @@ import { sfx } from '../fx/sfx';
 import { AnimatePresence, motion, animate } from 'motion/react';
 import { XP_PER_LEVEL, rankFor } from '../game/progress';
 import type { XpReward } from '../engine/store';
-import { clock, nf } from './format';
+import { clock, hhmm, nf } from './format';
 import { tierName } from '../game/season';
 
 export function XpToast({ reward }: { reward: (XpReward & { key: number }) | null }) {
@@ -73,6 +73,7 @@ export function MissionComplete({ data, model, goal = 4, onClose }: { data: { se
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }} className="chip text-gold mt-1">{ratingText}</motion.p>
         <motion.div className="mt-5 space-y-2 text-left num text-lg" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: .12, delayChildren: .6 } } }}>
           {[
+            ['Horário', [hhmm(s?.started_at), hhmm(s?.finished_at)].filter(Boolean).join(' – ') || '—'],
             ['Tempo', clock(Math.max(0, ms))],
             ['Séries de trabalho', String(work.length)],
             ['Volume movido', `${nf(volume, 0)} kg`],

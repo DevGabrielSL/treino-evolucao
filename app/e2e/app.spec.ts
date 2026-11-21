@@ -87,7 +87,7 @@ test('missão completa: unidade, séries, drop set, pular, concluir e histórico
   // pular a terceira série do exercício
   await page.getByRole('button', { name: 'Opções do exercício' }).click();
   await page.getByRole('button', { name: /Pular uma série/ }).click();
-  await expect(page.getByText(/3\/24 séries/)).toBeVisible();
+  await expect(page.getByText(/3\/21 séries/)).toBeVisible();
 
   // concluir
   await page.getByRole('button', { name: 'Concluir missão' }).click();
@@ -138,7 +138,7 @@ test('esforço (RIR), repetir série e corrigir a última série', async ({ page
   // repetir num toque
   await page.getByRole('button', { name: /Repetir série · 42,5 kg × 10/ }).click();
   await page.getByRole('button', { name: 'Minimizar' }).click();
-  await expect(page.getByText(/2\/24 séries/)).toBeVisible();
+  await expect(page.getByText(/2\/21 séries/)).toBeVisible();
   // corrigir a última
   await page.getByRole('button', { name: 'Corrigir última série' }).click();
   await page.getByLabel('Repetições corrigidas').fill('8');
@@ -187,6 +187,72 @@ test('sugestão de progressão (opcional): sobe um degrau depois do topo da faix
   await expect(page.getByLabel('Carga · kg', { exact: true })).toHaveValue(/^42[.,]5$/);
 });
 
+test('ajustes: descanso após aquecimento (2:30), cronômetro desde a última série, séries extras e horário no final', async ({ page }) => {
+  await boot(page);
+  await startFeaturedMission(page);
+  await confirmKg(page);
+  await expect(page.getByTestId('since-last')).toContainText('--:--');
+  // aquecimento também inicia o descanso, com padrão de 2:30
+  await page.getByRole('button', { name: 'Aquecimento · +5 XP' }).click();
+  await page.getByLabel('Carga · kg', { exact: true }).fill('20');
+  await page.getByLabel('Repetições', { exact: true }).fill('12');
+  await page.getByRole('button', { name: 'Registrar série' }).click();
+  await expect(page.getByRole('button', { name: 'Minimizar' })).toBeVisible();
+  await expect(page.getByText(/^02:(2\d|30)$/).first()).toBeVisible();
+  await expect(page.getByTestId('since-last-overlay')).toContainText('00:0');
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await expect(page.getByTestId('since-last')).not.toContainText('--:--');
+  // passa de 3 séries de trabalho no mesmo exercício
+  await page.getByRole('button', { name: 'Trabalho · +10 XP' }).click();
+  for (let i = 0; i < 4; i++) await registerSet(page, '40', '10');
+  await expect(page.getByText('Série extra 5 liberada.')).toBeVisible();
+  await expect(page.getByText(/^S4$/)).toBeVisible();
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await expect(page.getByText(/Horário/)).toBeVisible();
+  await expect(page.getByText(/^\d\d:\d\d – \d\d:\d\d$/)).toBeVisible();
+});
+
+test('treino em casa: peso corporal e tempo sem confirmar unidade; conta nos desafios do dia', async ({ page }) => {
+  await boot(page);
+  await page.getByTestId('home-card').click();
+  await page.getByRole('button', { name: 'Iniciar treino em casa' }).click();
+  await page.getByText('Toque para começar').click();
+  await expect(page.getByText('Missão em andamento')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Polichinelo' })).toBeVisible();
+  await page.getByLabel('Segundos realizados').fill('45');
+  await page.getByRole('button', { name: 'Salvar tempo' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await page.getByRole('button', { name: 'Próximo alvo' }).click();
+  await expect(page.getByRole('heading', { name: 'Agachamento livre' })).toBeVisible();
+  const extra = page.getByLabel('Carga extra · kg (0 = só o corpo)', { exact: true });
+  await expect(extra).toHaveValue('0');
+  await page.getByLabel('Repetições', { exact: true }).fill('20');
+  await page.getByRole('button', { name: 'Registrar série' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByTestId('quest-cardio')).toContainText('45s/10:00');
+  await expect(page.getByText('Concluir 4 missões')).toBeVisible();
+  await expect(page.getByText('1/4', { exact: true })).toBeVisible();
+});
+
+test('desafio diário: monta só o que falta e não conta como missão da semana', async ({ page }) => {
+  await boot(page);
+  await page.getByRole('button', { name: 'Fazer o que falta agora' }).click();
+  await page.getByText('Toque para começar').click();
+  await expect(page.getByRole('heading', { name: 'Abdominal' })).toBeVisible();
+  await page.getByLabel('Repetições', { exact: true }).fill('30');
+  await page.getByRole('button', { name: 'Registrar série' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByTestId('quest-abs')).toContainText('30/50');
+  await expect(page.getByText('0/4', { exact: true })).toBeVisible();
+});
+
 test('treino em andamento sobrevive a recarregar a página', async ({ page }) => {
   await boot(page);
   await startFeaturedMission(page);
@@ -194,7 +260,7 @@ test('treino em andamento sobrevive a recarregar a página', async ({ page }) =>
   await registerSet(page, '50', '8');
   await page.reload();
   await expect(page.getByText('Missão em andamento')).toBeVisible();
-  await expect(page.getByText(/1\/24 séries/)).toBeVisible();
+  await expect(page.getByText(/1\/21 séries/)).toBeVisible();
 });
 
 test('bloco final: abdominal e prancha', async ({ page }) => {
@@ -204,7 +270,8 @@ test('bloco final: abdominal e prancha', async ({ page }) => {
   await page.getByLabel('Carga do abdominal').fill('35');
   await page.getByLabel('Repetições do abdominal').fill('20');
   await page.getByRole('button', { name: 'Salvar série' }).click();
-  await expect(page.getByText('20/100 reps')).toBeVisible();
+  await expect(page.getByTestId('abs-done')).toHaveText('20 reps');
+  await expect(page.getByTestId('abs-vs')).toContainText('Primeira vez'); // sem meta fixa: sem histórico ainda
   await page.getByRole('button', { name: 'Iniciar' }).last().click();
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: 'Salvar trecho' }).click();

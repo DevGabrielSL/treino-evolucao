@@ -10,7 +10,7 @@ import { activeSession } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { ask } from './Dialog';
-import { clock, nf } from './format';
+import { clock, nf, hhmm } from './format';
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const STATUS: Record<string, [string, string]> = { completed: ['Concluída', 'text-cash bg-cash/15'], cancelled: ['Abandonada', 'text-pink bg-pink/15'], in_progress: ['Em andamento', 'text-gold bg-gold/15'], planned: ['Planejada', 'text-aqua bg-aqua/15'] };
@@ -149,7 +149,7 @@ function SessionSheet({ model, id, onClose, onError, onGoWorkout }: { model: any
           </div>
         ) : (
           <div className="flex items-start gap-2 mb-3">
-            <div className="flex-1"><p className="font-display uppercase text-2xl leading-tight">{s.name}</p>{s.notes && <p className="text-xs text-haze mt-1 line-clamp-3">{s.notes}</p>}</div>
+            <div className="flex-1"><p className="font-display uppercase text-2xl leading-tight">{s.name}</p>{hhmm(s.started_at) && <p className="num text-xs text-gold mt-0.5" data-testid="session-hours">Início {hhmm(s.started_at)}{hhmm(s.finished_at) ? ` · fim ${hhmm(s.finished_at)}` : ''}</p>}{s.notes && <p className="text-xs text-haze mt-1 line-clamp-3">{s.notes}</p>}</div>
             {local && <button onClick={() => setRename(true)} aria-label="Editar nome e observações" className="size-9 grid place-items-center rounded-lg bg-white/10"><Pencil size={16} /></button>}
           </div>
         )}

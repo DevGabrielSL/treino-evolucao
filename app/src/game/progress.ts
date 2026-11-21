@@ -1,6 +1,7 @@
 // Camada de jogo: tudo é DERIVADO do histórico já salvo. Nada aqui grava dados,
 // então a sincronização com o Google Sheets não muda.
 import { xpState } from '../legacy/principal_xp.js';
+import { isMission } from '../engine/home';
 import { classifyExercise } from '../legacy/balanced_coach.js';
 import { monday, dateLocal } from '../legacy/metrics.js';
 
@@ -59,7 +60,7 @@ export function attributes(entities: any, today = dateLocal()) {
 /** Ritmo semanal: treinos concluídos na semana atual x meta, e sequência de semanas cumpridas. */
 export function weeklyRhythm(entities: any, goal: number, today = dateLocal()) {
   const weeks = new Map<string, number>();
-  for (const s of entities.sessions) if (s.status === 'completed') weeks.set(monday(s.date), (weeks.get(monday(s.date)) || 0) + 1);
+  for (const s of entities.sessions) if (isMission(s)) weeks.set(monday(s.date), (weeks.get(monday(s.date)) || 0) + 1);
   const current = monday(today), thisWeek = weeks.get(current) || 0;
   let streak = 0; const d = new Date(current + 'T12:00:00Z');
   if (thisWeek >= goal) streak++;
@@ -90,7 +91,7 @@ export function records(entities: any) {
 export function totals(entities: any) {
   const work = completedWork(entities);
   const tonnage = work.reduce((n: number, s: any) => n + (s.set_type === 'effective' && typeof s.load_value === 'number' && /^kg/.test(s.load_unit_original || '') ? s.load_value * s.repetitions : 0), 0);
-  const missions = entities.sessions.filter((s: any) => s.status === 'completed').length;
+  const missions = entities.sessions.filter(isMission).length;
   return { sets: work.length, tonnage, missions };
 }
 

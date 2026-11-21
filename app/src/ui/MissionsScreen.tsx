@@ -12,6 +12,8 @@ import { Sparkles } from 'lucide-react';
 import { nf } from './format';
 import { cityLights, districtControl } from '../game/season';
 import { SeasonCard } from './SeasonPanel';
+import { isMission } from '../engine/home';
+import { HomeCard, DailyCard } from './HomePanel';
 import { progressionHint, progressionOn } from '../engine/progression';
 
 type Props = { model: any; goal: number; active: any; onResume: () => void; onError: (e: any) => void; onStarted: (deck: any) => void };
@@ -47,7 +49,7 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
   const weekSets = model.eff.filter((s: any) => s.date >= weekStart).length;
   const weekPR = records(entities).events.some((e: any) => e.date >= weekStart);
   const control = useMemo(() => districtControl(entities), [entities]);
-  const city = cityLights(entities.sessions.filter((s: any) => s.status === 'completed').length);
+  const city = cityLights(entities.sessions.filter(isMission).length);
 
   async function go(deck: any) {
     if (starting) return;
@@ -112,6 +114,9 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
         <span className="flex-1"><b className="font-display uppercase text-xl leading-[1.1] block">Missão personalizada</b><span className="text-xs text-haze">Escolha o foco e conte como está: o assistente monta o roteiro.</span></span>
         <ChevronRight className="text-haze" />
       </button>
+
+      <DailyCard model={model} active={active} onStarted={onStarted} onError={onError} />
+      <HomeCard model={model} active={active} onStarted={onStarted} onError={onError} />
 
       <SeasonCard model={model} goal={goal} />
 

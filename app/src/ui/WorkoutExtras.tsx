@@ -6,6 +6,7 @@ import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { ask } from './Dialog';
 import { clock, nf } from './format';
+import { finisherMarks, type Mark } from '../engine/finisherMarks';
 
 /* ---------- Opções do exercício atual ---------- */
 export function ExerciseOptions({ model, session, current, onClose, onSelect, onError }: { model: any; session: any; current: string; onClose: () => void; onSelect: (id: string) => void; onError: (e: any) => void }) {
@@ -83,18 +84,19 @@ export function FinisherPanel({ model, session, onError }: { model: any; session
   const running = Boolean(session.finisher_plank_started_at), paused = Boolean(session.clock_paused_at);
   useEffect(() => { if (!running) return; const t = setInterval(() => tick(x => x + 1), 500); return () => clearInterval(t); }, [running]);
   const goals = finisherProgress(session, model.sets);
-  const abs = goals.find((x: any) => x.key === 'abs'), pl = goals.find((x: any) => x.key === 'plank');
+  const abs = goals.find((x: any) => x.key === 'abs');
   const [f, setF] = useState({ load: '', reps: '', kind: 'effective', unit: 'kg' });
   const run = async (fn: () => Promise<any>) => { try { await fn(); } catch (e) { onError(e); } };
   const secs = Math.floor(plankElapsed(session, model.sets) / 1000);
+  const marks = { abs: finisherMarks(model.entities, 'abs', session.id), plank: finisherMarks(model.entities, 'plank', session.id) };
   const recent = model.sets.filter((s: any) => s.session_id === session.id && FINISHER_GOALS.some((g: any) => g.key === s.finisher_key)).slice(-4).reverse();
   return (
     <section className="mx-3 mt-3 panel p-4">
       <p className="hud-label text-[10px] text-pink">Fechamento</p>
       <h3 className="font-display uppercase text-2xl leading-[1.1]">Bloco final</h3>
       <div className="mt-3 rounded-xl bg-black/30 p-3">
-        <div className="flex justify-between items-baseline"><b className="font-hud text-lg">{abs.name}</b><span className={`num ${abs.remaining ? '' : 'text-cash'}`}>{abs.done}/{abs.target} reps</span></div>
-        <div className="h-2 rounded-full bg-white/10 overflow-hidden mt-1"><motion.div className="h-full bg-gradient-to-r from-pink to-gold" animate={{ width: `${Math.min(100, (abs.done / abs.target) * 100)}%` }} /></div>
+        <div className="flex justify-between items-baseline"><b className="font-hud text-lg">{abs.name}</b><span className={`num text-xl font-extrabold ${marks.abs.last && abs.done > marks.abs.last.value ? 'text-cash' : ''}`} data-testid="abs-done">{abs.done} reps</span></div>
+        <VsLast done={abs.done} last={marks.abs.last} best={marks.abs.best} fmt={(n: number) => `${n} reps`} unit="reps" testid="abs-vs" />
         <div className="grid grid-cols-2 gap-2 mt-3">
           <input inputMode="decimal" placeholder="Carga" value={f.load} onChange={e => setF({ ...f, load: e.target.value })} className="num rounded-lg bg-black/40 px-3 py-2 text-lg" aria-label="Carga do abdominal" />
           <input inputMode="numeric" placeholder="Repetições" value={f.reps} onChange={e => setF({ ...f, reps: e.target.value })} className="num rounded-lg bg-black/40 px-3 py-2 text-lg" aria-label="Repetições do abdominal" />
@@ -102,21 +104,44 @@ export function FinisherPanel({ model, session, onError }: { model: any; session
           <select value={f.kind} onChange={e => setF({ ...f, kind: e.target.value })} className="rounded-lg bg-black/40 px-3 py-2" aria-label="Tipo de série"><option value="effective">Trabalho</option><option value="warmup">Aquecimento</option></select>
         </div>
         <button disabled={!f.load || !f.reps} onClick={() => run(async () => { await recordFinisher(session, 'abs', { load: Number(f.load.replace(',', '.')), reps: Number(f.reps), kind: f.kind, unit: f.unit }); setF({ ...f, reps: '' }); })} className="mt-2 w-full h-11 rounded-xl btn-sunset text-lg disabled:opacity-40"><Plus size={16} className="inline -mt-1" /> Salvar série</button>
-        <p className="text-[11px] text-haze mt-1">Some repetições em séries de trabalho. Aquecimentos não contam.</p>
+        <p className="text-[11px] text-haze mt-1">Some repetições em séries de trabalho. Aquecimentos não contam. Sem meta fixa: o desafio é superar a sua última vez.</p>
       </div>
       <div className="mt-3 rounded-xl bg-black/30 p-3 flex items-center gap-3">
         <div className="relative size-16 shrink-0">
-          <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="6" /><circle cx="32" cy="32" r="27" fill="none" stroke="#1ee8d6" strokeWidth="6" strokeLinecap="round" strokeDasharray={169.6} strokeDashoffset={169.6 * (1 - Math.min(1, secs / 180))} /></svg>
+          <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="6" /><circle cx="32" cy="32" r="27" fill="none" stroke="#1ee8d6" strokeWidth="6" strokeLinecap="round" strokeDasharray={169.6} strokeDashoffset={169.6 * (1 - Math.min(1, marks.plank.last ? secs / Math.max(1, marks.plank.last.value) : (secs % 60) / 60))} /></svg>
           <Timer size={20} className="absolute inset-0 m-auto text-aqua" />
         </div>
-        <div className="flex-1"><b className="font-hud text-lg">Prancha</b> <span className="text-xs text-haze">meta 3 min</span><p className="num text-2xl font-extrabold">{clock(secs * 1000)}</p><p className="text-[11px] text-haze">{pl.remaining ? `Faltam ${pl.remaining}s` : 'Meta atingida'}{paused ? ' · retome o treino para continuar' : ''}</p></div>
+        <div className="flex-1"><b className="font-hud text-lg">Prancha</b><p className={`num text-2xl font-extrabold ${marks.plank.last && secs > marks.plank.last.value ? 'text-cash' : ''}`}>{clock(secs * 1000)}</p>
+          <VsLast done={secs} last={marks.plank.last} best={marks.plank.best} fmt={(n: number) => clock(n * 1000)} unit="s" testid="plank-vs" compact />
+          {paused && <p className="text-[11px] text-haze">Retome o treino para continuar.</p>}</div>
         <button disabled={paused} onClick={() => run(() => plank(session, !running))} className={`h-12 px-4 rounded-xl chip text-sm flex items-center gap-1 disabled:opacity-40 ${running ? 'bg-gold text-night' : 'bg-aqua text-night'}`}>{running ? <><Pause size={16} />Salvar trecho</> : <><Play size={16} />{secs ? 'Continuar' : 'Iniciar'}</>}</button>
       </div>
       {recent.length > 0 && <ul className="mt-3 space-y-1">{recent.map((r: any) => (
         <li key={r.id} className="flex items-center gap-2 text-sm rounded-lg bg-white/5 px-2 py-1.5">
           <span className="flex-1">{r.finisher_key === 'plank' ? `Prancha · ${(r.duration_ms / 1000).toFixed(1)} s` : `Abdominal · ${nf(r.load_value)} ${r.load_unit_original} × ${r.repetitions}${r.set_type === 'warmup' ? ' (aq.)' : ''}`}</span>
-          <button aria-label="Remover registro" onClick={() => run(async () => { if (await ask('Remover este registro do bloco final? A meta será recalculada.', { ok: 'Remover', danger: true })) await removeFinisherRow(session, r.id); })} className="size-8 grid place-items-center rounded-md bg-white/10 text-pink"><Trash2 size={14} /></button>
+          <button aria-label="Remover registro" onClick={() => run(async () => { if (await ask('Remover este registro do bloco final? O total será recalculado.', { ok: 'Remover', danger: true })) await removeFinisherRow(session, r.id); })} className="size-8 grid place-items-center rounded-md bg-white/10 text-pink"><Trash2 size={14} /></button>
         </li>))}</ul>}
     </section>
+  );
+}
+
+/** Comparação com a última execução: sem meta fixa, você compete com você mesmo. */
+function VsLast({ done, last, best, fmt, unit, testid, compact }: { done: number; last: Mark; best: Mark; fmt: (n: number) => string; unit: string; testid: string; compact?: boolean }) {
+  const pt = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+  if (!last) return <p data-testid={testid} className="text-[11px] text-haze mt-1">Primeira vez registrada aqui: o que fizer hoje vira a sua marca.</p>;
+  const diff = done - last.value, ahead = diff > 0;
+  return (
+    <div data-testid={testid} className="mt-1">
+      {!compact && <div className="h-2 rounded-full bg-white/10 overflow-hidden relative">
+        <motion.div className={`h-full ${ahead ? 'bg-cash' : 'bg-gradient-to-r from-pink to-gold'}`} animate={{ width: `${Math.min(100, (done / Math.max(1, last.value)) * 100)}%` }} />
+      </div>}
+      <p className="num text-[12px] mt-1">
+        <span className="text-haze">Última ({pt(last.date)}): <b className="text-cream">{fmt(last.value)}</b></span>
+        {best && best.value > last.value && <span className="text-haze"> · melhor {fmt(best.value)}</span>}
+      </p>
+      <p className={`chip text-[12px] ${ahead ? 'text-cash' : diff === 0 && done > 0 ? 'text-gold' : 'text-haze'}`}>
+        {ahead ? `Superou a última em +${unit === 's' ? fmt(diff) : diff + ' ' + unit}!` : diff === 0 && done > 0 ? 'Empatou com a última. Mais uma!' : `Faltam ${unit === 's' ? fmt(-diff) : -diff + ' ' + unit} para superar`}
+      </p>
+    </div>
   );
 }

@@ -27,7 +27,7 @@ const registry={
 };
 const spec=(id,name,items,note='')=>({id:'rpg_deck_'+id,name,items,note});
 export const PRESET_DECKS=[
- spec('01','Peito + bíceps + ombro lateral',['fly','inclineDB','bench','declinePlateMachine','scott','curlCable','hammer','lateralCable']),
+ spec('01','Peito + bíceps + ombro lateral',['fly','inclineDB','bench','scott','curlCable','hammer','lateralCable']),
  spec('02','Costas + tríceps + ombro posterior',['deck2Pulldown','deck2ArticulatedRow','deck2SinglePulldown','deck2HighRow','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','rear']),
  spec('03','Braços + ombros',['scottUnilateral','deck2FrenchV','curlCableLengthened','deck2PushdownV','hammer','tricepsSkullcrusherDB','press','lateralCable','rear']),
  spec('04','Pernas completas',['legPress45','hack','extension','flexSeated','hipAbduction','hipAdduction','calfSeated']),

@@ -13,6 +13,7 @@ import { ExerciseOptions, DropRows, FinisherPanel, type Drop } from './WorkoutEx
 import { clock, nf } from './format';
 import { Sheet } from './Sheet';
 import { progressionHint, progressionOn } from '../engine/progression';
+import { finisherMarks } from '../engine/finisherMarks';
 import { TrendingUp } from 'lucide-react';
 export { Sheet };
 
@@ -80,7 +81,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const [editLast, setEditLast] = useState<any>(null);
   useEffect(() => { // ao trocar de alvo, pré-preenche com a última série deste treino ou a referência
     const base = mySets.at(-1) || ref;
-    setLoad(base?.load_value != null ? String(base.load_value) : '');
+    setLoad(base?.load_value != null ? String(base.load_value) : variant?.unit === 'peso corporal' ? '0' : '');
     setReps(base?.repetitions != null ? String(base.repetitions) : String(guide.dose?.min ?? ''));
     setKind('effective'); setDrops([]); setRir(null); setEditLast(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,17 +112,14 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
       if (k === 'effective' && variant?.unit_confirmed && Number.isFinite(prevBest) && l > prevBest) {
         setTimeout(() => { sfx.pr(); fx.stamp('Novo recorde', `${exercise?.name}: ${nf(prevBest)} → ${nf(l)} ${variant.unit}`); fx.confetti(); }, 350);
       } else if (k === 'effective' && combo + 1 >= 2) { sfx.combo(combo + 1); }
-      if (k === 'effective' && auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 90); setRestOpen(true); }
+      // descanso também depois do aquecimento
+      if (auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 150); setRestOpen(true); }
     });
   }
-  // Depois de gravar: avança para o próximo alvo quando a meta deste foi atingida
-  useEffect(() => {
-    if (guide.target !== null && guide.resolved >= guide.target && kind === 'effective') {
-      const next = nextPending(session, current, entities);
-      if (next && mySets.length) { const t = setTimeout(() => setSelected(next), 900); return () => clearTimeout(t); }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guide.resolved]);
+  // A meta de séries é sugestão: depois dela o alvo continua aberto para séries extras.
+  const reachedNext = guide.target !== null && guide.resolved >= guide.target ? nextPending(session, current, entities) : null;
+  // Cronômetro desde a última série registrada neste treino (qualquer tipo).
+  const lastAt = sessionSets.reduce((m: number, x: any) => { const t = Date.parse(x.recorded_at || ''); return Number.isFinite(t) && t > m ? t : m; }, 0) || null;
 
   const adjust = (setter: (v: string) => void, value: string, delta: number, min = 0) => {
     const n = Number(String(value).replace(',', '.')) || 0; setter(String(Math.max(min, Math.round((n + delta) * 100) / 100)));
@@ -168,9 +166,10 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
         <span className="hud-label text-gold text-[11px] shrink-0">Objetivo</span>
         <span className="font-hud text-[15px] font-semibold leading-tight">
           {guide.target === null ? 'Registre o que realizar neste exercício.' : guide.resolved >= guide.target
-            ? <>Alvo concluído. <span className="text-aqua">Siga para o próximo.</span></>
+            ? <>Meta de {guide.target} cumprida. <span className="text-aqua">Série extra {guide.resolved + 1} liberada.</span></>
             : <>Série <b className="text-gold">{guide.resolved + 1}</b> de {guide.target} · {guide.dose?.min}–{guide.dose?.max} reps</>}
         </span>
+        {reachedNext && <button onClick={() => setSelected(reachedNext)} className="ml-auto shrink-0 chip text-[12px] rounded-md bg-aqua text-night px-2 py-1 flex items-center">Próximo <ChevronRight size={14} /></button>}
       </motion.div>
 
       {/* Alvos da missão */}
@@ -240,11 +239,11 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                 </div>
               </div>
             ) : timed ? (
-              <TimedEntry dose={guide.dose} busy={busy} onSave={(secs: number) => run(async () => { await logTimed(session, variant, secs); sfx.set(); if (auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 90); setRestOpen(true); } })} />
+              <TimedEntry dose={guide.dose} busy={busy} onSave={(secs: number) => run(async () => { await logTimed(session, variant, secs); sfx.set(); if (auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 150); setRestOpen(true); } })} />
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <Stepper label={`Carga · ${variant?.unit}`} value={load} onChange={setLoad} onMinus={() => adjust(setLoad, load, -step)} onPlus={() => adjust(setLoad, load, step)} decimal />
+                  <Stepper label={variant?.unit === 'peso corporal' ? 'Carga extra · kg (0 = só o corpo)' : `Carga · ${variant?.unit}`} value={load} onChange={setLoad} onMinus={() => adjust(setLoad, load, -step)} onPlus={() => adjust(setLoad, load, step)} decimal />
                   <Stepper label="Repetições" value={reps} onChange={setReps} onMinus={() => adjust(setReps, reps, -1, 1)} onPlus={() => adjust(setReps, reps, 1, 1)} />
                 </div>
                 <div className="mt-3 grid grid-cols-2 rounded-xl bg-black/40 p-1">
@@ -304,7 +303,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
       </AnimatePresence>
 
       {/* Descanso */}
-      <RestBar sessionId={session.id} rest={rest} auto={auto} onAuto={(v: boolean) => { setAutoRest(v); setAuto(v); }} onOpen={() => setRestOpen(true)} />
+      <RestBar sessionId={session.id} rest={rest} since={lastAt} auto={auto} onAuto={(v: boolean) => { setAutoRest(v); setAuto(v); }} onOpen={() => setRestOpen(true)} />
 
       <div className="mx-3 mt-3">
         <button onClick={toggleFinisher} className={`w-full h-12 rounded-xl chip text-sm border ${finisher ? 'bg-pink/15 border-pink/40 text-pink' : 'bg-white/5 border-white/10'}`}>{finisher ? 'Fechar bloco final' : 'Bloco final · abdominal + prancha'}</button>
@@ -324,7 +323,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
         {optionsOpen && variant && <ExerciseOptions model={model} session={session} current={current} onClose={() => setOptionsOpen(false)} onSelect={setSelected} onError={onError} />}
       </AnimatePresence>
       <AnimatePresence>
-        {restOpen && <RestOverlay sessionId={session.id} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1} de ${guide.target}` : 'Próximo alvo'} onClose={() => setRestOpen(false)} />}
+        {restOpen && <RestOverlay sessionId={session.id} since={lastAt} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1} de ${guide.target}` : `${exercise?.name} · série extra ou próximo alvo`} onClose={() => setRestOpen(false)} />}
       </AnimatePresence>
       <AnimatePresence>
         {menu && (
@@ -363,9 +362,9 @@ function Stepper({ label, value, onChange, onMinus, onPlus, decimal }: any) {
   );
 }
 
-function RestBar({ sessionId, rest, auto, onAuto, onOpen }: { sessionId: string; rest: any; auto: boolean; onAuto: (v: boolean) => void; onOpen: () => void }) {
+function RestBar({ sessionId, rest, since, auto, onAuto, onOpen }: { sessionId: string; rest: any; since: number | null; auto: boolean; onAuto: (v: boolean) => void; onOpen: () => void }) {
   const [, force] = useState(0);
-  const total = rest.seconds || 90, pct = rest.running || rest.remaining ? rest.remaining / total : 0;
+  const total = rest.seconds || 150, pct = rest.running || rest.remaining ? rest.remaining / total : 0;
   const act = (fn: () => void) => { fn(); force(x => x + 1); };
   return (
     <div className="mx-3 mt-3 panel p-3">
@@ -381,15 +380,18 @@ function RestBar({ sessionId, rest, auto, onAuto, onOpen }: { sessionId: string;
           <p className="hud-label text-[10px] text-aqua">Descanso</p>
           <p className="num text-2xl font-extrabold">{rest.running || rest.remaining ? clock(rest.remaining * 1000) : clock(total * 1000)}</p>
         </div>
+        <div className="text-right" data-testid="since-last">
+          <p className="hud-label text-[10px] text-gold">Desde a última série</p>
+          <p className="num text-2xl font-extrabold text-gold">{since ? clock(Math.max(0, Date.now() - since)) : '--:--'}</p>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5">
         {rest.running ? (
-          <button onClick={() => act(() => restTimer.stop(sessionId))} className="chip text-sm rounded-lg bg-white/10 px-3 py-2">Pular</button>
-        ) : (
-          <div className="flex gap-1.5">
-            {[60, 90, 120].map(s => (
-              <button key={s} onClick={() => act(() => { restTimer.configure(sessionId, s, restTimer.state(sessionId).auto); })} className={`num text-sm font-bold rounded-lg px-2.5 py-2 ${s === total ? 'bg-aqua text-night' : 'bg-white/10'}`}>{s}s</button>
-            ))}
-          </div>
-        )}
+          <button onClick={() => act(() => restTimer.stop(sessionId))} className="chip text-sm rounded-lg bg-white/10 px-3 py-2 w-full">Pular descanso</button>
+        ) : [90, 120, 150, 180].map(s => (
+          <button key={s} onClick={() => act(() => { restTimer.configure(sessionId, s, restTimer.state(sessionId).auto); })} aria-label={`Descanso de ${s} segundos`}
+            className={`flex-1 num text-sm font-bold rounded-lg py-2 ${s === total ? 'bg-aqua text-night' : 'bg-white/10'}`}>{clock(s * 1000).replace(/^0/, '')}</button>
+        ))}
       </div>
       <label className="mt-2 flex items-center justify-between text-sm text-haze">
         <span>Iniciar descanso automaticamente após cada série</span>
@@ -408,7 +410,11 @@ function Summary({ session, entities, ids, sets }: any) {
       <Row k="Séries de trabalho" v={work} />
       <Row k="Aquecimentos" v={warm} />
       <Row k="Alvos pendentes" v={pending} warn={pending > 0} />
-      {finisherProgress(session, sets).map((g: any) => <Row key={g.key} k={`Bloco final · ${g.name}`} v={`${g.done}/${g.target}${g.timed ? ' s' : ''}`} warn={g.remaining > 0} />)}
+      {finisherProgress(session, sets).filter((g: any) => g.done > 0).map((g: any) => {
+        const last = finisherMarks(entities, g.key, session.id).last;
+        const fmt = (n: number) => g.timed ? clock(n * 1000) : `${n} reps`;
+        return <Row key={g.key} k={`Bloco final · ${g.name}`} v={`${fmt(g.done)}${last ? ` · última ${fmt(last.value)}` : ''}`} />;
+      })}
     </div>
   );
 }
