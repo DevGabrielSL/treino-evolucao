@@ -42,6 +42,8 @@ export async function startPlan(plan: any, model: any): Promise<string> {
   const ids = plan.items.map((x: any) => x.variant_id), group = groupLabel(plan.groups), id = makeId('session');
   await perform(d => {
     const catalog = catalogEntities(plan.items);
+    // Itens com unidade já definida (peso corporal, tempo) dispensam a confirmação de unidade.
+    for (const v of catalog.variants) if (plan.items.some((i: any) => i.variant_id === v.id && i.unit_confirmed === true)) v.unit_confirmed = true;
     const allEx = [...(d.base?.entities?.exercises || []), ...d.overlay.exercises];
     const allVar = [...(d.base?.entities?.exercise_variants || []), ...d.overlay.exercise_variants];
     for (const ex of catalog.exercises) { const existing = allEx.find((x: any) => x.id === ex.id); if (existing && existing.name !== ex.name) throw new Error('Identificador de exercício já está em uso.'); if (!existing) d.overlay.exercises.push(ex); }

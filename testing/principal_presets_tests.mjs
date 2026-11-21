@@ -22,13 +22,13 @@ console.log('PRESETS_4_PREFERENCES_DOSE_RECOVERY_IDENTITY_NO_WRITES=PASS');
 
 const first=presetPlan('rpg_deck_01',entities,today).items;
 assert.deepEqual(first.map(x=>[x.name,x.equipment]),[
- ['Crucifixo de peito','Máquina inclinada com anilhas'],['Supino inclinado','Halteres'],['Supino reto','Barra livre'],['Supino declinado','Máquina com anilhas'],
+ ['Crucifixo de peito','Máquina inclinada com anilhas'],['Supino inclinado','Halteres'],['Supino reto','Barra livre'],
  ['Rosca Scott','Máquina'],['Rosca direta','Polia'],['Rosca martelo','Halteres'],['Elevação lateral','Polia']
 ]);
-assert.equal(first[4].unit,'plaquetas');
-assert.equal(first[6].unit,'kg/halter');
-assert.deepEqual(first.map(x=>x.group),['peito','peito','peito','peito','biceps','biceps','biceps','ombros']);
-console.log('FIRST_DECK_EXACT_ORDER_EQUIPMENT_EIGHT_EXERCISES=PASS');
+assert.equal(first[3].unit,'plaquetas');
+assert.equal(first[5].unit,'kg/halter');
+assert.deepEqual(first.map(x=>x.group),['peito','peito','peito','biceps','biceps','biceps','ombros']);
+console.log('FIRST_DECK_EXACT_ORDER_EQUIPMENT_SEVEN_EXERCISES_NO_DECLINE=PASS');
 
 
 const second=presetPlan('rpg_deck_02',entities,today).items;

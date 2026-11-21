@@ -6,6 +6,8 @@ const server = await createServer({ server: { middlewareMode: true, hmr: false }
 const S = await server.ssrLoadModule('/src/game/season.ts');
 const { PRESET_DECKS } = await server.ssrLoadModule('/src/legacy/principal_presets.js');
 const P = await server.ssrLoadModule('/src/engine/progression.ts');
+const H = await server.ssrLoadModule('/src/engine/home.ts');
+const F = await server.ssrLoadModule('/src/engine/finisherMarks.ts');
 
 let failed = 0, passed = 0;
 async function test(name, fn) { try { await fn(); passed++; console.log('ok -', name); } catch (e) { failed++; console.error('FALHOU -', name, '\n', e); } }
@@ -154,6 +156,85 @@ await test('progressão: não sugere sem unidade confirmada, por tempo, sem hist
   assert.equal(P.progressionHint('v1', DOSE, e, { today: '2026-11-09' }), null);
   e.exercise_variants[0].unit_confirmed = false; assert.equal(P.progressionHint('v1', DOSE, e), null);
   assert.equal(P.progressionHint('v1', DOSE, hist([['2026-11-10', [[10, 12, 2], [10, 12, 2]]]], 'peso corporal')), null);
+});
+
+// ---------- desafios diários, treino em casa e bloco final ----------
+function dayWorld(rows, extraSessions = []) {
+  const e = { sessions: [...extraSessions], sets: [], exercises: [
+    { id: 'abs', name: 'Abdominal máquina' }, { id: 'plk', name: 'Prancha' }, { id: 'pol', name: 'Polichinelo' },
+    { id: 'fx', name: 'Flexão de braço' }, { id: 'cf', name: 'Cadeira flexora' }, { id: 'sup', name: 'Supino reto' }], exercise_variants: [] };
+  rows.forEach(([date, ex, reps, secs, type = 'effective', status = 'completed', name = 'X'], i) => {
+    const sid = 'd' + date + status + name;
+    if (!e.sessions.some(s => s.id === sid)) e.sessions.push({ id: sid, date, status, name });
+    e.sets.push({ id: 'r' + i, session_id: sid, date, exercise_id: ex, set_type: secs ? 'core' : type, repetitions: secs ? null : reps,
+      load_unit_original: secs ? 'segundos' : 'kg', duration_ms: secs ? secs * 1000 : undefined, notes: secs ? `Tempo · ${secs.toFixed(2)} segundos` : '' });
+  });
+  return e;
+}
+
+await test('desafios diários: somam academia e casa do dia; aquecimento e cancelados não contam', () => {
+  const e = dayWorld([
+    ['2026-11-20', 'abs', 30], ['2026-11-20', 'abs', 25], ['2026-11-20', 'abs', 40, 0, 'warmup'],
+    ['2026-11-20', 'plk', 0, 70], ['2026-11-20', 'plk', 0, 55, 'core', 'in_progress', 'Y'],
+    ['2026-11-20', 'pol', 0, 300], ['2026-11-20', 'pol', 0, 400, 'core', 'cancelled', 'Z'],
+    ['2026-11-20', 'cf', 12], ['2026-11-19', 'abs', 80],
+  ]);
+  const q = Object.fromEntries(H.dailyQuests(e, '2026-11-20').map(x => [x.key, x]));
+  assert.equal(q.abs.value, 55); assert.equal(q.abs.done, true);
+  assert.equal(q.plank.value, 125); assert.equal(q.plank.done, true);
+  assert.equal(q.cardio.value, 300); assert.equal(q.cardio.done, false);
+  assert.equal(H.dailyQuests(e, '2026-11-20').length, 4);
+});
+
+await test('desafios diários: bônus gira por dia e "Cadeira flexora" não conta como flexão', () => {
+  const keys = new Set(['2026-11-20', '2026-11-21', '2026-11-22', '2026-11-23'].map(d => H.questsFor(d)[3].key));
+  assert.equal(keys.size, 4);
+  const day = ['2026-11-20', '2026-11-21', '2026-11-22', '2026-11-23'].find(d => H.questsFor(d)[3].key === 'pushup');
+  const e = dayWorld([[day, 'cf', 30], [day, 'fx', 12]]);
+  assert.equal(H.dailyQuests(e, day)[3].value, 12);
+});
+
+await test('desafios diários: sequência de dias com os 3 principais completos', () => {
+  const full = d => [[d, 'abs', 50], [d, 'plk', 0, 120], [d, 'pol', 0, 600]];
+  const e = dayWorld([...full('2026-11-18'), ...full('2026-11-19'), ...full('2026-11-20')]);
+  assert.equal(H.dailyStreak(e, '2026-11-20'), 3);
+  assert.equal(H.dailyStreak(e, '2026-11-21'), 3); // hoje ainda aberto não quebra
+  assert.equal(H.dailyStreak(e, '2026-11-22'), 0);
+});
+
+await test('desafio diário soma XP mas não conta como missão; treino em casa conta', () => {
+  assert.equal(H.isMission({ status: 'completed', name: 'Desafio diário' }), false);
+  assert.equal(H.isMission({ status: 'completed', name: 'Treino em casa' }), true);
+  const e = world([mission('2026-10-13'), mission('2026-10-14')]);
+  e.sessions.push({ id: 'dd', date: '2026-10-14', name: 'Desafio diário', status: 'completed' });
+  e.sets.push({ id: 'dd1', session_id: 'dd', date: '2026-10-14', set_type: 'effective', repetitions: 20, load_value: 0, variant_id: 'v9', exercise_id: 'e9' });
+  const p = S.seasonProgress(e, 4, S.seasonOf('2026-10-14'), '2026-10-14');
+  assert.equal(p.missions, 2); assert.deepEqual(p.weeks.slice(0, 1), [2]);
+  assert.ok(p.xp > (100 + 180) * 2);
+});
+
+await test('planos: casa com unidades já confirmadas; desafio rápido só com o que falta', () => {
+  const home = H.homePlan({ sessions: [], sets: [], exercises: [], exercise_variants: [] });
+  assert.equal(home.presetName, 'Treino em casa'); assert.equal(home.items.length, 8);
+  assert.ok(home.items.every(i => i.unit_confirmed === true && ['peso corporal', 'segundos'].includes(i.unit)));
+  assert.ok(home.items.filter(i => i.unit === 'segundos').every(i => i.dose.unit === 'segundos'));
+  const e = dayWorld([['2026-11-20', 'abs', 60]]);
+  const daily = H.dailyPlan(e, '2026-11-20');
+  assert.equal(daily.presetName, 'Desafio diário');
+  assert.ok(!daily.items.some(i => i.name === 'Abdominal'));
+  assert.ok(daily.items.some(i => i.name === 'Cardio livre' && i.dose.sets === 1 && i.dose.unit === 'segundos'));
+});
+
+await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
+  const e = { sessions: [
+    { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [
+    { session_id: 'a', finisher_key: 'abs', set_type: 'effective', repetitions: 60 }, { session_id: 'a', finisher_key: 'abs', set_type: 'effective', repetitions: 50 },
+    { session_id: 'b', finisher_key: 'abs', set_type: 'effective', repetitions: 80 }, { session_id: 'b', finisher_key: 'abs', set_type: 'warmup', repetitions: 30 },
+    { session_id: 'a', exercise_id: 'exercise_finisher_plank', notes: 'Bloco final · Prancha · 150.00 segundos' },
+    { session_id: 'b', finisher_key: 'plank', duration_ms: 95000 }, { session_id: 'c', finisher_key: 'plank', duration_ms: 400000 } ] };
+  const abs = F.finisherMarks(e, 'abs', 'c'); assert.deepEqual(abs.last, { value: 80, date: '2026-11-14' }); assert.deepEqual(abs.best, { value: 110, date: '2026-11-10' });
+  const pl = F.finisherMarks(e, 'plank', 'c'); assert.equal(pl.last.value, 95); assert.equal(pl.best.value, 150);
+  assert.deepEqual(F.finisherMarks({ sessions: [], sets: [] }, 'abs'), { last: null, best: null });
 });
 
 await server.close();

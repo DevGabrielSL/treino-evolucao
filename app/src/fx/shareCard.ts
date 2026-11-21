@@ -71,7 +71,8 @@ export async function renderMissionCard(model: any, sessionId: string): Promise<
   // XP e rodapé
   c.font = '700 74px "Barlow Condensed"'; c.fillStyle = '#7cf29a'; c.fillText(`+${fmt(sum.missionXp, 0)} XP`, W / 2, 1215);
   c.font = '500 28px Barlow'; c.fillStyle = '#bfaed3';
-  const date = sum.session?.date ? sum.session.date.split('-').reverse().join('/') : '';
+  const t = Date.parse(sum.session?.started_at || '');
+  const date = (sum.session?.date ? sum.session.date.split('-').reverse().join('/') : '') + (Number.isFinite(t) ? ' · ' + new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '');
   c.fillText(`Nível ${level.level} · ${rankFor(level.level)} · ${date}`, W / 2, 1270);
   c.font = '30px Anton'; c.fillStyle = '#fff4e6'; c.fillText('TREINO & EVOLUÇÃO', W / 2, 1320);
 

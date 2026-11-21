@@ -4,6 +4,7 @@ import { xpState } from '../legacy/principal_xp.js';
 import { monday, dateLocal } from '../legacy/metrics.js';
 import { PRESET_DECKS } from '../legacy/principal_presets.js';
 import { records } from './progress';
+import { isMission } from '../engine/home';
 
 export const SEASON_WEEKS = 8;
 const EPOCH = '2026-01-05'; // segunda-feira; Temporada 1 = 05/01 a 01/03/2026
@@ -44,8 +45,9 @@ function slice(entities: any, start: string, end: string) {
 }
 
 export function seasonProgress(entities: any, goal: number, info: SeasonInfo, today = dateLocal()) {
-  const { sessions, sets } = slice(entities, info.start, info.end);
-  const seasonXp = xpState({ sessions, sets }).total as number;
+  const { sessions: all, sets } = slice(entities, info.start, info.end);
+  const seasonXp = xpState({ sessions: all, sets }).total as number;
+  const sessions = all.filter(isMission); // o desafio diário soma XP, mas não conta como missão
   const size = tierSize(goal);
   const tier = Math.min(TIERS, Math.floor(seasonXp / size));
   const weeks = info.weekStarts.map(w => sessions.filter((s: any) => monday(s.date) === w).length);
@@ -81,7 +83,7 @@ export function seasonProgress(entities: any, goal: number, info: SeasonInfo, to
 export function pastSeasons(entities: any, goal: number, today = dateLocal()) {
   const current = seasonOf(today).index;
   const seen = new Set<number>();
-  for (const s of entities.sessions) if (s.status === 'completed' && s.date) { const i = seasonOf(s.date).index; if (i < current) seen.add(i); }
+  for (const s of entities.sessions) if (isMission(s) && s.date) { const i = seasonOf(s.date).index; if (i < current) seen.add(i); }
   return [...seen].sort((a, b) => b - a).map(i => {
     const start = iso(utc(EPOCH) + i * SEASON_WEEKS * 7 * DAY);
     const info = seasonOf(start);
