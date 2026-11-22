@@ -17,7 +17,7 @@ export function MissionIntro({ deck, onDone }: { deck: any; onDone: () => void }
         <motion.p className="hud-label text-aqua" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .4 }}>{deck.index >= 0 ? `${DISTRICTS[deck.index]?.name} · Deck ${String(deck.index + 1).padStart(2, '0')}` : deck.district}</motion.p>
         <motion.h1 className="font-display uppercase text-[3.4rem] leading-[1.06] sunset-text" initial={{ opacity: 0, y: 40, letterSpacing: '.2em' }} animate={{ opacity: 1, y: 0, letterSpacing: '0em' }} transition={{ delay: .55, duration: .6, ease: 'easeOut' }}>{deck.title}</motion.h1>
         <motion.div className="mt-3 space-y-1" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: .15, delayChildren: 1.1 } } }}>
-          {[`${deck.items.length} alvos · ${deck.sets} séries`, `Recompensa estimada: +${deck.xp} XP`, 'Registre cada série logo após realizar'].map(t => (
+          {[`${deck.count ?? deck.items.length} alvos · ${deck.sets} séries`, `Recompensa estimada: +${deck.xp} XP`, 'Registre cada série logo após realizar'].map(t => (
             <motion.p key={t} variants={{ h: { opacity: 0, x: -16 }, s: { opacity: 1, x: 0 } }} className="font-hud font-semibold text-lg text-cream flex items-center gap-2"><span className="h-0.5 w-4 bg-gold" />{t}</motion.p>
           ))}
         </motion.div>

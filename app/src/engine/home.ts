@@ -71,16 +71,19 @@ const BONUS = [
 ];
 const dayIndex = (d: string) => Math.floor(Date.parse(d + 'T12:00:00Z') / 86400000);
 
-export function questsFor(date: string) {
-  return [...MAIN, BONUS[((dayIndex(date) % BONUS.length) + BONUS.length) % BONUS.length]];
+export type DailyTargets = { abs?: number; plank?: number; cardio?: number };
+export const DAILY_DEFAULTS = { abs: 50, plank: 120, cardio: 600 };
+export function questsFor(date: string, targets: DailyTargets = {}) {
+  const main = MAIN.map(q => { const t = (targets as any)[q.key]; return Number.isInteger(t) && t > 0 ? { ...q, target: t } : q; });
+  return [...main, BONUS[((dayIndex(date) % BONUS.length) + BONUS.length) % BONUS.length]];
 }
 
 /** Progresso do dia: soma séries de qualquer treino daquela data (academia, casa ou desafio). */
-export function dailyQuests(entities: any, date = dateLocal()): Quest[] {
+export function dailyQuests(entities: any, date = dateLocal(), targets: DailyTargets = {}): Quest[] {
   const exName = new Map((entities.exercises || []).map((e: any) => [e.id, norm(e.name)]));
   const live = new Set((entities.sessions || []).filter((s: any) => s.status !== 'cancelled' && s.date === date).map((s: any) => s.id));
   const rows = (entities.sets || []).filter((s: any) => live.has(s.session_id) && WORK.has(s.set_type));
-  return questsFor(date).map(q => {
+  return questsFor(date, targets).map(q => {
     const mine = rows.filter((s: any) => q.match.test(String(exName.get(s.exercise_id) || '')));
     const raw = q.timed ? mine.reduce((n: number, s: any) => n + (s.load_unit_original === 'segundos' || Number.isFinite(s.duration_ms) ? secsOf(s) : 0), 0)
       : mine.reduce((n: number, s: any) => n + (Number.isInteger(s.repetitions) ? s.repetitions : 0), 0);
@@ -90,17 +93,17 @@ export function dailyQuests(entities: any, date = dateLocal()): Quest[] {
 }
 
 /** Dias seguidos com os 3 desafios principais completos (hoje conta se já completou). */
-export function dailyStreak(entities: any, today = dateLocal()) {
+export function dailyStreak(entities: any, today = dateLocal(), targets: DailyTargets = {}) {
   const shift = (d: string, k: number) => new Date(Date.parse(d + 'T12:00:00Z') + k * 86400000).toISOString().slice(0, 10);
-  const full = (d: string) => dailyQuests(entities, d).slice(0, 3).every(q => q.done);
+  const full = (d: string) => dailyQuests(entities, d, targets).slice(0, 3).every(q => q.done);
   let n = 0, d = full(today) ? today : shift(today, -1);
   while (n < 366 && full(d)) { n++; d = shift(d, -1); }
   return n;
 }
 
 /** Missão curta só com o que falta hoje (ou o pacote completo, se já fez tudo). */
-export function dailyPlan(entities: any, date = dateLocal()) {
-  const qs = dailyQuests(entities, date);
+export function dailyPlan(entities: any, date = dateLocal(), targets: DailyTargets = {}) {
+  const qs = dailyQuests(entities, date, targets);
   const open = qs.filter(q => !q.done);
   const specs = (open.length ? open : qs).map(q => ({ ...q.spec, sets: q.key === 'cardio' ? 1 : q.timed ? 2 : 2 }));
   return plan(DAILY_NAME, specs, entities, 'Desafio rápido do dia. Conta para os desafios diários e para o XP, mas não para a meta semanal de missões.');

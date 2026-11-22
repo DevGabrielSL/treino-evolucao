@@ -43,6 +43,12 @@ export async function saveRecovery(v: { id?: string; date: string; sleep: string
   await perform(d => upsertRecovery(d, { id, date, sleep_hours: sleep, energy, soreness, notes: v.notes }), 'Diário de recuperação salvo.');
 }
 export async function deleteRecovery(id: string) { await perform(d => removeRecovery(d, id), 'Registro removido.'); }
+/** Metas dos desafios diários (abdominais em reps; prancha e cardio em segundos). */
+export async function setDailyTargets(t: { abs: number; plank: number; cardio: number }) {
+  const ok = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >= lo && n <= hi;
+  if (!ok(t.abs, 5, 1000) || !ok(t.plank, 10, 3600) || !ok(t.cardio, 60, 14400)) throw new Error('Metas inválidas: abdominais 5–1000, prancha 10 s–60 min, cardio 1–240 min.');
+  await perform(d => { d.settings.daily_targets = { abs: t.abs, plank: t.plank, cardio: t.cardio }; }, 'Metas diárias atualizadas.');
+}
 export async function setWeeklyGoal(goal: number) { if (!Number.isInteger(goal) || goal < 1 || goal > 14) throw new Error('Meta semanal inválida.'); await perform(d => { d.settings.weekly_goal = goal; }, 'Meta semanal atualizada.'); }
 
 export const templates = () => getTemplates(getState().doc);

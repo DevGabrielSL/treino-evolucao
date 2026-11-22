@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronRight, Clock3, Crosshair, Flame, Play, Target, Trophy, X } from 'lucide-react';
+import { ChevronRight, Clock3, Crosshair, Flame, Pencil, Play, Target, Trophy, X } from 'lucide-react';
 import { PRESET_DECKS, DECK_TITLES, planFor, startMission } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { records, weeklyRhythm } from '../game/progress';
@@ -15,6 +15,7 @@ import { SeasonCard } from './SeasonPanel';
 import { isMission } from '../engine/home';
 import { HomeCard, DailyCard } from './HomePanel';
 import { RankedCard } from './RankedPanel';
+import { DeckEditor } from './DeckEditor';
 import { progressionHint, progressionOn } from '../engine/progression';
 
 type Props = { model: any; goal: number; active: any; onResume: () => void; onError: (e: any) => void; onStarted: (deck: any) => void };
@@ -34,8 +35,9 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
 
   const decks = useMemo(() => PRESET_DECKS.map((d: any, i: number) => {
     const last = entities.sessions.filter((s: any) => s.status === 'completed' && s.name === d.name).map((s: any) => s.date).sort().at(-1);
-    return { ...d, index: i, title: DECK_TITLES[i] || d.name, cover: asset(`deck-cover-0${i + 1}.webp`), sets: d.items.length * 3, xp: d.items.length * 3 * 10 + 100, last };
-  }), [entities]);
+    const plan = planFor(d.id, model), sets = plan.items.reduce((n: number, x: any) => n + (x.dose?.sets || 3), 0);
+    return { ...d, index: i, title: DECK_TITLES[i] || d.name, cover: asset(`deck-cover-0${i + 1}.webp`), count: plan.items.length, sets, xp: sets * 10 + 100, last, custom: !!plan.custom };
+  }), [entities, model]);
 
   // Próxima missão: o deck seguinte ao último concluído (rodízio), ou o primeiro.
   const featured = useMemo(() => {
@@ -95,7 +97,7 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
               {sel.id === featured.id && <span className="rounded bg-aqua text-night px-1.5 text-[11px]">Recomendada</span>}</p>
             <h1 className="font-display uppercase text-[2.6rem] leading-[1.06] sunset-text">{sel.title}</h1>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Tag icon={Target}>{sel.items.length} alvos</Tag>
+              <Tag icon={Target}>{sel.count} alvos{sel.custom ? " · editado" : ""}</Tag>
               <Tag icon={Flame}>{sel.sets} séries</Tag>
               <Tag icon={Trophy} gold>+{sel.xp} XP</Tag>
               {sel.last && <Tag icon={Clock3}>{daysAgo(sel.last)}</Tag>}
@@ -137,7 +139,7 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
 
       <AnimatePresence>{custom && <CustomMission model={model} active={active} onClose={() => setCustom(false)} onStarted={onStarted} onError={onError} />}</AnimatePresence>
       <AnimatePresence>
-        {briefing !== null && <Briefing deck={decks[briefing]} model={model} active={active} starting={starting} onClose={() => setBriefing(null)} onStart={go} />}
+        {briefing !== null && <Briefing deck={decks[briefing]} model={model} active={active} starting={starting} onClose={() => setBriefing(null)} onStart={go} onError={onError} />}
       </AnimatePresence>
     </div>
   );
@@ -162,8 +164,9 @@ function Objective({ label, value, target }: { label: string; value: number; tar
   );
 }
 
-function Briefing({ deck, model, active, starting, onClose, onStart }: any) {
+function Briefing({ deck, model, active, starting, onClose, onStart, onError }: any) {
   const plan = useMemo(() => planFor(deck.id, model), [deck.id, model]);
+  const [editing, setEditing] = useState(false);
   const prog = progressionOn();
   return (
     <motion.div className="fixed inset-0 z-50 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -175,8 +178,10 @@ function Briefing({ deck, model, active, starting, onClose, onStart }: any) {
         <div className="px-4 -mt-12 relative">
           <p className="chip text-gold text-sm">Briefing · Deck {String(deck.index + 1).padStart(2, '0')}</p>
           <h2 className="font-display uppercase text-4xl leading-none sunset-text">{deck.title}</h2>
-          <p className="text-haze text-sm mt-2">3 séries de trabalho por alvo. Sem carga predefinida: use a que mantém a técnica, com repetições em reserva.</p>
+          <p className="text-haze text-sm mt-2">{plan.custom ? 'Deck personalizado por você.' : '3 séries de trabalho por alvo.'} Sem carga predefinida: use a que mantém a técnica, com repetições em reserva.</p>
+          <button onClick={() => setEditing(true)} className="mt-3 h-10 px-4 rounded-xl bg-white/10 chip text-sm flex items-center gap-2"><Pencil size={14} /> Editar deck</button>
         </div>
+        <AnimatePresence>{editing && <DeckEditor deck={deck} model={model} onClose={() => setEditing(false)} onError={onError} />}</AnimatePresence>
         <ol className="px-4 mt-4 space-y-2 pb-36">
           {plan.items.map((item: any, i: number) => {
             return (
@@ -189,7 +194,7 @@ function Briefing({ deck, model, active, starting, onClose, onStart }: any) {
                   <p className="text-xs text-haze truncate">{item.equipment}</p>
                 </div>
                 <div className="text-right">
-                  <p className="num font-bold text-gold">3×{item.dose?.min}–{item.dose?.max}</p>
+                  <p className="num font-bold text-gold">{item.dose?.sets ?? 3}×{item.dose?.min}–{item.dose?.max}{item.dose?.unit === 'segundos' ? 's' : ''}</p>
                   {item.last && <p className="num text-[11px] text-haze">últ. {nf(item.last.load_value)} {item.unit}</p>}
                   {prog && (() => { const h = progressionHint(item.variant_id, item.dose, model.entities); return h?.kind === 'subir' ? <p className="num text-[11px] text-cash">↑ {nf(h.next)} {item.unit}</p> : h?.kind === 'reduzir' ? <p className="num text-[11px] text-pink">↓ {nf(h.next)} {item.unit}</p> : null; })()}
                 </div>
