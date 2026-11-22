@@ -1,7 +1,7 @@
 import {sameLoadVariant} from './principal_unit.js';
 const working=new Set(['effective','core','back_off']);
 const unique=sets=>{const seen=new Set();return sets.filter(s=>{if(s.id&&seen.has(s.id))return false;if(s.id)seen.add(s.id);return true;});};
-const targetFor=(session,id)=>{const n=session.planned_guidance?.[id]?.sets;return Number.isInteger(n)&&n>0&&n<=20?(session.status==='in_progress'?Math.max(3,n):n):null;};
+const targetFor=(session,id)=>{const n=session.planned_guidance?.[id]?.sets;return Number.isInteger(n)&&n>0&&n<=20?n:null;};
 const plannedId = row => row.planned_variant_id || row.variant_id;
 const slotIds = (session, id) => [id, ...(session.prior_planned_variants?.[id] || [])];
 const skippedFor = (session, id) => session.skipped_series?.[id] || 0;

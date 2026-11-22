@@ -2,8 +2,9 @@
 import { perform } from './store';
 import { makeId } from '../legacy/store.js';
 import { dateLocal } from '../legacy/metrics.js';
-import { PRESET_DECKS, presetPlan } from '../legacy/principal_presets.js';
+import { PRESET_DECKS } from '../legacy/principal_presets.js';
 import { catalogEntities } from '../legacy/balanced_coach.js';
+import { deckPlan } from './decks';
 import { groupLabel } from '../legacy/coach_logic.js';
 import { liveGuidance, nextPending, changeWorkoutPlan } from '../legacy/principal_live.js';
 import { confirmSessionVariant, loadUnits } from '../legacy/principal_unit.js';
@@ -26,8 +27,9 @@ export function activeSession(model: any) {
   return model?.entities.sessions.filter((s: any) => s.status === 'in_progress').at(-1) || null;
 }
 
+/** Plano de um deck: o personalizado pelo usuário (se houver) ou o pronto. */
 export function planFor(presetId: string, model: any) {
-  return presetPlan(presetId, model.entities, dateLocal(), {});
+  return deckPlan(presetId, model);
 }
 
 export async function startMission(presetId: string, model: any): Promise<string> {
@@ -237,3 +239,44 @@ export async function togglePause(session: any) {
   await perform(d => setWorkoutPaused(d, session.id, !session.clock_paused_at), session.clock_paused_at ? 'Treino retomado.' : 'Treino pausado.');
 }
 export { workoutElapsed };
+
+/** Muda o número de séries planejadas de um exercício no treino em andamento. */
+export async function setPlannedSets(session: any, variantId: string, sets: number, model: any) {
+  if (!Number.isInteger(sets) || sets < 1 || sets > 10) throw new Error('Séries planejadas: de 1 a 10.');
+  const fallback = doseForAdded(model.variantMap.get(variantId) || { id: variantId, unit: 'repetições' }, model.entities);
+  await perform(d => {
+    const s = d.overlay.sessions.find((x: any) => x.id === session.id && x.status === 'in_progress');
+    if (!s) throw new Error('Treino encerrado.');
+    const g = s.planned_guidance?.[variantId] || fallback;
+    s.planned_guidance = { ...(s.planned_guidance || {}), [variantId]: { ...g, sets, label: `Sugestão: ${sets} série(s) de ${g.min}–${g.max} ${g.unit}` } };
+  }, `Meta deste exercício: ${sets} séries.`);
+}
+
+/** Move um exercício no roteiro do treino em andamento (-1 = antes, 1 = depois). */
+export async function movePlanned(session: any, variantId: string, dir: -1 | 1) {
+  await perform(d => {
+    const s = d.overlay.sessions.find((x: any) => x.id === session.id && x.status === 'in_progress');
+    if (!s) throw new Error('Treino encerrado.');
+    const ids = [...(s.planned_variant_ids || [])], i = ids.indexOf(variantId), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    s.planned_variant_ids = ids;
+  }, 'Ordem do roteiro atualizada.');
+}
+
+// ---------- descanso por exercício ----------
+export const REST_DEFAULT = 150;
+/** Segundos de descanso: o escolhido para este exercício, senão o padrão dos Ajustes (2:30). */
+export function restFor(settings: any, variantId?: string | null) {
+  const by = settings?.rest?.by_variant?.[variantId || ''];
+  const def = settings?.rest?.default;
+  return Number.isInteger(by) ? by : Number.isInteger(def) ? def : REST_DEFAULT;
+}
+export async function setRest(seconds: number, variantId?: string | null) {
+  if (!Number.isInteger(seconds) || seconds < 15 || seconds > 600) throw new Error('Descanso: de 15 s a 10 min.');
+  await perform(d => {
+    const rest = { default: d.settings.rest?.default, by_variant: { ...(d.settings.rest?.by_variant || {}) } };
+    if (variantId) rest.by_variant[variantId] = seconds; else rest.default = seconds;
+    d.settings.rest = rest;
+  }, variantId ? 'Descanso salvo para este exercício.' : 'Descanso padrão atualizado.');
+}

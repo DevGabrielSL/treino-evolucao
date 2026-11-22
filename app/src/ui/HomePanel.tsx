@@ -3,7 +3,10 @@ import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, ChevronRight, Flame, Home, Play, X, Zap } from 'lucide-react';
-import { dailyPlan, dailyQuests, dailyStreak, homePlan, HOME_NAME, DAILY_NAME } from '../engine/home';
+import { dailyPlan, dailyQuests, dailyStreak, homePlan, HOME_NAME, DAILY_NAME, DAILY_DEFAULTS } from '../engine/home';
+import { getState } from '../engine/store';
+import { setDailyTargets } from '../engine/edits';
+import { Sheet } from './Sheet';
 import { startPlan } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { asset } from './assets';
@@ -19,20 +22,24 @@ function deckFor(plan: any, title: string, district: string, cover: string) {
 }
 
 export function DailyCard({ model, active, onStarted, onError }: P) {
-  const quests = useMemo(() => dailyQuests(model.entities), [model]);
-  const streak = useMemo(() => dailyStreak(model.entities), [model]);
+  const tKey = JSON.stringify(getState().doc?.settings?.daily_targets || {});
+  const targets = useMemo(() => JSON.parse(tKey), [tKey]);
+  const quests = useMemo(() => dailyQuests(model.entities, undefined, targets), [model, targets]);
+  const streak = useMemo(() => dailyStreak(model.entities, undefined, targets), [model, targets]);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const main = quests.slice(0, 3), bonus = quests[3];
   const allMain = main.every(q => q.done);
   const start = async () => {
     if (busy) return; setBusy(true); sfx.tap();
-    try { const plan = dailyPlan(model.entities); await startPlan(plan, model); onStarted(deckFor(plan, 'Desafio diário', 'Desafios do dia', 'deck-cover-03.webp')); }
+    try { const plan = dailyPlan(model.entities, undefined, targets); await startPlan(plan, model); onStarted(deckFor(plan, 'Desafio diário', 'Desafios do dia', 'deck-cover-03.webp')); }
     catch (e) { onError(e); } finally { setBusy(false); }
   };
   return (
     <section className="panel p-4" data-testid="daily-card">
       <div className="flex items-baseline justify-between">
         <h2 className="font-display uppercase text-2xl"><span className="title-slash">Desafios do dia</span></h2>
+        <button onClick={() => setEditing(true)} className="chip text-[11px] text-aqua ml-auto mr-3" aria-label="Ajustar metas diárias">Ajustar metas</button>
         <span className="num text-sm text-haze flex items-center gap-1">{streak > 0 ? <><Flame size={14} className="text-flame" />{streak} {streak === 1 ? 'dia' : 'dias'}</> : 'Comece hoje'}</span>
       </div>
       <ul className="mt-3 space-y-2.5">
@@ -53,6 +60,7 @@ export function DailyCard({ model, active, onStarted, onError }: P) {
         })}
       </ul>
       <p className="text-[11px] text-haze mt-3 leading-snug">Conta tudo o que você registrar hoje: bloco final da academia, treino em casa ou o desafio rápido. Cardio é por tempo (esteira, bike, corrida, polichinelo).</p>
+      <AnimatePresence>{editing && <TargetsSheet current={{ ...DAILY_DEFAULTS, ...targets }} onClose={() => setEditing(false)} onError={onError} />}</AnimatePresence>
       <button disabled={!!active || busy} onClick={start} className="mt-3 w-full h-12 rounded-xl bg-gradient-to-r from-aqua to-violet text-night chip text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-40">
         <Zap size={16} className="fill-current" /> {active ? 'Termine a missão atual' : allMain ? 'Fazer de novo (extra)' : 'Fazer o que falta agora'}
       </button>
@@ -119,6 +127,27 @@ function HomeBriefing({ model, plan, active, onClose, onStarted, onError }: any)
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function TargetsSheet({ current, onClose, onError }: { current: { abs: number; plank: number; cardio: number }; onClose: () => void; onError: (e: any) => void }) {
+  const [t, setT] = useState(current);
+  const row = (label: string, key: 'abs' | 'plank' | 'cardio', step: number, min: number, show: (n: number) => string) => (
+    <div className="flex items-center gap-3 py-2">
+      <span className="flex-1 font-hud font-bold">{label}</span>
+      <button aria-label={`Diminuir ${label}`} disabled={t[key] - step < min} onClick={() => setT({ ...t, [key]: t[key] - step })} className="size-10 rounded-lg bg-white/10 disabled:opacity-30">−</button>
+      <span className="num text-xl font-extrabold w-20 text-center" data-testid={`target-${key}`}>{show(t[key])}</span>
+      <button aria-label={`Aumentar ${label}`} onClick={() => setT({ ...t, [key]: t[key] + step })} className="size-10 rounded-lg bg-white/10">+</button>
+    </div>
+  );
+  return (
+    <Sheet onClose={onClose} title="Metas diárias">
+      {row('Abdominais', 'abs', 10, 10, n => `${n} reps`)}
+      {row('Prancha', 'plank', 15, 15, n => clock(n * 1000).replace(/^0/, ''))}
+      {row('Cardio', 'cardio', 300, 300, n => `${Math.round(n / 60)} min`)}
+      <p className="text-[11px] text-haze mt-1">O bônus do dia continua com a meta fixa. As metas valem a partir de agora (os dias anteriores também passam a ser avaliados com elas).</p>
+      <button onClick={async () => { try { await setDailyTargets(t); onClose(); } catch (e) { onError(e); } }} className="btn-sunset w-full h-12 rounded-xl text-xl mt-3">Salvar metas</button>
+    </Sheet>
   );
 }
 
