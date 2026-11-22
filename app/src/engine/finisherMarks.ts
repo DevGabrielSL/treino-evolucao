@@ -31,3 +31,15 @@ export function finisherMarks(entities: any, key: 'abs' | 'plank', excludeSessio
   const best = list.reduce((a, b) => (b.value > a.value ? b : a));
   return { last: { value: list[0].value, date: list[0].session.date }, best: { value: best.value, date: best.session.date } };
 }
+
+/** Maior tempo em UMA série de prancha (bloco final ou prancha do treino em casa). */
+export function plankBestSingle(entities: any, excludeSession?: string): Mark {
+  const done = new Map((entities.sessions || []).filter((s: any) => s.status === 'completed' && s.id !== excludeSession).map((s: any) => [s.id, s]));
+  let best: Mark = null;
+  for (const s of entities.sets || []) {
+    if (!done.has(s.session_id) || !(isKey(s, 'plank') || s.exercise_id === 'home_ex_prancha')) continue;
+    const v = Math.round(seconds(s));
+    if (v > 0 && (!best || v > best.value)) best = { value: v, date: (done.get(s.session_id) as any).date };
+  }
+  return best;
+}

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
 import { restTimer } from '../engine/workout';
-import { sfx } from '../fx/sfx';
 import { clock } from './format';
 
 const KEY = 'treino-evolucao-autorest-v1';
@@ -15,9 +14,9 @@ export function RestOverlay({ sessionId, next, since = null, onClose }: { sessio
   const was = useRef(true);
   const st = restTimer.state(sessionId);
   useEffect(() => { const t = setInterval(() => tick(x => x + 1), 250); return () => clearInterval(t); }, []);
+  // Som e vibração ficam no alarme global da tela de treino; aqui só fecha depois do fim.
   useEffect(() => {
-    if (st.running && st.remaining <= 3 && st.remaining > 0) sfx.tick();
-    if (was.current && !st.running) { sfx.restEnd(); setTimeout(onClose, 1200); }
+    if (was.current && !st.running) setTimeout(onClose, 1800);
     was.current = st.running;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st.remaining, st.running]);

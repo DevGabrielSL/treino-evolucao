@@ -32,3 +32,14 @@ self.addEventListener('fetch', event => {
     return hit || fetch(req);
   })());
 });
+
+// Toque na notificação do fim do descanso: volta para o app aberto (ou abre).
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = all.find(c => c.url.startsWith(self.registration.scope));
+    if (open) return open.focus();
+    return self.clients.openWindow(self.registration.scope);
+  })());
+});

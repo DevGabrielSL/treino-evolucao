@@ -8,6 +8,7 @@ const { PRESET_DECKS } = await server.ssrLoadModule('/src/legacy/principal_prese
 const P = await server.ssrLoadModule('/src/engine/progression.ts');
 const H = await server.ssrLoadModule('/src/engine/home.ts');
 const F = await server.ssrLoadModule('/src/engine/finisherMarks.ts');
+const RK = await server.ssrLoadModule('/src/game/ranked.ts');
 
 let failed = 0, passed = 0;
 async function test(name, fn) { try { await fn(); passed++; console.log('ok -', name); } catch (e) { failed++; console.error('FALHOU -', name, '\n', e); } }
@@ -130,8 +131,8 @@ await test('progressão: sem RIR pede 2 treinos seguidos no topo', () => {
 await test('progressão: dentro ou abaixo da faixa mantém, e só a última sessão decide', () => {
   const mid = P.progressionHint('v1', DOSE, hist([['2026-11-03', [[40, 12, 2], [40, 12, 2]]], ['2026-11-10', [[42.5, 10, 2], [42.5, 9, 2]]]]));
   assert.equal(mid.kind, 'manter'); assert.equal(mid.current, 42.5); assert.match(mid.detail, /\+1 repetição/);
-  const low = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[50, 6], [50, 5], [50, 9]]]]));
-  assert.equal(low.kind, 'manter'); assert.match(low.detail, /abaixo de 8/);
+  const low = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[50, 7], [50, 6], [50, 9]]]]));
+  assert.equal(low.kind, 'reduzir'); assert.equal(low.next, 47.5); assert.match(low.detail, /abaixo da faixa/);
 });
 
 await test('progressão: avalia a carga mais alta; aquecimento e drop não contam', () => {
@@ -235,6 +236,64 @@ await test('bloco final: última execução e melhor marca, sem a sessão atual'
   const abs = F.finisherMarks(e, 'abs', 'c'); assert.deepEqual(abs.last, { value: 80, date: '2026-11-14' }); assert.deepEqual(abs.best, { value: 110, date: '2026-11-10' });
   const pl = F.finisherMarks(e, 'plank', 'c'); assert.equal(pl.last.value, 95); assert.equal(pl.best.value, 150);
   assert.deepEqual(F.finisherMarks({ sessions: [], sets: [] }, 'abs'), { last: null, best: null });
+});
+
+// ---------- redução de carga ----------
+await test('redução: repetições bem abaixo da faixa cortam ~10%; falha em 2 séries corta um degrau', () => {
+  const far = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[60, 4], [60, 5], [60, 4]]]]));
+  assert.equal(far.kind, 'reduzir'); assert.equal(far.next, 55); assert.equal(far.pct, -8);
+  const fail = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[40, 10, 0], [40, 9, 0], [40, 8, 1]]]]));
+  assert.equal(fail.kind, 'reduzir'); assert.equal(fail.next, 37.5); assert.match(fail.detail, /falha \(RIR 0\) em 2/);
+  const one = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[40, 10, 2], [40, 9, 0]]]]));
+  assert.equal(one.kind, 'manter');
+  const plates = P.progressionHint('v1', DOSE, hist([['2026-11-10', [[1, 5], [1, 4]]]], 'plaquetas'));
+  assert.notEqual(plates.kind, 'reduzir'); // não sugere zero placas
+});
+
+// ---------- prancha: maior série única ----------
+await test('prancha: maior série única entre bloco final e prancha em casa', () => {
+  const e = { sessions: [{ id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [
+    { session_id: 'a', finisher_key: 'plank', duration_ms: 60000 }, { session_id: 'a', finisher_key: 'plank', duration_ms: 60000 }, { session_id: 'a', finisher_key: 'plank', duration_ms: 60000 },
+    { session_id: 'b', exercise_id: 'home_ex_prancha', duration_ms: 72400 }, { session_id: 'c', finisher_key: 'plank', duration_ms: 99000 }] };
+  assert.deepEqual(F.plankBestSingle(e, 'c'), { value: 72, date: '2026-11-14' });
+  assert.equal(F.finisherMarks(e, 'plank', 'c').best.value, 180); // total por treino continua separado
+  assert.equal(F.plankBestSingle({ sessions: [], sets: [] }), null);
+});
+
+// ---------- ranqueada ----------
+await test('ranqueada: divisões e faixas', () => {
+  assert.equal(RK.rankOf(0).label, 'Ferro III'); assert.equal(RK.rankOf(250).label, 'Ferro I');
+  assert.equal(RK.rankOf(300).label, 'Bronze III'); assert.equal(RK.rankOf(1799).label, 'Diamante I');
+  assert.equal(RK.rankOf(1800).label, 'Mestre'); assert.equal(RK.rankOf(5000).label, 'Lenda'); assert.equal(RK.rankOf(5000).ceil, null);
+});
+
+await test('ranqueada: missões pontuam, semana vencida/incompleta e reinício de temporada', () => {
+  const list = [];
+  // semana de 12/10: 4 missões (meta cumprida); semana de 19/10: 1 missão; semana de 26/10: nada
+  for (const d of ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-20']) list.push(mission(d));
+  const e = world(list);
+  for (const s of e.sessions) s.finished_at = s.date + 'T20:00:00Z';
+  const r = RK.ranked(e, 4, '2026-11-03');
+  const kinds = r.events.map(x => x.kind + ':' + x.delta);
+  assert.deepEqual(kinds, ['mission:12', 'mission:12', 'mission:12', 'mission:12', 'week:15', 'mission:12', 'week:-36', 'week:-36']);
+  assert.equal(r.points, 12 * 5 + 15 - 72);
+  assert.equal(r.missions, 5);
+  // virada de temporada (07/12) mantém 60%
+  const big = world(Array.from({ length: 40 }, (_, k) => mission(addDays('2026-10-12', k), k % 4)));
+  const after = RK.ranked(big, 4, '2026-12-07');
+  assert.equal(after.events.at(-1).kind, 'season'); assert.equal(after.events.at(-2).label, 'Semana sem treino');
+  assert.equal(after.points, Math.round(after.events.at(-2).points * 0.6));
+  assert.equal(after.seasons[0].number, 6);
+});
+
+await test('ranqueada: desafio diário não é partida; promoção é marcada', () => {
+  const e = world([mission('2026-10-12')]);
+  e.sessions.push({ id: 'dd', date: '2026-10-12', name: 'Desafio diário', status: 'completed' });
+  assert.equal(RK.ranked(e, 4, '2026-10-13').missions, 1);
+  const many = world(Array.from({ length: 30 }, (_, k) => mission(addDays('2026-10-12', k), k % 4)));
+  const r = RK.ranked(many, 4, '2026-11-10');
+  assert.ok(r.events.some(x => x.promoted === 'Ferro II'));
+  assert.equal(RK.missionRanked(many, many.sessions[0].id, 4).delta, 12);
 });
 
 await server.close();

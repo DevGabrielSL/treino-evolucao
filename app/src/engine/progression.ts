@@ -26,7 +26,7 @@ export function loadStep(unit: string, load: number) {
 }
 
 export type Hint = {
-  kind: 'subir' | 'confirmar' | 'manter';
+  kind: 'subir' | 'confirmar' | 'manter' | 'reduzir';
   unit: string; current: number; next: number; pct: number;
   min: number; max: number; title: string; detail: string;
 };
@@ -93,6 +93,24 @@ export function progressionHint(variantId: string, dose: Dose, entities: any, op
     return { ...base, kind: 'manter', next: last.top, pct: 0, title: `Mantenha ${fmt(last.top)} ${unit}`, detail: `Só houve 1 série de trabalho com essa carga na última vez. Faça pelo menos 2 para a sugestão avaliar se dá para subir.` };
   }
   const below = last.reps.filter(r => r < min).length > last.reps.length / 2;
+  // Redução: repetições baixas (abaixo da faixa) ou falha (RIR 0) em 2+ séries sem chegar ao topo.
+  const rirs = last.atTop.map((s: any) => s.rir).filter((r: any) => typeof r === 'number');
+  const failures = rirs.filter((r: number) => r === 0).length;
+  if (below || failures >= 2) {
+    const avg = last.reps.reduce((a, b) => a + b, 0) / last.reps.length;
+    const down = loadStep(unit, Math.max(0, last.top - 0.01));
+    const cut = below && min - avg >= 3 ? Math.max(down, Math.round((last.top * 0.1) / down) * down) : down;
+    const lower = Math.round((last.top - cut) * 100) / 100;
+    if (lower > 0) {
+      const dpct = Math.round((cut / last.top) * 100);
+      return {
+        ...base, kind: 'reduzir', next: lower, pct: -dpct, title: `Reduza para ${fmt(lower)} ${unit === 'plaquetas' ? (lower === 1 ? 'placa' : 'placas') : unit}`,
+        detail: below
+          ? `Na última vez as repetições ficaram abaixo da faixa (${last.reps.join(', ')} com ${fmt(last.top)} ${unit}). Reduzindo ~${dpct}%, você volta para ${min}–${max} com boa técnica e depois sobe de novo.`
+          : `Você chegou na falha (RIR 0) em ${failures} séries sem chegar a ${max} reps (${last.reps.join(', ')}). Reduzindo ~${dpct}%, dá para treinar com 1–2 repetições em reserva.`,
+      };
+    }
+  }
   return {
     ...base, kind: 'manter', next: last.top, pct: 0, title: `Mantenha ${fmt(last.top)} ${unit}`,
     detail: below ? `As repetições ficaram abaixo de ${min}. Mantenha a carga (ou reduza, se a técnica caiu) até voltar para a faixa ${min}–${max}.`

@@ -45,6 +45,9 @@ function plan(name: string, specs: Spec[], entities: any, note: string) {
   return { presetId: name === HOME_NAME ? 'home' : 'daily', presetName: name, presetNote: note, groups: [...new Set(items.map(i => i.group))], items, minutes: null, budget: items.length, only: true, excluded: [], short: 0, options: items, adjustment: {}, notes: [] };
 }
 
+/** Exercícios de peso corporal/tempo para o catálogo de "adicionar exercício". */
+export function homeCatalog(entities: any) { return [...HOME, CARDIO].map(s => item(s, entities)); }
+
 export function homePlan(entities: any) {
   return plan(HOME_NAME, HOME, entities, 'Circuito sem equipamento: faça as 3 séries de cada exercício ou alterne os exercícios em rodadas.');
 }
