@@ -9,6 +9,8 @@ const P = await server.ssrLoadModule('/src/engine/progression.ts');
 const H = await server.ssrLoadModule('/src/engine/home.ts');
 const F = await server.ssrLoadModule('/src/engine/finisherMarks.ts');
 const RK = await server.ssrLoadModule('/src/game/ranked.ts');
+const D = await server.ssrLoadModule('/src/engine/decks.ts');
+const LIVE = await server.ssrLoadModule('/src/legacy/principal_live.js');
 
 let failed = 0, passed = 0;
 async function test(name, fn) { try { await fn(); passed++; console.log('ok -', name); } catch (e) { failed++; console.error('FALHOU -', name, '\n', e); } }
@@ -226,6 +228,22 @@ await test('planos: casa com unidades já confirmadas; desafio rápido só com o
   assert.ok(daily.items.some(i => i.name === 'Cardio livre' && i.dose.sets === 1 && i.dose.unit === 'segundos'));
 });
 
+await test('core profundo: vácuo e estabilidade, sem crunch; extra fora da meta de missões', () => {
+  const core = H.corePlan({ sessions: [], sets: [], exercises: [], exercise_variants: [] });
+  assert.equal(core.presetName, 'Core profundo'); assert.equal(core.presetId, 'core');
+  assert.deepEqual(core.items.map(i => i.name), ['Vácuo abdominal', 'Inseto morto', 'Perdigueiro', 'Prancha', 'Prancha lateral', 'Ponte de glúteo']);
+  assert.ok(!core.items.some(i => i.name === 'Abdominal'));
+  assert.ok(core.items.every(i => i.unit_confirmed === true));
+  const vac = core.items[0]; assert.equal(vac.dose.unit, 'segundos'); assert.equal(vac.dose.sets, 4); assert.match(vac.dose.effort, /umbigo/);
+  // mesma prancha e ponte do treino em casa: histórico e recorde continuam juntos
+  assert.equal(core.items[3].variant_id, 'home_var_prancha'); assert.equal(core.items[5].variant_id, 'home_var_ponte');
+  assert.equal(H.isMission({ status: 'completed', name: 'Core profundo' }), false);
+  // catálogo de "adicionar exercício" ganha os novos, sem duplicar prancha e ponte
+  const names = H.homeCatalog({ sessions: [], sets: [], exercises: [], exercise_variants: [] }).map(i => i.name);
+  for (const n of ['Vácuo abdominal', 'Inseto morto', 'Perdigueiro', 'Prancha lateral']) assert.ok(names.includes(n), n);
+  assert.equal(names.filter(n => n === 'Prancha').length, 1); assert.equal(names.filter(n => n === 'Ponte de glúteo').length, 1);
+});
+
 await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
   const e = { sessions: [
     { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [
@@ -294,6 +312,65 @@ await test('ranqueada: desafio diário não é partida; promoção é marcada', 
   const r = RK.ranked(many, 4, '2026-11-10');
   assert.ok(r.events.some(x => x.promoted === 'Ferro II'));
   assert.equal(RK.missionRanked(many, many.sessions[0].id, 4).delta, 12);
+});
+
+// ---------- decks personalizados ----------
+const empty = () => ({ sessions: [], sets: [], exercises: [], exercise_variants: [] });
+await test('decks: padrão vira referências; sem personalização o plano é o pronto', () => {
+  const m = { entities: empty() };
+  const def = D.defaultEntries('rpg_deck_01', m.entities);
+  assert.equal(def.length, 7); assert.equal(def[0].ref, 'cat:fly'); assert.deepEqual([def[0].sets, def[0].min], [3, def[0].min]);
+  const p = D.deckPlan('rpg_deck_01', m, {});
+  assert.equal(p.items.length, 7); assert.equal(p.custom, undefined);
+});
+
+await test('decks: personalizado reordena, tira, muda séries/faixa e inclui catálogo, casa e variação sua', () => {
+  const e = empty();
+  e.exercises.push({ id: 'ex1', name: 'Remada curvada', muscle_group: 'costas' });
+  e.exercise_variants.push({ id: 'v1', exercise_id: 'ex1', equipment_or_variation: 'Barra', unit: 'kg', unit_confirmed: true });
+  const settings = { deck_custom: { rpg_deck_01: { items: [
+    { ref: 'cat:bench', sets: 4, min: 5, max: 8 }, { ref: 'var:v1', sets: 2, min: 10, max: 12 },
+    { ref: 'home:prancha', sets: 2, min: 30, max: 90 }, { ref: 'var:sumiu', sets: 3, min: 8, max: 12 } ] } } };
+  const p = D.deckPlan('rpg_deck_01', { entities: e }, settings);
+  assert.equal(p.custom, true);
+  assert.deepEqual(p.items.map(i => i.name), ['Supino reto', 'Remada curvada', 'Prancha']);
+  assert.deepEqual([p.items[0].dose.sets, p.items[0].dose.min, p.items[0].dose.max], [4, 5, 8]);
+  assert.equal(p.items[1].is_catalog, false); assert.equal(p.items[1].dose.sets, 2);
+  assert.equal(p.items[2].dose.unit, 'segundos'); assert.equal(p.items[2].unit_confirmed, true);
+  assert.deepEqual(p.groups.sort(), ['costas', 'peito']);
+});
+
+await test('decks: item do catálogo usa a sua variação confirmada de mesmo nome/equipamento', () => {
+  const e = empty();
+  const cat = D.resolveEntry(e, { ref: 'cat:bench', sets: 3, min: 6, max: 10 });
+  e.exercises.push({ id: 'meu', name: cat.name, muscle_group: 'peito' });
+  e.exercise_variants.push({ id: 'meuv', exercise_id: 'meu', equipment_or_variation: cat.equipment, unit: 'kg', unit_confirmed: true });
+  const r = D.resolveEntry(e, { ref: 'cat:bench', sets: 3, min: 6, max: 10 });
+  assert.equal(r.variant_id, 'meuv'); assert.equal(r.is_catalog, false); assert.equal(r.group, 'peito');
+});
+
+await test('decks: validação e referência das opções do seletor', () => {
+  assert.throws(() => D.validateEntries([]), /1 a 18/);
+  assert.throws(() => D.validateEntries([{ ref: 'cat:a', sets: 3, min: 12, max: 8 }]), /Faixa/);
+  assert.throws(() => D.validateEntries([{ ref: 'cat:a', sets: 11, min: 8, max: 12 }]), /Séries/);
+  assert.throws(() => D.validateEntries([{ ref: 'cat:a', sets: 3, min: 8, max: 12 }, { ref: 'cat:a', sets: 3, min: 8, max: 12 }]), /repetido/);
+  assert.equal(D.validateEntries([{ ref: 'var:x', sets: 1, min: 1, max: 1 }]), true);
+  assert.equal(D.refForOption({ mine: true, item: { variant_id: 'v9' } }), 'var:v9');
+  assert.equal(D.refForOption({ mine: false, item: { variant_id: 'preset_var_bench' } }), 'cat:bench');
+  assert.equal(D.refForOption({ mine: false, item: { variant_id: 'home_var_prancha' } }), 'home:prancha');
+});
+
+await test('meta de séries respeita o planejado (1, 2 ou 5), também em andamento', () => {
+  const s = (n) => ({ id: 's', status: 'in_progress', planned_variant_ids: ['v'], planned_guidance: { v: { sets: n, min: 8, max: 12, unit: 'repetições' } } });
+  for (const n of [1, 2, 5]) assert.equal(LIVE.liveGuidance(s(n), 'v', empty()).target, n);
+});
+
+await test('desafios diários com metas personalizadas', () => {
+  const e = dayWorld([['2026-11-20', 'abs', 30], ['2026-11-20', 'plk', 0, 60], ['2026-11-20', 'pol', 0, 300]]);
+  const q = Object.fromEntries(H.dailyQuests(e, '2026-11-20', { abs: 30, plank: 60, cardio: 300 }).map(x => [x.key, x]));
+  assert.ok(q.abs.done && q.plank.done && q.cardio.done);
+  assert.equal(H.dailyStreak(e, '2026-11-20', { abs: 30, plank: 60, cardio: 300 }), 1);
+  assert.equal(H.dailyStreak(e, '2026-11-20'), 0);
 });
 
 await server.close();

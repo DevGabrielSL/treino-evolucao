@@ -238,6 +238,25 @@ test('treino em casa: peso corporal e tempo sem confirmar unidade; conta nos des
   await expect(page.getByText('1/4', { exact: true })).toBeVisible();
 });
 
+test('core profundo: vácuo por tempo, prancha conta no desafio e não conta como missão da semana', async ({ page }) => {
+  await boot(page);
+  await page.getByTestId('core-card').click();
+  const brief = page.getByRole('dialog', { name: 'Core profundo' });
+  await expect(brief.getByText('Vácuo abdominal')).toBeVisible();
+  await expect(brief.getByText('4×15–30s')).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar core profundo' }).click();
+  await page.getByText('Toque para começar').click();
+  await expect(page.getByRole('heading', { name: 'Vácuo abdominal' })).toBeVisible();
+  await page.getByLabel('Segundos realizados').fill('20');
+  await page.getByRole('button', { name: 'Salvar tempo' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByText('0/4', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('core-card')).toContainText('último');
+});
+
 test('desafio diário: monta só o que falta e não conta como missão da semana', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Fazer o que falta agora' }).click();
@@ -276,6 +295,65 @@ test('adicionar exercício no meio do treino, alarme do descanso minimizado e ra
   await expect(page.getByTestId('rank-label')).toHaveText('Ferro III');
   await page.getByTestId('ranked-card').click();
   await expect(page.getByRole('dialog', { name: 'Ranqueada' }).getByTestId('ranked-events')).toContainText('+12');
+});
+
+test('editor de deck: tirar, mudar séries, incluir do catálogo e salvar', async ({ page }) => {
+  await boot(page);
+  await page.getByRole('button', { name: 'Briefing' }).click();
+  await page.getByRole('button', { name: 'Editar deck' }).click();
+  const editor = page.getByRole('dialog', { name: 'Editar deck' });
+  const rows = editor.getByTestId('deck-row');
+  await expect(rows).toHaveCount(7);
+  await rows.first().getByRole('button', { name: /^Remover/ }).click();
+  await expect(rows).toHaveCount(6);
+  await rows.first().getByRole('button', { name: /^Mais séries/ }).click();
+  await editor.getByRole('button', { name: 'Adicionar exercício ao deck' }).click();
+  await editor.getByLabel('Buscar exercício').fill('polichinelo');
+  await editor.getByRole('button', { name: /Polichinelo/ }).click();
+  await expect(rows).toHaveCount(7);
+  await expect(editor.getByText('7 exercícios · 22 séries')).toBeVisible();
+  await editor.getByRole('button', { name: 'Salvar deck' }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByText('Deck personalizado por você.', { exact: false })).toBeVisible();
+  await expect(page.getByText(/^4×/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Fechar', exact: true }).first().click();
+  await expect(page.getByText(/· editado/)).toBeVisible();
+
+  // inicia com o deck editado: 22 séries
+  await startFeaturedMission(page);
+  await expect(page.getByText(/0\/22 séries/)).toBeVisible();
+});
+
+test('editor de deck: restaurar o original', async ({ page }) => {
+  await boot(page);
+  await page.getByRole('button', { name: 'Briefing' }).click();
+  await page.getByRole('button', { name: 'Editar deck' }).click();
+  const editor = page.getByRole('dialog', { name: 'Editar deck' });
+  await editor.getByTestId('deck-row').first().getByRole('button', { name: /^Remover/ }).click();
+  await editor.getByRole('button', { name: 'Salvar deck' }).click();
+  await page.getByRole('button', { name: 'Editar deck' }).click();
+  await expect(editor.getByTestId('deck-row')).toHaveCount(6);
+  await editor.getByRole('button', { name: 'Restaurar deck original' }).click();
+  await page.getByRole('button', { name: 'Restaurar', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByText('3 séries de trabalho por alvo.', { exact: false })).toBeVisible();
+});
+
+test('roteiro no treino: mais séries planejadas, mudar ordem e descanso salvo por exercício', async ({ page }) => {
+  await boot(page);
+  await startFeaturedMission(page);
+  await confirmKg(page);
+  await page.getByRole('button', { name: 'Opções do exercício' }).click();
+  await page.getByRole('button', { name: 'Mais uma série planejada' }).click();
+  await expect(page.getByTestId('planned-sets')).toHaveText('4');
+  await page.getByRole('button', { name: 'Mover para depois' }).click();
+  await expect(page.getByTestId('plan-controls')).toContainText('2 de 7');
+  await page.getByRole('button', { name: 'Fechar' }).last().click();
+  await expect(page.getByText(/de 4 · /)).toBeVisible();
+  // descanso de 1:30 só para este exercício
+  await page.getByRole('button', { name: 'Descanso de 90 segundos' }).click();
+  await registerSet(page, '40', '10');
+  await expect(page.getByText(/^01:(2\d|30)$/).first()).toBeVisible();
 });
 
 test('treino em andamento sobrevive a recarregar a página', async ({ page }) => {
