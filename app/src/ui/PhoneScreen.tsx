@@ -12,6 +12,7 @@ import { soundOn, setSound, sfx } from '../fx/sfx';
 import { autoRest, setAutoRest } from './RestOverlay';
 import { progressionOn, setProgression } from '../engine/progression';
 import { notifySupported, restNotifyOn, setRestNotify } from '../fx/notify';
+import { setRest as saveRest } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { ask } from './Dialog';
 import { nf } from './format';
@@ -382,6 +383,16 @@ function SettingsApp({ doc, onError, toast }: Ctx) {
       <Card title="Jogo">
         <label className="flex items-center justify-between py-1.5"><span>Efeitos sonoros</span><input type="checkbox" checked={snd} onChange={e => { setSound(e.target.checked); setSnd(e.target.checked); if (e.target.checked) sfx.set(); }} className="size-5 accent-[#ff2e93]" /></label>
         <label className="flex items-center justify-between py-1.5"><span>Descanso automático após cada série</span><input type="checkbox" checked={rest} onChange={e => { setAutoRest(e.target.checked); setRest(e.target.checked); }} className="size-5 accent-[#1ee8d6]" /></label>
+      </Card>
+      <Card title="Descanso padrão">
+        <p className="text-[12px] text-haze leading-snug">Usado nos exercícios em que você ainda não escolheu um tempo. Ao tocar num tempo na barra de descanso do treino, ele fica salvo só para aquele exercício.</p>
+        <div className="mt-2 grid grid-cols-5 gap-1.5" role="group" aria-label="Descanso padrão">
+          {[90, 120, 150, 180, 240].map(sec => {
+            const on = (doc.settings.rest?.default ?? 150) === sec;
+            return <button key={sec} aria-pressed={on} aria-label={`Padrão ${sec} segundos`} onClick={() => saveRest(sec).catch(onError)} className={`num h-11 rounded-xl font-bold ${on ? 'bg-aqua text-night' : 'bg-white/10'}`}>{`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`}</button>;
+          })}
+        </div>
+        {Object.keys(doc.settings.rest?.by_variant || {}).length > 0 && <p className="num text-[11px] text-haze mt-2">{Object.keys(doc.settings.rest.by_variant).length} exercício(s) com descanso próprio.</p>}
       </Card>
       <Card title="Alarme do descanso">
         <p className="text-[12px] text-haze leading-snug">O fim do descanso toca 3 rajadas fortes e vibra, mesmo com a tela de descanso minimizada. O volume é o de <b>mídia</b> do celular (não o da campainha).</p>

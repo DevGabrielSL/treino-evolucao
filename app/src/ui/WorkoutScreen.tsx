@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Pencil, Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2 } from 'lucide-react';
-import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, logTimed, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed } from '../engine/workout';
+import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, logTimed, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed, restFor, setRest } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { onReward } from '../engine/store';
 import { xp, rankFor } from '../game/progress';
@@ -115,7 +115,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
         setTimeout(() => { sfx.pr(); fx.stamp('Novo recorde', `${exercise?.name}: ${nf(prevBest)} → ${nf(l)} ${variant.unit}`); fx.confetti(); }, 350);
       } else if (k === 'effective' && combo + 1 >= 2) { sfx.combo(combo + 1); }
       // descanso também depois do aquecimento
-      if (auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 150); setRestOpen(true); }
+      if (auto) { restTimer.start(session.id, restFor(doc.settings, current)); setRestOpen(true); }
     });
   }
   // A meta de séries é sugestão: depois dela o alvo continua aberto para séries extras.
@@ -245,7 +245,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                 </div>
               </div>
             ) : timed ? (
-              <TimedEntry dose={guide.dose} busy={busy} onSave={(secs: number) => run(async () => { await logTimed(session, variant, secs); sfx.set(); if (auto) { restTimer.start(session.id, restTimer.state(session.id).seconds || 150); setRestOpen(true); } })} />
+              <TimedEntry dose={guide.dose} busy={busy} onSave={(secs: number) => run(async () => { await logTimed(session, variant, secs); sfx.set(); if (auto) { restTimer.start(session.id, restFor(doc.settings, current)); setRestOpen(true); } })} />
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -309,7 +309,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
       </AnimatePresence>
 
       {/* Descanso */}
-      <RestBar sessionId={session.id} rest={rest} since={lastAt} auto={auto} onAuto={(v: boolean) => { setAutoRest(v); setAuto(v); }} onOpen={() => setRestOpen(true)} />
+      <RestBar sessionId={session.id} rest={rest} since={lastAt} planned={restFor(doc.settings, current)} onPick={(s: number) => run(() => setRest(s, current))} auto={auto} onAuto={(v: boolean) => { setAutoRest(v); setAuto(v); }} onOpen={() => setRestOpen(true)} />
 
       <div className="mx-3 mt-3">
         <button onClick={toggleFinisher} className={`w-full h-12 rounded-xl chip text-sm border ${finisher ? 'bg-pink/15 border-pink/40 text-pink' : 'bg-white/5 border-white/10'}`}>{finisher ? 'Fechar bloco final' : 'Bloco final · abdominal + prancha'}</button>
@@ -369,9 +369,9 @@ function Stepper({ label, value, onChange, onMinus, onPlus, decimal }: any) {
   );
 }
 
-function RestBar({ sessionId, rest, since, auto, onAuto, onOpen }: { sessionId: string; rest: any; since: number | null; auto: boolean; onAuto: (v: boolean) => void; onOpen: () => void }) {
+function RestBar({ sessionId, rest, since, planned, onPick, auto, onAuto, onOpen }: { sessionId: string; rest: any; since: number | null; planned: number; onPick: (s: number) => void; auto: boolean; onAuto: (v: boolean) => void; onOpen: () => void }) {
   const [, force] = useState(0);
-  const total = rest.seconds || 150, pct = rest.running || rest.remaining ? rest.remaining / total : 0;
+  const total = rest.running || rest.remaining ? rest.seconds || planned : planned, pct = rest.running || rest.remaining ? rest.remaining / total : 0;
   const act = (fn: () => void) => { fn(); force(x => x + 1); };
   return (
     <div className="mx-3 mt-3 panel p-3">
@@ -396,7 +396,7 @@ function RestBar({ sessionId, rest, since, auto, onAuto, onOpen }: { sessionId: 
         {rest.running ? (
           <button onClick={() => act(() => restTimer.stop(sessionId))} className="chip text-sm rounded-lg bg-white/10 px-3 py-2 w-full">Pular descanso</button>
         ) : [90, 120, 150, 180].map(s => (
-          <button key={s} onClick={() => act(() => { restTimer.configure(sessionId, s, restTimer.state(sessionId).auto); })} aria-label={`Descanso de ${s} segundos`}
+          <button key={s} onClick={() => act(() => { restTimer.configure(sessionId, s, restTimer.state(sessionId).auto); onPick(s); })} aria-label={`Descanso de ${s} segundos`}
             className={`flex-1 num text-sm font-bold rounded-lg py-2 ${s === total ? 'bg-aqua text-night' : 'bg-white/10'}`}>{clock(s * 1000).replace(/^0/, '')}</button>
         ))}
       </div>

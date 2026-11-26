@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeftRight, Ban, Minus, Plus, RotateCcw, Search, SkipForward, Trash2, Timer, Pause, Play } from 'lucide-react';
-import { addToPlan, doseForAdded, changePlan, confirmUnit, loadUnits, liveGuidance, FINISHER_GOALS, finisherProgress, plankElapsed, recordFinisher, plank, removeFinisherRow } from '../engine/workout';
+import { ArrowLeftRight, Ban, Minus, Plus, RotateCcw, Search, SkipForward, Trash2, Timer, Pause, Play, ArrowUp, ArrowDown } from 'lucide-react';
+import { addToPlan, doseForAdded, setPlannedSets, movePlanned, changePlan, confirmUnit, loadUnits, liveGuidance, FINISHER_GOALS, finisherProgress, plankElapsed, recordFinisher, plank, removeFinisherRow } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { ask } from './Dialog';
 import { clock, nf } from './format';
 import { finisherMarks, plankBestSingle, type Mark } from '../engine/finisherMarks';
 import { sfx } from '../fx/sfx';
-import { catalogItems } from '../legacy/principal_presets.js';
-import { homeCatalog } from '../engine/home';
+import { ExercisePicker, type PickOption } from './ExercisePicker';
 
 /* ---------- Opções do exercício atual ---------- */
 export function ExerciseOptions({ model, session, current, onClose, onSelect, onError }: { model: any; session: any; current: string; onClose: () => void; onSelect: (id: string) => void; onError: (e: any) => void }) {
@@ -31,6 +30,7 @@ export function ExerciseOptions({ model, session, current, onClose, onSelect, on
         <div className="space-y-2">
           {g.target !== null && <Item icon={SkipForward} disabled={done} onClick={() => run(async () => { await changePlan(session, current, 'skip'); onClose(); })} title="Pular uma série" sub="Conta como resolvida, sem registro de carga." />}
           {g.skipped > 0 && <Item icon={RotateCcw} onClick={() => run(async () => { await changePlan(session, current, 'undo-skip'); onClose(); })} title="Devolver série pulada" sub={`${g.skipped} pulada(s) neste exercício.`} />}
+          <PlanControls model={model} session={session} current={current} target={g.target} onError={onError} />
           <Item icon={ArrowLeftRight} disabled={done} onClick={() => setMode('swap')} title="Trocar por outro exercício" sub="As séries já feitas continuam salvas." />
           <Item icon={Ban} onClick={() => setMode('unit')} title="Trocar unidade de carga" sub={`Atual: ${variant?.unit}`} />
           <Item icon={Trash2} danger onClick={() => run(async () => { if (await ask(`Remover ${ex?.name || 'este exercício'} do roteiro deste treino? As séries salvas serão mantidas.`, { ok: 'Remover', danger: true })) { await changePlan(session, current, 'remove'); onClose(); } })} title="Remover do roteiro" sub="Só desta missão." />
@@ -165,25 +165,9 @@ function VsLast({ done, last, best, fmt, unit, testid, compact }: { done: number
 
 /* ---------- Adicionar exercício durante o treino ---------- */
 export function AddExercise({ model, session, onClose, onAdded, onError }: { model: any; session: any; onClose: () => void; onAdded: (id: string) => void; onError: (e: any) => void }) {
-  const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
-  const norm = (x: string) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const options = useMemo(() => {
-    const occupied = new Set((session.planned_variant_ids || []).flatMap((id: string) => [id, ...(session.prior_planned_variants?.[id] || [])]));
-    const used = new Set<string>();
-    const mine = model.entities.exercise_variants.filter((v: any) => !occupied.has(v.id)).map((v: any) => {
-      const e = model.exerciseMap.get(v.exercise_id); if (!e) return null;
-      used.add(norm(e.name) + '|' + norm(v.equipment_or_variation));
-      return { key: v.id, name: e.name, equipment: v.equipment_or_variation, unit: v.unit, mine: true, item: { variant_id: v.id, unit: v.unit, is_catalog: false } };
-    }).filter(Boolean);
-    const known = new Set(model.entities.exercise_variants.map((v: any) => v.id));
-    const catalog = [...catalogItems(), ...homeCatalog(model.entities)].filter((i: any) => !occupied.has(i.variant_id) && !known.has(i.variant_id) && !used.has(norm(i.name) + '|' + norm(i.equipment)))
-      .map((i: any) => ({ key: i.variant_id, name: i.name, equipment: i.equipment, unit: i.unit, mine: false, item: { ...i, is_catalog: true } }));
-    return [...mine, ...catalog].filter((o: any) => !q || norm(`${o.name} ${o.equipment}`).includes(norm(q)))
-      .sort((a: any, b: any) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name, 'pt-BR')).slice(0, 80);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, session, q]);
-  const add = async (o: any) => {
+  const exclude = useMemo(() => new Set<string>((session.planned_variant_ids || []).flatMap((id: string) => [id, ...(session.prior_planned_variants?.[id] || [])])), [session]);
+  const add = async (o: PickOption) => {
     if (busy) return; setBusy(true);
     try {
       const dose = o.item.dose || doseForAdded({ id: o.item.variant_id, unit: o.unit }, model.entities);
@@ -192,19 +176,31 @@ export function AddExercise({ model, session, onClose, onAdded, onError }: { mod
   };
   return (
     <Sheet onClose={onClose} title="Adicionar exercício">
-      <div className="flex items-center gap-2 rounded-xl bg-black/40 border border-white/10 px-3"><Search size={16} className="text-haze" /><input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar exercício ou equipamento" aria-label="Buscar exercício" className="flex-1 bg-transparent py-2.5 outline-none" /></div>
-      <p className="text-[11px] text-haze mt-2">Entra no fim do roteiro com 3 séries (ou a faixa que você usou da última vez). Seus exercícios aparecem primeiro.</p>
-      <ul className="mt-2 max-h-[52vh] overflow-y-auto no-scrollbar space-y-1.5">
-        {options.map((o: any) => (
-          <li key={o.key}><button disabled={busy} onClick={() => add(o)} className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-2 text-left disabled:opacity-50">
-            <div className="duotone-wrap size-11 rounded-lg shrink-0"><ExerciseVisual name={o.name} equipment={o.equipment} size="sm" /></div>
-            <span className="flex-1 min-w-0"><b className="font-hud block truncate">{o.name}</b><span className="text-[11px] text-haze truncate block">{o.equipment} · {o.unit === 'a confirmar' ? 'unidade a confirmar' : o.unit}</span></span>
-            {!o.mine && <span className="chip text-[10px] text-aqua shrink-0">catálogo</span>}
-            <Plus size={18} className="text-aqua shrink-0" />
-          </button></li>
-        ))}
-        {!options.length && <p className="text-sm text-haze text-center py-6">Nada encontrado. Cadastre um exercício novo no app Modelos do Celular.</p>}
-      </ul>
+      <ExercisePicker model={model} exclude={exclude} busy={busy} onPick={add} hint="Entra no fim do roteiro com 3 séries (ou a faixa que você usou da última vez). Seus exercícios aparecem primeiro." />
     </Sheet>
+  );
+}
+
+/** Roteiro do treino: séries planejadas deste exercício e posição na fila. */
+function PlanControls({ model, session, current, target, onError }: { model: any; session: any; current: string; target: number | null; onError: (e: any) => void }) {
+  const ids: string[] = session.planned_variant_ids || [];
+  const i = ids.indexOf(current), sets = target ?? 3;
+  const run = async (fn: () => Promise<any>) => { try { await fn(); sfx.tap(); } catch (e) { onError(e); } };
+  return (
+    <div className="rounded-xl bg-white/5 p-3 space-y-3" data-testid="plan-controls">
+      <div className="flex items-center gap-3">
+        <span className="flex-1"><b className="font-hud block">Séries planejadas</b><span className="text-[11px] text-haze">Só neste treino. Para mudar sempre, edite o deck.</span></span>
+        <button aria-label="Menos uma série planejada" disabled={sets <= 1} onClick={() => run(() => setPlannedSets(session, current, sets - 1, model))} className="size-10 rounded-lg bg-white/10 grid place-items-center disabled:opacity-30"><Minus size={16} /></button>
+        <span className="num text-2xl font-extrabold w-7 text-center" data-testid="planned-sets">{sets}</span>
+        <button aria-label="Mais uma série planejada" disabled={sets >= 10} onClick={() => run(() => setPlannedSets(session, current, sets + 1, model))} className="size-10 rounded-lg bg-white/10 grid place-items-center disabled:opacity-30"><Plus size={16} /></button>
+      </div>
+      {i >= 0 && ids.length > 1 && (
+        <div className="flex items-center gap-3">
+          <span className="flex-1"><b className="font-hud block">Ordem no roteiro</b><span className="num text-[11px] text-haze">{i + 1} de {ids.length}</span></span>
+          <button aria-label="Mover para antes" disabled={i === 0} onClick={() => run(() => movePlanned(session, current, -1))} className="size-10 rounded-lg bg-white/10 grid place-items-center disabled:opacity-30"><ArrowUp size={16} /></button>
+          <button aria-label="Mover para depois" disabled={i === ids.length - 1} onClick={() => run(() => movePlanned(session, current, 1))} className="size-10 rounded-lg bg-white/10 grid place-items-center disabled:opacity-30"><ArrowDown size={16} /></button>
+        </div>
+      )}
+    </div>
   );
 }
