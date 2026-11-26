@@ -1,0 +1,67 @@
+// Catálogo ampliado de exercícios de academia, para encontrar na busca durante o treino
+// e no editor de decks. Formato: [grupo, nome, equipamento, mín, máx, unidade?].
+// Sem cargas: a unidade de máquina e polia é confirmada pelo usuário no primeiro uso.
+export const EXTRA_EXERCISES = [
+ // Peito
+ ['peito','Supino reto','Halteres',8,12,'kg/halter'], ['peito','Supino reto','Máquina',8,12], ['peito','Supino reto','Smith',8,12],
+ ['peito','Supino inclinado','Barra livre',8,12], ['peito','Supino inclinado','Smith',8,12],
+ ['peito','Supino declinado','Barra livre',8,12], ['peito','Supino declinado','Halteres',8,12,'kg/halter'],
+ ['peito','Crucifixo','Halteres · banco reto',10,15,'kg/halter'], ['peito','Crucifixo inclinado','Halteres',10,15,'kg/halter'],
+ ['peito','Voador (peck deck)','Máquina',10,15], ['peito','Crossover','Polia alta',10,15], ['peito','Crossover','Polia baixa',10,15],
+ ['peito','Crucifixo na polia','Polia média',10,15], ['peito','Flexão de braço','Peso corporal',8,20,'peso corporal'],
+ ['peito','Paralelas para peito','Peso corporal',6,12,'peso corporal'], ['peito','Pullover','Halter',10,15,'kg/halter'],
+ ['peito','Chest press','Máquina articulada',8,12], ['peito','Supino inclinado','Máquina articulada',8,12],
+ // Costas
+ ['costas','Barra fixa','Peso corporal',5,12,'peso corporal'], ['costas','Barra fixa supinada','Peso corporal',5,12,'peso corporal'],
+ ['costas','Barra fixa','Graviton (assistida)',6,12], ['costas','Puxada alta supinada','Polia alta',8,12],
+ ['costas','Puxada alta aberta','Polia alta',8,12], ['costas','Puxada alta triângulo','Polia alta',8,12],
+ ['costas','Puxada alta','Máquina articulada',8,12], ['costas','Puxada alta unilateral','Máquina articulada · unilateral',8,12],
+ ['costas','Remada curvada','Barra livre',8,12], ['costas','Remada curvada supinada','Barra livre',8,12],
+ ['costas','Remada cavalinho','Barra T',8,12], ['costas','Remada serrote','Halter',8,12,'kg/halter'],
+ ['costas','Remada baixa','Polia · triângulo',8,12], ['costas','Remada baixa aberta','Polia · barra reta',8,12],
+ ['costas','Remada sentada','Máquina',8,12], ['costas','Remada unilateral','Máquina articulada · unilateral',8,12],
+ ['costas','Remada alta','Máquina articulada',8,12], ['costas','Remada curvada','Smith',8,12],
+ ['costas','Pulldown braços estendidos','Polia alta · barra reta',10,15], ['costas','Pull over na polia','Polia alta · corda',10,15],
+ ['costas','Levantamento terra','Barra livre',5,8], ['costas','Levantamento terra romeno','Barra livre',8,12],
+ ['costas','Hiperextensão lombar','Banco romano',10,15,'peso corporal'], ['costas','Encolhimento','Halteres',10,15,'kg/halter'],
+ ['costas','Encolhimento','Barra livre',10,15], ['costas','Encolhimento','Máquina',10,15],
+ // Ombros
+ ['ombros','Desenvolvimento','Halteres',8,12,'kg/halter'], ['ombros','Desenvolvimento','Barra livre',8,12],
+ ['ombros','Desenvolvimento','Smith',8,12], ['ombros','Desenvolvimento Arnold','Halteres',8,12,'kg/halter'],
+ ['ombros','Elevação lateral','Máquina',12,20], ['ombros','Elevação lateral unilateral','Polia · unilateral',12,20],
+ ['ombros','Elevação frontal','Halteres',10,15,'kg/halter'], ['ombros','Elevação frontal','Polia',10,15],
+ ['ombros','Elevação frontal','Anilha',10,15], ['ombros','Crucifixo inverso','Halteres',12,20,'kg/halter'],
+ ['ombros','Crucifixo inverso','Polia · cruzado',12,20], ['ombros','Face pull','Polia · corda',12,20],
+ ['ombros','Remada alta (upright row)','Barra livre',10,15], ['ombros','Remada alta (upright row)','Polia',10,15],
+ // Bíceps
+ ['biceps','Rosca direta','Barra reta',8,12], ['biceps','Rosca direta','Barra W',8,12], ['biceps','Rosca alternada','Halteres',8,12,'kg/halter'],
+ ['biceps','Rosca concentrada','Halter',10,15,'kg/halter'], ['biceps','Rosca Scott','Barra W',8,12], ['biceps','Rosca Scott','Halter · unilateral',10,15,'kg/halter'],
+ ['biceps','Rosca martelo','Polia · corda',10,15], ['biceps','Rosca inversa','Barra W',10,15], ['biceps','Rosca 21','Barra W',7,7],
+ ['biceps','Rosca na polia','Polia baixa · barra reta',10,15], ['biceps','Rosca na polia unilateral','Polia · unilateral',10,15],
+ ['biceps','Rosca bayesian','Polia · unilateral',10,15], ['biceps','Rosca spider','Halteres · banco inclinado',10,15,'kg/halter'],
+ ['biceps','Rosca direta','Máquina',10,15],
+ // Tríceps
+ ['triceps','Tríceps corda','Polia · corda',10,15], ['triceps','Tríceps barra reta','Polia · barra reta',10,15],
+ ['triceps','Tríceps unilateral','Polia · unilateral',10,15], ['triceps','Tríceps francês','Halter',10,15,'kg/halter'],
+ ['triceps','Tríceps francês na polia','Polia · corda',10,15], ['triceps','Tríceps testa','Barra W',8,12],
+ ['triceps','Tríceps coice','Halter',10,15,'kg/halter'], ['triceps','Tríceps coice','Polia',10,15],
+ ['triceps','Mergulho no banco','Peso corporal',8,15,'peso corporal'], ['triceps','Paralelas','Peso corporal',6,12,'peso corporal'],
+ ['triceps','Supino fechado','Barra livre',8,12], ['triceps','Tríceps','Máquina',10,15],
+ // Pernas
+ ['pernas','Agachamento livre','Barra livre',6,10], ['pernas','Agachamento','Smith',8,12], ['pernas','Agachamento goblet','Halter',10,15,'kg/halter'],
+ ['pernas','Agachamento búlgaro','Halteres',8,12,'kg/halter'], ['pernas','Afundo','Halteres',8,12,'kg/halter'], ['pernas','Afundo','Smith',8,12],
+ ['pernas','Passada','Halteres',10,14,'kg/halter'], ['pernas','Agachamento sumô','Halter',10,15,'kg/halter'],
+ ['pernas','Leg press horizontal','Máquina',10,15], ['pernas','Leg press unilateral','Máquina · unilateral',10,15],
+ ['pernas','Agachamento pêndulo','Máquina',8,12], ['pernas','Belt squat','Máquina',8,12],
+ ['pernas','Cadeira extensora unilateral','Máquina · unilateral',12,15], ['pernas','Flexora em pé','Máquina · unilateral',10,15],
+ ['pernas','Stiff','Barra livre',8,12], ['pernas','Stiff','Halteres',8,12,'kg/halter'],
+ ['pernas','Elevação pélvica','Barra livre',8,12], ['pernas','Elevação pélvica','Máquina',8,12],
+ ['pernas','Glúteo na polia (coice)','Polia · tornozeleira',12,15], ['pernas','Glúteo','Máquina',12,15],
+ ['pernas','Panturrilha em pé','Máquina',12,20], ['pernas','Panturrilha no leg press','Máquina',12,20], ['pernas','Panturrilha','Smith',12,20],
+ ['pernas','Subida no banco','Halteres',8,12,'kg/halter'],
+ // Core
+ ['core','Abdominal supra','Peso corporal',12,20,'peso corporal'], ['core','Abdominal infra','Peso corporal',10,15,'peso corporal'],
+ ['core','Elevação de pernas na barra','Peso corporal',8,15,'peso corporal'], ['core','Elevação de pernas','Paralelas (cadeira romana)',10,15,'peso corporal'],
+ ['core','Abdominal oblíquo','Peso corporal',12,20,'peso corporal'], ['core','Abdominal na bola','Bola suíça',12,20,'peso corporal'],
+ ['core','Rotação de tronco','Polia',10,15], ['core','Pallof press','Polia',10,15], ['core','Roda abdominal','Rolo',8,12,'peso corporal'],
+];

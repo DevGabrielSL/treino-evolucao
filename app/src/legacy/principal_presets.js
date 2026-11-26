@@ -1,4 +1,5 @@
 import {analyzeHistory,readinessAdjustment} from './balanced_coach.js';
+import {EXTRA_EXERCISES} from './exercise_catalog.js';
 const norm=x=>String(x??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 // Equipment descriptions are explicit. Machine load conventions must be confirmed by the user.
 const registry={
@@ -7,6 +8,8 @@ const registry={
  hipAdduction:['pernas','Cadeira adutora','Máquina',12,20],
  curlCableLengthened:['biceps','Rosca na polia alongada','Polia · posição alongada',10,15],
  tricepsSkullcrusherDB:['triceps','Tríceps testa com halteres','Halteres',10,15,'kg/halter'],
+ latUniPlate:['costas','Puxada alta unilateral','Máquina com anilhas · unilateral',8,12],
+ pulloverCable:['costas','Pull over na polia','Polia alta',10,15],
  deck2Pulldown:['costas','Puxada alta','Polia alta',8,12],
  deck2ArticulatedRow:['costas','Remada articulada com apoio','Máquina articulada com apoio',8,12],
  deck2SinglePulldown:['costas','Puxada alta unilateral','Polia alta · unilateral',8,12],
@@ -25,10 +28,14 @@ const registry={
  hack:['pernas','Agachamento hack','Máquina hack',8,12], leg:['pernas','Leg press','Máquina',10,15], extension:['pernas','Cadeira extensora','Máquina',12,15], flexLying:['pernas','Mesa flexora','Máquina',10,15], flexSeated:['pernas','Cadeira flexora','Máquina',10,15], rdl:['pernas','Levantamento romeno (stiff)','Halteres',8,12,'kg/halter'], hip:['pernas','Elevação pélvica','Máquina',8,12], lunge:['pernas','Afundo com apoio','Halteres',8,12,'kg/halter'], calfStanding:['pernas','Panturrilha em pé','Máquina',12,20], calfSeated:['pernas','Panturrilha sentada','Máquina',12,20], goblet:['pernas','Agachamento goblet','Halter',8,12,'kg/halter'],
  absCable:['core','Abdominal','Polia',10,15], absMachine:['core','Abdominal','Máquina',10,15], reverse:['core','Abdominal reverso','Peso corporal',10,15,'peso corporal']
 };
+// Catálogo ampliado: chaves estáveis 'x_<nome>_<equipamento>', sem repetir o que os decks já têm.
+const slug=x=>norm(x).replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+{const seen=new Set(Object.values(registry).map(r=>norm(r[1])+'|'+norm(r[2])));
+ for(const r of EXTRA_EXERCISES){const k=norm(r[1])+'|'+norm(r[2]);if(seen.has(k))continue;seen.add(k);registry['x_'+slug(r[1]+' '+r[2])]=r;}}
 const spec=(id,name,items,note='')=>({id:'rpg_deck_'+id,name,items,note});
 export const PRESET_DECKS=[
- spec('01','Peito + bíceps + ombro lateral',['fly','inclineDB','bench','scott','curlCable','hammer','lateralCable']),
- spec('02','Costas + tríceps + ombro posterior',['deck2Pulldown','deck2ArticulatedRow','deck2SinglePulldown','deck2HighRow','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','rear']),
+ spec('01','Peito + tríceps + ombro lateral',['fly','inclineDB','bench','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','lateralCable']),
+ spec('02','Costas + bíceps + ombro posterior',['latUniPlate','deck2HighRow','pulloverCable','scott','curlCable','rear']),
  spec('03','Braços + ombros',['scottUnilateral','deck2FrenchV','curlCableLengthened','deck2PushdownV','hammer','tricepsSkullcrusherDB','press','lateralCable','rear']),
  spec('04','Pernas completas',['legPress45','hack','extension','flexSeated','hipAbduction','hipAdduction','calfSeated']),
 ];

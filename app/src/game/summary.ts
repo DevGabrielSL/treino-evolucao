@@ -4,7 +4,7 @@ import { records, xp } from './progress';
 import { classifyExercise } from '../legacy/balanced_coach.js';
 import { seasonOf, seasonProgress } from './season';
 
-const COVER: Record<string, string> = { peito: '01', biceps: '01', costas: '02', triceps: '02', ombros: '03', core: '03', pernas: '04' };
+const COVER: Record<string, string> = { peito: '01', biceps: '02', costas: '02', triceps: '01', ombros: '03', core: '03', pernas: '04' };
 
 export function missionSummary(model: any, sessionId: string, goal = 4) {
   const e = model.entities;

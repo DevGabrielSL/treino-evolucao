@@ -23,31 +23,29 @@ console.log('PRESETS_4_PREFERENCES_DOSE_RECOVERY_IDENTITY_NO_WRITES=PASS');
 const first=presetPlan('rpg_deck_01',entities,today).items;
 assert.deepEqual(first.map(x=>[x.name,x.equipment]),[
  ['Crucifixo de peito','Máquina inclinada com anilhas'],['Supino inclinado','Halteres'],['Supino reto','Barra livre'],
- ['Rosca Scott','Máquina'],['Rosca direta','Polia'],['Rosca martelo','Halteres'],['Elevação lateral','Polia']
+ ['Tríceps francês na polia barra V','Polia · barra V'],['Tríceps polia barra V','Polia · barra V'],['Tríceps testa barra V','Polia · barra V'],['Elevação lateral','Polia']
 ]);
-assert.equal(first[3].unit,'plaquetas');
-assert.equal(first[5].unit,'kg/halter');
-assert.deepEqual(first.map(x=>x.group),['peito','peito','peito','biceps','biceps','biceps','ombros']);
-console.log('FIRST_DECK_EXACT_ORDER_EQUIPMENT_SEVEN_EXERCISES_NO_DECLINE=PASS');
+assert.deepEqual(first.map(x=>x.group),['peito','peito','peito','triceps','triceps','triceps','ombros']);
+console.log('FIRST_DECK_CHEST_TRICEPS_LATERAL=PASS');
 
 
 const second=presetPlan('rpg_deck_02',entities,today).items;
 assert.deepEqual(second.map(x=>[x.name,x.equipment]),[
- ['Puxada alta','Polia alta'],
- ['Remada articulada com apoio','Máquina articulada com apoio'],
- ['Puxada alta unilateral','Polia alta · unilateral'],
+ ['Puxada alta unilateral','Máquina com anilhas · unilateral'],
  ['Remada alta com apoio no peito','Apoio no peito · equipamento a confirmar'],
- ['Tríceps francês na polia barra V','Polia · barra V'],
- ['Tríceps polia barra V','Polia · barra V'],
- ['Tríceps testa barra V','Polia · barra V'],
+ ['Pull over na polia','Polia alta'],
+ ['Rosca Scott','Máquina'],
+ ['Rosca direta','Polia'],
  ['Crucifixo inverso','Máquina']
 ]);
-assert.equal(second.length,8);
-assert.equal(new Set(second.map(x=>x.variant_id)).size,8);
-assert.deepEqual(second.map(x=>x.group),['costas','costas','costas','costas','triceps','triceps','triceps','ombros']);
-assert.ok(second.every(x=>x.unit==='a confirmar'));
-assert.match(second[2].dose.effort,/por lado/);
-console.log('SECOND_DECK_EXACT_ORDER_V_BAR_UNILATERAL_CHEST_SUPPORT=PASS');
+assert.equal(second.length,6);
+assert.equal(new Set(second.map(x=>x.variant_id)).size,6);
+assert.deepEqual(second.map(x=>x.group),['costas','costas','costas','biceps','biceps','ombros']);
+assert.equal(second[3].unit,'plaquetas');
+assert.ok(second[0].dose.effort.includes('Repetições por lado.'));
+
+
+console.log('SECOND_DECK_BACK_BICEPS_REAR=PASS');
 
 
 const third=presetPlan('rpg_deck_03',entities,today).items;
@@ -67,9 +65,9 @@ assert.equal(new Set(third.map(x=>x.variant_id)).size,9);
 assert.deepEqual(third.map(x=>x.group),['biceps','triceps','biceps','triceps','biceps','triceps','ombros','ombros','ombros']);
 assert.ok(third.every(x=>x.dose.sets===3));
 assert.equal(third[4].unit,'kg/halter');assert.equal(third[5].unit,'kg/halter');
-assert.notEqual(third[5].variant_id,second[6].variant_id);
-assert.notEqual(third[0].variant_id,first[4].variant_id);
-assert.equal(third[1].variant_id,second[4].variant_id);
+assert.notEqual(third[5].variant_id,first[5].variant_id);
+assert.notEqual(third[0].variant_id,second[3].variant_id);
+assert.equal(third[1].variant_id,first[3].variant_id);
 console.log('THIRD_DECK_EXACT_NINE_ALTERNATING_ARMS_SHOULDERS_DUMBBELL_SKULLCRUSHER=PASS');
 
 
