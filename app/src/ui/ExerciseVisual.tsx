@@ -5,7 +5,7 @@ import { asset, hasAsset } from './assets';
 // Usa a ilustração do exercício quando ela existe em src/assets/art (estilo litoral/neon).
 // Para adicionar uma nova, basta salvar o arquivo com o nome exercise-<slug>.webp (ver docs/ILUSTRACOES.md).
 // Os demais exercícios usam um cartão gerado.
-const COVER: Record<string, string> = { peito: '01', biceps: '01', costas: '02', triceps: '02', ombros: '03', pernas: '04', core: '03' };
+const COVER: Record<string, string> = { peito: '01', biceps: '02', costas: '02', triceps: '01', ombros: '03', pernas: '04', core: '03' };
 const LABEL: Record<string, string> = { peito: 'Peito', biceps: 'Bíceps', costas: 'Costas', triceps: 'Tríceps', ombros: 'Ombros', pernas: 'Pernas', core: 'Core' };
 
 export function exerciseImage(name?: string, equipment?: string) {

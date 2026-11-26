@@ -21,7 +21,7 @@ import { restTimer } from '../legacy/principal_rest.js';
 
 export { PRESET_DECKS, liveGuidance, nextPending, loadUnits, restTimer, lastDraftSet, FINISHER_GOALS, finisherProgress, plankElapsed, replacementFor };
 
-export const DECK_TITLES = ['Peito + Bíceps', 'Costas + Tríceps', 'Braços + Ombros', 'Pernas completas'];
+export const DECK_TITLES = ['Peito + Tríceps', 'Costas + Bíceps', 'Braços + Ombros', 'Pernas completas'];
 
 export function activeSession(model: any) {
   return model?.entities.sessions.filter((s: any) => s.status === 'in_progress').at(-1) || null;

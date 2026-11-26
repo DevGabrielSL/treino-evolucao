@@ -6,6 +6,9 @@ import { homeCatalog } from '../engine/home';
 import { ExerciseVisual } from './ExerciseVisual';
 
 export type PickOption = { key: string; name: string; equipment: string; unit: string; mine: boolean; item: any };
+// Outros nomes usados na academia, para a busca achar.
+const ALIASES: Record<string, string> = { 'crucifixo inverso': 'voador inverso peck deck inverso', 'voador (peck deck)': 'crucifixo maquina', 'remada alta (upright row)': 'remada alta em pe',
+  'pull over na polia': 'pullover pulldown', 'puxada alta': 'pulldown puxador', 'cadeira flexora': 'flexora', 'mesa flexora': 'flexora deitada', 'elevacao pelvica': 'hip thrust', 'agachamento hack': 'hack' };
 const norm = (x: string) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export function ExercisePicker({ model, exclude, busy, onPick, hint }: { model: any; exclude: Set<string>; busy?: boolean; onPick: (o: PickOption) => void; hint?: string }) {
@@ -20,7 +23,8 @@ export function ExercisePicker({ model, exclude, busy, onPick, hint }: { model: 
     const known = new Set(model.entities.exercise_variants.map((v: any) => v.id));
     const catalog: PickOption[] = [...catalogItems(), ...homeCatalog(model.entities)].filter((i: any) => !exclude.has(i.variant_id) && !known.has(i.variant_id) && !used.has(norm(i.name) + '|' + norm(i.equipment)))
       .map((i: any) => ({ key: i.variant_id, name: i.name, equipment: i.equipment, unit: i.unit, mine: false, item: { ...i, is_catalog: true } }));
-    return [...mine, ...catalog].filter(o => !q || norm(`${o.name} ${o.equipment}`).includes(norm(q)))
+    const words = norm(q).split(/\s+/).filter(Boolean);
+    return [...mine, ...catalog].filter(o => { const hay = norm(`${o.name} ${o.equipment} ${ALIASES[norm(o.name)] || ''}`); return words.every(w => hay.includes(w)); })
       .sort((a, b) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name, 'pt-BR')).slice(0, 80);
   }, [model, exclude, q]);
   return (

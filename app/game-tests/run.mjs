@@ -244,6 +244,18 @@ await test('core profundo: vácuo e estabilidade, sem crunch; extra fora da meta
   assert.equal(names.filter(n => n === 'Prancha').length, 1); assert.equal(names.filter(n => n === 'Ponte de glúteo').length, 1);
 });
 
+await test('catálogo ampliado: muitos exercícios, ids estáveis e sem repetir os dos decks', async () => {
+  const P = await server.ssrLoadModule('/src/legacy/principal_presets.js');
+  const all = P.catalogItems();
+  assert.ok(all.length >= 150, String(all.length));
+  assert.equal(new Set(all.map(i => i.variant_id)).size, all.length);
+  const key = (i) => (i.name + '|' + i.equipment).toLowerCase();
+  assert.equal(new Set(all.map(key)).size, all.length);
+  for (const n of ['Remada cavalinho', 'Agachamento búlgaro', 'Tríceps corda', 'Face pull', 'Stiff', 'Barra fixa', 'Rosca concentrada', 'Elevação pélvica']) assert.ok(all.some(i => i.name === n), n);
+  assert.ok(all.some(i => i.variant_id === 'preset_var_x_remada_cavalinho_barra_t'));
+  assert.ok(all.every(i => ['peito', 'costas', 'ombros', 'biceps', 'triceps', 'pernas', 'core'].includes(i.group)));
+});
+
 await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
   const e = { sessions: [
     { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [

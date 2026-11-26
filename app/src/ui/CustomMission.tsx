@@ -10,7 +10,7 @@ import { asset } from './assets';
 import { nf } from './format';
 
 const GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['pernas', 'Pernas'], ['ombros', 'Ombros'], ['biceps', 'Bíceps'], ['triceps', 'Tríceps'], ['core', 'Core']];
-const COVER: Record<string, string> = { peito: '01', biceps: '01', costas: '02', triceps: '02', ombros: '03', core: '03', pernas: '04' };
+const COVER: Record<string, string> = { peito: '01', biceps: '02', costas: '02', triceps: '01', ombros: '03', core: '03', pernas: '04' };
 const Q: { key: keyof Readiness; label: string; opts: [string, string][] }[] = [
   { key: 'fatigue', label: 'Cansaço', opts: [['unknown', '—'], ['low', 'Baixo'], ['moderate', 'Moderado'], ['high', 'Alto']] },
   { key: 'recovery', label: 'Recuperação', opts: [['unknown', '—'], ['good', 'Boa'], ['partial', 'Parcial'], ['poor', 'Ruim']] },
