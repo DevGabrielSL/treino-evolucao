@@ -5,9 +5,10 @@ import { dateLocal } from '../legacy/metrics.js';
 
 export const HOME_NAME = 'Treino em casa';
 export const DAILY_NAME = 'Desafio diário';
+export const CORE_NAME = 'Core profundo';
 
-/** Sessões que contam como "missão" na meta semanal, temporada e cidade (o desafio diário é extra). */
-export const isMission = (s: any) => s?.status === 'completed' && s.name !== DAILY_NAME;
+/** Sessões que contam como "missão" na meta semanal, temporada e cidade (o desafio diário e o core profundo são extras). */
+export const isMission = (s: any) => s?.status === 'completed' && s.name !== DAILY_NAME && s.name !== CORE_NAME;
 
 type Spec = { key: string; group: string; name: string; equipment: string; unit: 'peso corporal' | 'segundos'; min: number; max: number; sets: number; note?: string };
 
@@ -20,6 +21,16 @@ const HOME: Spec[] = [
   { key: 'abdominal', group: 'core', name: 'Abdominal', equipment: 'Peso corporal · solo', unit: 'peso corporal', min: 15, max: 25, sets: 3 },
   { key: 'escalador', group: 'cardio', name: 'Escalador', equipment: 'Peso corporal', unit: 'segundos', min: 30, max: 45, sets: 3 },
   { key: 'prancha', group: 'core', name: 'Prancha', equipment: 'Peso corporal · antebraços', unit: 'segundos', min: 30, max: 60, sets: 3 },
+];
+// Core profundo: transverso do abdômen e estabilidade do tronco, sem abdominal de flexão (crunch).
+// Mesmas chaves da prancha e da ponte do treino em casa, para manter histórico e recordes.
+const CORE: Spec[] = [
+  { key: 'vacuo', group: 'core', name: 'Vácuo abdominal', equipment: 'Peso corporal · deitado ou em 4 apoios', unit: 'segundos', min: 15, max: 30, sets: 4, note: 'Solte todo o ar, puxe o umbigo em direção à coluna e segure respirando curto, sem prender a respiração. Faça longe das refeições.' },
+  { key: 'inseto_morto', group: 'core', name: 'Inseto morto', equipment: 'Peso corporal · solo', unit: 'peso corporal', min: 8, max: 12, sets: 3, note: 'Lombar encostada no chão e umbigo para dentro; estenda braço e perna opostos devagar. Repetições por lado.' },
+  { key: 'perdigueiro', group: 'core', name: 'Perdigueiro', equipment: 'Peso corporal · 4 apoios', unit: 'peso corporal', min: 8, max: 12, sets: 3, note: 'Coluna neutra, sem girar o quadril; segure 2 s em cima. Repetições por lado.' },
+  { key: 'prancha', group: 'core', name: 'Prancha', equipment: 'Peso corporal · antebraços', unit: 'segundos', min: 20, max: 45, sets: 3, note: 'Mantenha o umbigo puxado para dentro durante toda a série.' },
+  { key: 'prancha_lateral', group: 'core', name: 'Prancha lateral', equipment: 'Peso corporal · antebraço', unit: 'segundos', min: 20, max: 40, sets: 3, note: 'Tempo por lado: faça os dois lados em cada série e registre o tempo de um lado.' },
+  { key: 'ponte', group: 'pernas', name: 'Ponte de glúteo', equipment: 'Peso corporal', unit: 'peso corporal', min: 12, max: 20, sets: 3, note: 'Contraia o abdômen antes de subir, sem arquear a lombar.' },
 ];
 const CARDIO: Spec = { key: 'cardio', group: 'cardio', name: 'Cardio livre', equipment: 'Esteira, bike, corrida ou polichinelo', unit: 'segundos', min: 300, max: 900, sets: 1, note: 'Use o cronômetro e salve o tempo total.' };
 
@@ -42,14 +53,21 @@ function item(spec: Spec, entities: any) {
 
 function plan(name: string, specs: Spec[], entities: any, note: string) {
   const items = specs.map(s => item(s, entities));
-  return { presetId: name === HOME_NAME ? 'home' : 'daily', presetName: name, presetNote: note, groups: [...new Set(items.map(i => i.group))], items, minutes: null, budget: items.length, only: true, excluded: [], short: 0, options: items, adjustment: {}, notes: [] };
+  return { presetId: name === HOME_NAME ? 'home' : name === CORE_NAME ? 'core' : 'daily', presetName: name, presetNote: note, groups: [...new Set(items.map(i => i.group))], items, minutes: null, budget: items.length, only: true, excluded: [], short: 0, options: items, adjustment: {}, notes: [] };
 }
 
 /** Exercícios de peso corporal/tempo para o catálogo de "adicionar exercício". */
-export function homeCatalog(entities: any) { return [...HOME, CARDIO].map(s => item(s, entities)); }
+export function homeCatalog(entities: any) {
+  const keys = new Set(HOME.map(s => s.key));
+  return [...HOME, ...CORE.filter(s => !keys.has(s.key)), CARDIO].map(s => item(s, entities));
+}
 
 export function homePlan(entities: any) {
   return plan(HOME_NAME, HOME, entities, 'Circuito sem equipamento: faça as 3 séries de cada exercício ou alterne os exercícios em rodadas.');
+}
+
+export function corePlan(entities: any) {
+  return plan(CORE_NAME, CORE, entities, 'Abdômen profundo e postura, cerca de 20 minutos. Pode fazer em dias de academia ou de descanso. Conta para o XP e para os desafios diários, mas não para a meta semanal de missões.');
 }
 
 // ---------------- desafios diários ----------------

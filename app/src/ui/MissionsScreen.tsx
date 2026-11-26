@@ -13,7 +13,7 @@ import { nf } from './format';
 import { cityLights, districtControl } from '../game/season';
 import { SeasonCard } from './SeasonPanel';
 import { isMission } from '../engine/home';
-import { HomeCard, DailyCard } from './HomePanel';
+import { HomeCard, CoreCard, DailyCard } from './HomePanel';
 import { RankedCard } from './RankedPanel';
 import { DeckEditor } from './DeckEditor';
 import { progressionHint, progressionOn } from '../engine/progression';
@@ -120,6 +120,7 @@ export function MissionsScreen({ model, goal, active, onResume, onError, onStart
 
       <DailyCard model={model} active={active} onStarted={onStarted} onError={onError} />
       <HomeCard model={model} active={active} onStarted={onStarted} onError={onError} />
+      <CoreCard model={model} active={active} onStarted={onStarted} onError={onError} />
 
       <RankedCard model={model} goal={goal} />
       <SeasonCard model={model} goal={goal} />

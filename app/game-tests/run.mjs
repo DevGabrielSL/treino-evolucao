@@ -228,6 +228,22 @@ await test('planos: casa com unidades já confirmadas; desafio rápido só com o
   assert.ok(daily.items.some(i => i.name === 'Cardio livre' && i.dose.sets === 1 && i.dose.unit === 'segundos'));
 });
 
+await test('core profundo: vácuo e estabilidade, sem crunch; extra fora da meta de missões', () => {
+  const core = H.corePlan({ sessions: [], sets: [], exercises: [], exercise_variants: [] });
+  assert.equal(core.presetName, 'Core profundo'); assert.equal(core.presetId, 'core');
+  assert.deepEqual(core.items.map(i => i.name), ['Vácuo abdominal', 'Inseto morto', 'Perdigueiro', 'Prancha', 'Prancha lateral', 'Ponte de glúteo']);
+  assert.ok(!core.items.some(i => i.name === 'Abdominal'));
+  assert.ok(core.items.every(i => i.unit_confirmed === true));
+  const vac = core.items[0]; assert.equal(vac.dose.unit, 'segundos'); assert.equal(vac.dose.sets, 4); assert.match(vac.dose.effort, /umbigo/);
+  // mesma prancha e ponte do treino em casa: histórico e recorde continuam juntos
+  assert.equal(core.items[3].variant_id, 'home_var_prancha'); assert.equal(core.items[5].variant_id, 'home_var_ponte');
+  assert.equal(H.isMission({ status: 'completed', name: 'Core profundo' }), false);
+  // catálogo de "adicionar exercício" ganha os novos, sem duplicar prancha e ponte
+  const names = H.homeCatalog({ sessions: [], sets: [], exercises: [], exercise_variants: [] }).map(i => i.name);
+  for (const n of ['Vácuo abdominal', 'Inseto morto', 'Perdigueiro', 'Prancha lateral']) assert.ok(names.includes(n), n);
+  assert.equal(names.filter(n => n === 'Prancha').length, 1); assert.equal(names.filter(n => n === 'Ponte de glúteo').length, 1);
+});
+
 await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
   const e = { sessions: [
     { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [

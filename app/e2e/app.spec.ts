@@ -238,6 +238,25 @@ test('treino em casa: peso corporal e tempo sem confirmar unidade; conta nos des
   await expect(page.getByText('1/4', { exact: true })).toBeVisible();
 });
 
+test('core profundo: vácuo por tempo, prancha conta no desafio e não conta como missão da semana', async ({ page }) => {
+  await boot(page);
+  await page.getByTestId('core-card').click();
+  const brief = page.getByRole('dialog', { name: 'Core profundo' });
+  await expect(brief.getByText('Vácuo abdominal')).toBeVisible();
+  await expect(brief.getByText('4×15–30s')).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar core profundo' }).click();
+  await page.getByText('Toque para começar').click();
+  await expect(page.getByRole('heading', { name: 'Vácuo abdominal' })).toBeVisible();
+  await page.getByLabel('Segundos realizados').fill('20');
+  await page.getByRole('button', { name: 'Salvar tempo' }).click();
+  await page.getByRole('button', { name: 'Minimizar' }).click();
+  await page.getByRole('button', { name: 'Concluir missão' }).click();
+  await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByText('0/4', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('core-card')).toContainText('último');
+});
+
 test('desafio diário: monta só o que falta e não conta como missão da semana', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Fazer o que falta agora' }).click();
