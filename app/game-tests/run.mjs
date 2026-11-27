@@ -256,6 +256,28 @@ await test('catálogo ampliado: muitos exercícios, ids estáveis e sem repetir 
   assert.ok(all.every(i => ['peito', 'costas', 'ombros', 'biceps', 'triceps', 'pernas', 'core'].includes(i.group)));
 });
 
+await test('nome exibido sem o equipamento (o dado não muda)', async () => {
+  const { exName } = await server.ssrLoadModule('/src/ui/format.ts');
+  assert.equal(exName('Tríceps francês na polia barra V', 'Polia · barra V'), 'Tríceps francês');
+  assert.equal(exName('Tríceps testa com halteres', 'Halteres'), 'Tríceps testa');
+  assert.equal(exName('Remada alta com apoio no peito', 'Apoio no peito · equipamento a confirmar'), 'Remada alta');
+  assert.equal(exName('Rosca na polia unilateral', 'Polia · unilateral'), 'Rosca unilateral');
+  assert.equal(exName('Supino reto', 'Barra livre'), 'Supino reto');
+  assert.equal(exName('Puxada alta', 'Polia alta'), 'Puxada alta');
+  assert.equal(exName('Tríceps', 'Polia'), 'Tríceps');
+  assert.equal(exName('Polia', 'Polia'), 'Polia'); // nunca fica vazio
+});
+
+await test('deck personalizado antes da atualização do deck padrão fica marcado como desatualizado', async () => {
+  const D = await server.ssrLoadModule('/src/engine/decks.ts');
+  const st = (u) => ({ deck_custom: { rpg_deck_02: { items: [], ...(u ? { updated_at: u } : {}) } } });
+  assert.equal(D.customOutdated(st('2026-11-20T10:00:00Z'), 'rpg_deck_02'), true);
+  assert.equal(D.customOutdated(st(null), 'rpg_deck_02'), true);
+  assert.equal(D.customOutdated(st('2026-11-27T10:00:00Z'), 'rpg_deck_02'), false);
+  assert.equal(D.customOutdated({}, 'rpg_deck_02'), false);
+  assert.equal(D.customOutdated({ deck_custom: { rpg_deck_04: { items: [], updated_at: '2026-01-01' } } }, 'rpg_deck_04'), false);
+});
+
 await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
   const e = { sessions: [
     { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [
@@ -331,7 +353,7 @@ const empty = () => ({ sessions: [], sets: [], exercises: [], exercise_variants:
 await test('decks: padrão vira referências; sem personalização o plano é o pronto', () => {
   const m = { entities: empty() };
   const def = D.defaultEntries('rpg_deck_01', m.entities);
-  assert.equal(def.length, 7); assert.equal(def[0].ref, 'cat:fly'); assert.deepEqual([def[0].sets, def[0].min], [3, def[0].min]);
+  assert.equal(def.length, 7); assert.equal(def[0].ref, 'cat:bench'); assert.deepEqual([def[0].sets, def[0].min], [3, def[0].min]);
   const p = D.deckPlan('rpg_deck_01', m, {});
   assert.equal(p.items.length, 7); assert.equal(p.custom, undefined);
 });

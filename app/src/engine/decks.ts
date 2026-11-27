@@ -96,6 +96,14 @@ export function validateEntries(list: DeckEntry[]) {
   return true;
 }
 
+/** Data da última mudança de cada deck pronto. Personalização anterior a ela está desatualizada. */
+const PRESET_REVISION: Record<string, string> = { rpg_deck_01: '2026-11-26T12:00:00Z', rpg_deck_02: '2026-11-26T12:00:00Z' };
+export function customOutdated(settings: any, deckId: string) {
+  const c = settings?.deck_custom?.[deckId];
+  const rev = PRESET_REVISION[deckId];
+  return !!(c && rev && (!c.updated_at || String(c.updated_at) < rev));
+}
+
 export async function saveDeck(deckId: string, list: DeckEntry[]) {
   validateEntries(list);
   await perform(d => { d.settings.deck_custom = { ...(d.settings.deck_custom || {}), [deckId]: { items: list.map(e => ({ ref: e.ref, sets: e.sets, min: e.min, max: e.max })), updated_at: new Date().toISOString() } }; }, 'Deck salvo.');
