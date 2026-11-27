@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { catalogItems } from '../legacy/principal_presets.js';
 import { homeCatalog } from '../engine/home';
+import { exName } from './format';
 import { ExerciseVisual } from './ExerciseVisual';
 
 export type PickOption = { key: string; name: string; equipment: string; unit: string; mine: boolean; item: any };
@@ -35,7 +36,7 @@ export function ExercisePicker({ model, exclude, busy, onPick, hint }: { model: 
         {options.map(o => (
           <li key={o.key}><button disabled={busy} onClick={() => onPick(o)} className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-2 text-left disabled:opacity-50">
             <div className="duotone-wrap size-11 rounded-lg shrink-0"><ExerciseVisual name={o.name} equipment={o.equipment} size="sm" /></div>
-            <span className="flex-1 min-w-0"><b className="font-hud block truncate">{o.name}</b><span className="text-[11px] text-haze truncate block">{o.equipment} · {o.unit === 'a confirmar' ? 'unidade a confirmar' : o.unit}</span></span>
+            <span className="flex-1 min-w-0"><b className="font-hud block truncate">{exName(o.name, o.equipment)}</b><span className="text-[11px] text-haze truncate block">{o.equipment} · {o.unit === 'a confirmar' ? 'unidade a confirmar' : o.unit}</span></span>
             {!o.mine && <span className="chip text-[10px] text-aqua shrink-0">catálogo</span>}
             <Plus size={18} className="text-aqua shrink-0" />
           </button></li>

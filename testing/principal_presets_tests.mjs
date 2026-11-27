@@ -14,15 +14,15 @@ for(const deck of PRESET_DECKS){
 }
 assert.equal(JSON.stringify(PRESET_DECKS),before);assert.deepEqual(entities,{sessions:[],sets:[],exercises:[],exercise_variants:[]});assert.throws(()=>presetPlan('missing',entities,today));
 const e={...entities,exercises:[{id:'personalEx',name:'Supino reto'}],exercise_variants:[{id:'personalV',exercise_id:'personalEx',equipment_or_variation:'Barra livre',unit:'kg/lado',unit_confirmed:true}]};
-const reused=presetPlan('rpg_deck_01',e,today).items[2];assert.equal(reused.variant_id,'personalV');assert.equal(reused.unit,'kg/lado');assert.equal(reused.is_catalog,false);
-e.exercise_variants[0].unit_confirmed=false;assert.notEqual(presetPlan('rpg_deck_01',e,today).items[2].variant_id,'personalV');
+const reused=presetPlan('rpg_deck_01',e,today).items[0];assert.equal(reused.variant_id,'personalV');assert.equal(reused.unit,'kg/lado');assert.equal(reused.is_catalog,false);
+e.exercise_variants[0].unit_confirmed=false;assert.notEqual(presetPlan('rpg_deck_01',e,today).items[0].variant_id,'personalV');
 const html=renderPresetLibrary();assert.equal((html.match(/data-preset-id=/g)||[]).length,4);assert.ok(html.includes('Ver deck'));
 console.log('PRESETS_4_PREFERENCES_DOSE_RECOVERY_IDENTITY_NO_WRITES=PASS');
 
 
 const first=presetPlan('rpg_deck_01',entities,today).items;
 assert.deepEqual(first.map(x=>[x.name,x.equipment]),[
- ['Crucifixo de peito','Máquina inclinada com anilhas'],['Supino inclinado','Halteres'],['Supino reto','Barra livre'],
+ ['Supino reto','Barra livre'],['Supino inclinado','Halteres'],['Crucifixo de peito','Máquina inclinada com anilhas'],
  ['Tríceps francês na polia barra V','Polia · barra V'],['Tríceps polia barra V','Polia · barra V'],['Tríceps testa barra V','Polia · barra V'],['Elevação lateral','Polia']
 ]);
 assert.deepEqual(first.map(x=>x.group),['peito','peito','peito','triceps','triceps','triceps','ombros']);
@@ -31,9 +31,9 @@ console.log('FIRST_DECK_CHEST_TRICEPS_LATERAL=PASS');
 
 const second=presetPlan('rpg_deck_02',entities,today).items;
 assert.deepEqual(second.map(x=>[x.name,x.equipment]),[
- ['Puxada alta unilateral','Máquina com anilhas · unilateral'],
+ ['Puxada alta','Polia alta'],
  ['Remada alta com apoio no peito','Apoio no peito · equipamento a confirmar'],
- ['Pull over na polia','Polia alta'],
+ ['Pulldown braços estendidos','Polia alta · barra reta'],
  ['Rosca Scott','Máquina'],
  ['Rosca direta','Polia'],
  ['Crucifixo inverso','Máquina']
@@ -42,7 +42,6 @@ assert.equal(second.length,6);
 assert.equal(new Set(second.map(x=>x.variant_id)).size,6);
 assert.deepEqual(second.map(x=>x.group),['costas','costas','costas','biceps','biceps','ombros']);
 assert.equal(second[3].unit,'plaquetas');
-assert.ok(second[0].dose.effort.includes('Repetições por lado.'));
 
 
 console.log('SECOND_DECK_BACK_BICEPS_REAR=PASS');

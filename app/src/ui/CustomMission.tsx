@@ -7,7 +7,7 @@ import { groupLabel } from '../legacy/coach_logic.js';
 import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { asset } from './assets';
-import { nf } from './format';
+import { nf, exName } from './format';
 
 const GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['pernas', 'Pernas'], ['ombros', 'Ombros'], ['biceps', 'Bíceps'], ['triceps', 'Tríceps'], ['core', 'Core']];
 const COVER: Record<string, string> = { peito: '01', biceps: '02', costas: '02', triceps: '01', ombros: '03', core: '03', pernas: '04' };
@@ -67,7 +67,7 @@ export function CustomMission({ model, active, onClose, onStarted, onError }: { 
               {plan.items.map((it: any, i: number) => (
                 <motion.li key={it.variant_id} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .04 }} className="flex items-center gap-2 rounded-xl bg-white/5 p-2">
                   <div className="duotone-wrap size-12 rounded-lg shrink-0"><ExerciseVisual name={it.name} equipment={it.equipment} size="sm" /></div>
-                  <div className="flex-1 min-w-0"><p className="font-hud font-bold leading-tight truncate">{it.name}</p><p className="text-[11px] text-haze truncate">{it.equipment}{it.last ? ` · últ. ${nf(it.last.load_value)} ${it.unit}` : ''}</p><p className="num text-[11px] text-gold">{it.dose?.label?.replace('Sugestão: ', '')}</p></div>
+                  <div className="flex-1 min-w-0"><p className="font-hud font-bold leading-tight truncate">{exName(it.name, it.equipment)}</p><p className="text-[11px] text-haze truncate">{it.equipment}{it.last ? ` · últ. ${nf(it.last.load_value)} ${it.unit}` : ''}</p><p className="num text-[11px] text-gold">{it.dose?.label?.replace('Sugestão: ', '')}</p></div>
                   <button aria-label="Trocar sugestão" onClick={() => { const r = replacementFor(plan, i); if (!r) return onError(new Error('Não há outra opção cadastrada para esse grupo.')); const items = [...plan.items]; items[i] = r; setPlan({ ...plan, items }); }} className="size-9 grid place-items-center rounded-lg bg-white/10"><RefreshCw size={15} /></button>
                   <button aria-label="Remover sugestão" onClick={() => setPlan({ ...plan, items: plan.items.filter((_: any, k: number) => k !== i) })} className="size-9 grid place-items-center rounded-lg bg-white/10 text-pink"><X size={15} /></button>
                 </motion.li>

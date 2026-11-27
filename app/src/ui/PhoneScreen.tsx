@@ -15,6 +15,7 @@ import { notifySupported, restNotifyOn, setRestNotify } from '../fx/notify';
 import { setRest as saveRest } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { ask } from './Dialog';
+import { exName } from './format';
 import { nf } from './format';
 
 type AppId = 'corpo' | 'sync' | 'backup' | 'modelos' | 'ajustes' | 'instalar' | 'sobre';
@@ -304,7 +305,7 @@ function TemplatesApp({ model, onError, onGoWorkout }: Ctx) {
           return (
             <li key={it.variant_id} className="flex items-center gap-2 rounded-xl bg-white/5 p-2">
               <div className="duotone-wrap size-11 rounded-lg shrink-0"><ExerciseVisual name={ex?.name} equipment={v?.equipment_or_variation} size="sm" /></div>
-              <div className="flex-1 min-w-0"><p className="font-hud font-bold leading-tight truncate">{ex?.name || 'Exercício indisponível'}</p><p className="num text-[11px] text-haze">{it.target_sets} séries{it.target_reps ? ` × ${it.target_reps}` : ''} · {v?.unit}</p></div>
+              <div className="flex-1 min-w-0"><p className="font-hud font-bold leading-tight truncate">{ex?.name ? exName(ex.name, v?.equipment_or_variation) : 'Exercício indisponível'}</p><p className="num text-[11px] text-haze">{it.target_sets} séries{it.target_reps ? ` × ${it.target_reps}` : ''} · {v?.unit}</p></div>
               <button disabled={i === 0} aria-label="Subir" onClick={() => run(() => tpl.move(t.id, it.variant_id, -1))} className="size-8 grid place-items-center rounded-md bg-white/10 disabled:opacity-30"><ArrowUp size={14} /></button>
               <button disabled={i === t.items.length - 1} aria-label="Descer" onClick={() => run(() => tpl.move(t.id, it.variant_id, 1))} className="size-8 grid place-items-center rounded-md bg-white/10 disabled:opacity-30"><ArrowDown size={14} /></button>
               <button aria-label="Remover do modelo" onClick={() => run(() => tpl.removeItem(t.id, it.variant_id))} className="size-8 grid place-items-center rounded-md bg-white/10 text-pink"><Trash2 size={14} /></button>
