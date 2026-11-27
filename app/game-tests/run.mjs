@@ -268,6 +268,16 @@ await test('nome exibido sem o equipamento (o dado não muda)', async () => {
   assert.equal(exName('Polia', 'Polia'), 'Polia'); // nunca fica vazio
 });
 
+await test('deck personalizado antes da atualização do deck padrão fica marcado como desatualizado', async () => {
+  const D = await server.ssrLoadModule('/src/engine/decks.ts');
+  const st = (u) => ({ deck_custom: { rpg_deck_02: { items: [], ...(u ? { updated_at: u } : {}) } } });
+  assert.equal(D.customOutdated(st('2026-11-20T10:00:00Z'), 'rpg_deck_02'), true);
+  assert.equal(D.customOutdated(st(null), 'rpg_deck_02'), true);
+  assert.equal(D.customOutdated(st('2026-11-27T10:00:00Z'), 'rpg_deck_02'), false);
+  assert.equal(D.customOutdated({}, 'rpg_deck_02'), false);
+  assert.equal(D.customOutdated({ deck_custom: { rpg_deck_04: { items: [], updated_at: '2026-01-01' } } }, 'rpg_deck_04'), false);
+});
+
 await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
   const e = { sessions: [
     { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [

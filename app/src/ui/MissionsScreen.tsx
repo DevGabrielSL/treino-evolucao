@@ -16,6 +16,8 @@ import { isMission } from '../engine/home';
 import { HomeCard, CoreCard, DailyCard } from './HomePanel';
 import { RankedCard } from './RankedPanel';
 import { DeckEditor } from './DeckEditor';
+import { getState } from '../engine/store';
+import { customOutdated } from '../engine/decks';
 import { progressionHint, progressionOn } from '../engine/progression';
 
 type Props = { model: any; goal: number; active: any; onResume: () => void; onError: (e: any) => void; onStarted: (deck: any) => void };
@@ -170,7 +172,7 @@ function Briefing({ deck, model, active, starting, onClose, onStart, onError }: 
   const [editing, setEditing] = useState(false);
   const prog = progressionOn();
   return (
-    <motion.div className="fixed inset-0 z-50 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div className="fixed inset-0 z-50 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ visibility: editing ? 'hidden' : 'visible' }}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <motion.div className="relative max-h-[88vh] overflow-y-auto no-scrollbar rounded-t-[26px] bg-dusk border-t border-white/10"
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 260 }}>
@@ -181,6 +183,7 @@ function Briefing({ deck, model, active, starting, onClose, onStart, onError }: 
           <h2 className="font-display uppercase text-4xl leading-none sunset-text">{deck.title}</h2>
           <p className="text-haze text-sm mt-2">{plan.custom ? 'Deck personalizado por você.' : '3 séries de trabalho por alvo.'} Sem carga predefinida: use a que mantém a técnica, com repetições em reserva.</p>
           <button onClick={() => setEditing(true)} className="mt-3 h-10 px-4 rounded-xl bg-white/10 chip text-sm flex items-center gap-2"><Pencil size={14} /> Editar deck</button>
+          {customOutdated(getState().doc?.settings, deck.id) && <p className="mt-2 text-xs text-gold" data-testid="briefing-outdated">O deck padrão foi atualizado depois da sua edição. Abra "Editar deck" para usar a versão nova.</p>}
         </div>
         <AnimatePresence>{editing && <DeckEditor deck={deck} model={model} onClose={() => setEditing(false)} onError={onError} />}</AnimatePresence>
         <ol className="px-4 mt-4 space-y-2 pb-36">
