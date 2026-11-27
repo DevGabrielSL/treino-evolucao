@@ -5,7 +5,7 @@ import { addToPlan, doseForAdded, setPlannedSets, movePlanned, changePlan, confi
 import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { ask } from './Dialog';
-import { clock, nf } from './format';
+import { clock, nf, exName } from './format';
 import { finisherMarks, plankBestSingle, type Mark } from '../engine/finisherMarks';
 import { sfx } from '../fx/sfx';
 import { ExercisePicker, type PickOption } from './ExercisePicker';
@@ -43,7 +43,7 @@ export function ExerciseOptions({ model, session, current, onClose, onSelect, on
             {options.map((o: any) => (
               <li key={o.v.id}><button onClick={() => run(async () => { await changePlan(session, current, 'swap', o.v.id); onSelect(o.v.id); onClose(); })} className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-2 text-left">
                 <div className="duotone-wrap size-11 rounded-lg shrink-0"><ExerciseVisual name={o.e.name} equipment={o.v.equipment_or_variation} size="sm" /></div>
-                <span className="flex-1 min-w-0"><b className="font-hud block truncate">{o.e.name}</b><span className="text-[11px] text-haze truncate block">{o.v.equipment_or_variation} · {o.v.unit}</span></span>
+                <span className="flex-1 min-w-0"><b className="font-hud block truncate">{exName(o.e.name, o.v.equipment_or_variation)}</b><span className="text-[11px] text-haze truncate block">{o.v.equipment_or_variation} · {o.v.unit}</span></span>
               </button></li>
             ))}
             {!options.length && <p className="text-sm text-haze text-center py-6">Nenhum exercício disponível. Cadastre um novo no app Modelos do Celular.</p>}

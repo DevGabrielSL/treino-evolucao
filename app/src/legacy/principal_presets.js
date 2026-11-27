@@ -34,8 +34,8 @@ const slug=x=>norm(x).replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
  for(const r of EXTRA_EXERCISES){const k=norm(r[1])+'|'+norm(r[2]);if(seen.has(k))continue;seen.add(k);registry['x_'+slug(r[1]+' '+r[2])]=r;}}
 const spec=(id,name,items,note='')=>({id:'rpg_deck_'+id,name,items,note});
 export const PRESET_DECKS=[
- spec('01','Peito + tríceps + ombro lateral',['fly','inclineDB','bench','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','lateralCable']),
- spec('02','Costas + bíceps + ombro posterior',['latUniPlate','deck2HighRow','pulloverCable','scott','curlCable','rear']),
+ spec('01','Peito + tríceps + ombro lateral',['bench','inclineDB','fly','deck2FrenchV','deck2PushdownV','deck2SkullcrusherV','lateralCable']),
+ spec('02','Costas + bíceps + ombro posterior',['deck2Pulldown','deck2HighRow','x_pulldown_bracos_estendidos_polia_alta_barra_reta','scott','curlCable','rear']),
  spec('03','Braços + ombros',['scottUnilateral','deck2FrenchV','curlCableLengthened','deck2PushdownV','hammer','tricepsSkullcrusherDB','press','lateralCable','rear']),
  spec('04','Pernas completas',['legPress45','hack','extension','flexSeated','hipAbduction','hipAdduction','calfSeated']),
 ];

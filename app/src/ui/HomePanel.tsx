@@ -11,7 +11,7 @@ import { startPlan } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { asset } from './assets';
 import { sfx } from '../fx/sfx';
-import { clock, nf } from './format';
+import { clock, nf, exName } from './format';
 
 type P = { model: any; active: any; onStarted: (deck: any) => void; onError: (e: any) => void };
 const fmt = (n: number, unit: 'reps' | 's') => unit === 's' ? (n >= 60 ? clock(n * 1000).replace(/^0/, '') : `${n}s`) : `${n}`;
@@ -120,7 +120,7 @@ function Briefing({ model, plan, kind, active, onClose, onStarted, onError }: an
               <span className="num font-extrabold text-2xl w-8 text-center text-white/30">{String(i + 1).padStart(2, '0')}</span>
               <div className="duotone-wrap size-14 rounded-lg shrink-0 bg-plum"><ExerciseVisual name={item.name} equipment={item.equipment} size="sm" /></div>
               <div className="min-w-0 flex-1">
-                <p className="font-hud font-bold text-[17px] leading-tight">{item.name}</p>
+                <p className="font-hud font-bold text-[17px] leading-tight">{exName(item.name, item.equipment)}</p>
                 <p className="text-xs text-haze truncate">{item.equipment}</p>
               </div>
               <div className="text-right">
