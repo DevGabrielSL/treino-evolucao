@@ -257,6 +257,29 @@ test('core profundo: vácuo por tempo, prancha conta no desafio e não conta com
   await expect(page.getByTestId('core-card')).toContainText('último');
 });
 
+test('treino: nota do aparelho fica salva, anilhas por lado e previsão de término', async ({ page }) => {
+  await boot(page);
+  await startFeaturedMission(page);
+  await expect(page.getByRole('heading', { name: 'Supino reto' })).toBeVisible();
+  await confirmKg(page);
+  // anilhas: barra livre de 20 kg
+  await page.getByLabel('Carga · kg', { exact: true }).fill('62,5');
+  await expect(page.getByTestId('plates')).toHaveText('Por lado (barra 20 kg): 20 + 1,25');
+  // nota do aparelho
+  await page.getByRole('button', { name: /Nota do aparelho/ }).click();
+  await page.getByLabel('Nota do aparelho').fill('banco na 4, pegada média');
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.getByTestId('machine-note')).toContainText('banco na 4, pegada média');
+  // previsão aparece com ritmo de 3+ séries
+  for (let i = 0; i < 3; i++) await registerSet(page, '60', '10');
+  await expect(page.getByTestId('eta')).toContainText('fim ~');
+  // a nota continua depois de recarregar
+  await page.reload();
+  await expect(page.getByText('Missão em andamento')).toBeVisible();
+  await page.getByRole('button', { name: '01 Supino reto' }).click(); // a meta cumprida leva ao próximo alvo
+  await expect(page.getByTestId('machine-note')).toContainText('banco na 4');
+});
+
 test('desafio diário: monta só o que falta e não conta como missão da semana', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Fazer o que falta agora' }).click();

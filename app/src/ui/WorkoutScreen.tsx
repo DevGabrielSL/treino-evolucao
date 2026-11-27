@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Pencil, Check, ChevronLeft, ChevronRight, Minus, MoreVertical, Pause, Play, Plus, RotateCcw, Timer, Undo2 } from 'lucide-react';
-import { finisherProgress, liveGuidance, nextPending, loadUnits, restTimer, logSet, logTimed, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed, restFor, setRest } from '../engine/workout';
+import { Pencil, Check, ChevronLeft, ChevronRight, MoreVertical, Pause, Play, Plus, RotateCcw, Undo2 } from 'lucide-react';
+import { liveGuidance, nextPending, loadUnits, restTimer, logSet, logTimed, confirmUnit, finishMission, cancelMission, togglePause, undoLast, correctLast, lastDraftSet, workoutElapsed, restFor, setRest } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { onReward } from '../engine/store';
 import { xp, rankFor } from '../game/progress';
@@ -10,11 +10,12 @@ import { sfx, soundOn, setSound } from '../fx/sfx';
 import { RestOverlay, autoRest, setAutoRest } from './RestOverlay';
 import { ask } from './Dialog';
 import { ExerciseOptions, DropRows, FinisherPanel, AddExercise, type Drop } from './WorkoutExtras';
-import { clock, nf, exName } from './format';
+import { clock, nf, exName, hhmm } from './format';
 import { Sheet } from './Sheet';
 import { progressionHint, progressionOn } from '../engine/progression';
-import { finisherMarks } from '../engine/finisherMarks';
-import { notifyRestEnd } from '../fx/notify';
+import { Stepper, RestBar, Summary, RirPicker, TimedEntry, RestAlarm } from './WorkoutParts';
+import { plateLine, finishEstimate, noteFor, setMachineNote } from '../engine/gym';
+import { voiceOn, setVoice, voiceSupported, speak, restEndPhrase } from '../fx/voice';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 export { Sheet };
 
@@ -39,6 +40,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const totalTarget = ids.reduce((n, id) => n + (liveGuidance(session, id, entities).target || 0), 0);
   const totalDone = ids.reduce((n, id) => { const g = liveGuidance(session, id, entities); return n + Math.min(g.resolved, g.target ?? g.resolved); }, 0);
   const elapsed = workoutElapsed(session);
+  const eta = session.clock_paused_at ? null : finishEstimate(sessionSets.map((x: any) => x.recorded_at).filter(Boolean), totalTarget - totalDone);
   const [menu, setMenu] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -50,6 +52,8 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   const toggleFinisher = () => setFinisher(v => { try { sessionStorage.setItem('workout-finisher-session', v ? '' : session.id); } catch { /* sem armazenamento */ } return !v; });
   const [sound, setSoundState] = useState(soundOn());
   const [auto, setAuto] = useState(autoRest());
+  const [voice, setVoiceState] = useState(voiceOn());
+  const [noteEdit, setNoteEdit] = useState<string | null>(null);
   const registerRef = useRef<HTMLButtonElement>(null);
   const totalXp = xp(entities).total;
 
@@ -139,6 +143,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
           </div>
           <div className="text-right leading-none">
             <div className="num text-2xl font-extrabold text-cream tabular-nums">{clock(elapsed)}</div>
+            {eta && <div className="num text-[11px] text-haze" data-testid="eta">fim ~{hhmm(new Date(eta).toISOString())}</div>}
             <div id="xp-target" key={totalXp} className="num text-[13px] font-bold text-cash pop">{nf(totalXp, 0)} XP</div>
           </div>
           <button onClick={() => run(() => togglePause(session))} aria-label={session.clock_paused_at ? 'Retomar' : 'Pausar'} className="size-10 grid place-items-center rounded-full bg-white/5">{session.clock_paused_at ? <Play size={18} /> : <Pause size={18} />}</button>
@@ -210,6 +215,20 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
             </div>
           </div>
 
+          {(() => {
+            const note = noteFor(doc.settings, current);
+            if (noteEdit !== null) return (
+              <div className="flex items-center gap-2 px-3 py-2 bg-black/40 border-b border-white/5">
+                <input autoFocus value={noteEdit} onChange={e => setNoteEdit(e.target.value)} maxLength={140} placeholder="Ex.: banco na 4, pino no furo 6" aria-label="Nota do aparelho" className="flex-1 min-w-0 rounded-lg bg-black/50 border border-white/10 px-3 py-2 text-sm" />
+                <button onClick={() => run(async () => { await setMachineNote(current, noteEdit); setNoteEdit(null); })} className="chip text-xs rounded-md bg-gold text-night px-3 py-2">Salvar</button>
+                <button onClick={() => setNoteEdit(null)} className="chip text-xs text-haze px-1">Cancelar</button>
+              </div>
+            );
+            return note
+              ? <button onClick={() => setNoteEdit(note)} data-testid="machine-note" className="w-full flex items-start gap-2 px-3 py-2 bg-gold/10 border-b border-white/5 text-left"><Pencil size={14} className="text-gold mt-0.5 shrink-0" /><span className="text-sm"><span className="text-gold">Aparelho:</span> {note}</span></button>
+              : <button onClick={() => setNoteEdit('')} className="w-full px-3 py-1.5 border-b border-white/5 text-left chip text-[11px] text-haze">+ Nota do aparelho (regulagem, pino, pegada)</button>;
+          })()}
+
           {ref && (
             <div className="flex items-center gap-3 px-3 py-2.5 bg-black/30 border-b border-white/5">
               <RotateCcw size={16} className="text-haze shrink-0" />
@@ -252,6 +271,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
                   <Stepper label={variant?.unit === 'peso corporal' ? 'Carga extra · kg (0 = só o corpo)' : `Carga · ${variant?.unit}`} value={load} onChange={setLoad} onMinus={() => adjust(setLoad, load, -step)} onPlus={() => adjust(setLoad, load, step)} decimal />
                   <Stepper label="Repetições" value={reps} onChange={setReps} onMinus={() => adjust(setReps, reps, -1, 1)} onPlus={() => adjust(setReps, reps, 1, 1)} />
                 </div>
+                {(() => { const line = plateLine(variant?.unit, variant?.equipment_or_variation, Number(String(load).replace(',', '.'))); return line && <p className="mt-1.5 text-center num text-[12px] text-aqua" data-testid="plates">{line}</p>; })()}
                 <div className="mt-3 grid grid-cols-2 rounded-xl bg-black/40 p-1">
                   {(['effective', 'warmup'] as const).map(k => (
                     <button key={k} onClick={() => setKind(k)} className={`relative chip text-sm py-2 rounded-lg ${kind === k ? 'text-night' : 'text-haze'}`}>
@@ -329,7 +349,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
         {optionsOpen && variant && <ExerciseOptions model={model} session={session} current={current} onClose={() => setOptionsOpen(false)} onSelect={setSelected} onError={onError} />}
       </AnimatePresence>
       <AnimatePresence>
-        <RestAlarm sessionId={session.id} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1}` : `${exercise?.name || 'próximo exercício'}`} overlay={restOpen} />
+        <RestAlarm sessionId={session.id} onEnd={() => speak(restEndPhrase({ name: exName(exercise?.name, variant?.equipment_or_variation), set: guide.resolved + 1, of: guide.target, load: Number(String(load).replace(',', '.')), unit: variant?.unit, seconds: timed }))} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1}` : `${exercise?.name || 'próximo exercício'}`} overlay={restOpen} />
       {restOpen && <RestOverlay sessionId={session.id} since={lastAt} next={guide.target !== null && guide.resolved < guide.target ? `${exercise?.name} · série ${guide.resolved + 1} de ${guide.target}` : `${exercise?.name} · série extra ou próximo alvo`} onClose={() => setRestOpen(false)} />}
       </AnimatePresence>
       <AnimatePresence>
@@ -339,6 +359,12 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
               <span className="font-hud font-semibold text-lg">Efeitos sonoros</span>
               <input type="checkbox" checked={sound} onChange={e => { setSound(e.target.checked); setSoundState(e.target.checked); if (e.target.checked) sfx.set(); }} className="size-5 accent-[#ff2e93]" />
             </label>
+            {voiceSupported() && (
+              <label className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3 mb-3">
+                <span><span className="font-hud font-semibold text-lg block">Falar no fim do descanso</span><span className="text-xs text-haze">Exercício, série e carga, pela voz do celular</span></span>
+                <input type="checkbox" aria-label="Falar no fim do descanso" checked={voice} onChange={e => { setVoice(e.target.checked); setVoiceState(e.target.checked); if (e.target.checked) speak('Voz ativada.'); }} className="size-5 accent-[#ff2e93]" />
+              </label>
+            )}
             <button onClick={() => { setMenu(false); run(async () => { if (await ask('Abandonar esta missão? Ela não será marcada como concluída. As séries registradas ficam no histórico.', { ok: 'Abandonar', danger: true })) { await cancelMission(session); onExit(); } }); }}
               className="w-full rounded-xl bg-pink/15 border border-pink/40 text-pink chip py-3">Abandonar missão</button>
           </Sheet>
@@ -355,147 +381,3 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
   );
 }
 
-function Stepper({ label, value, onChange, onMinus, onPlus, decimal }: any) {
-  return (
-    <div className="rounded-xl bg-black/40 border border-white/10 p-2">
-      <p className="hud-label text-[10px] text-haze text-center">{label}</p>
-      <div className="flex items-center gap-1 mt-1">
-        <button onClick={onMinus} aria-label={`Diminuir ${label}`} className="size-10 shrink-0 grid place-items-center rounded-lg bg-white/10 active:bg-white/20"><Minus size={18} /></button>
-        <input value={value} onChange={e => onChange(e.target.value.replace(/[^0-9.,]/g, ''))} inputMode={decimal ? 'decimal' : 'numeric'} aria-label={label}
-          className="num w-full min-w-0 bg-transparent text-center text-[2rem] font-extrabold outline-none text-cream" />
-        <button onClick={onPlus} aria-label={`Aumentar ${label}`} className="size-10 shrink-0 grid place-items-center rounded-lg bg-white/10 active:bg-white/20"><Plus size={18} /></button>
-      </div>
-    </div>
-  );
-}
-
-function RestBar({ sessionId, rest, since, planned, onPick, auto, onAuto, onOpen }: { sessionId: string; rest: any; since: number | null; planned: number; onPick: (s: number) => void; auto: boolean; onAuto: (v: boolean) => void; onOpen: () => void }) {
-  const [, force] = useState(0);
-  const total = rest.running || rest.remaining ? rest.seconds || planned : planned, pct = rest.running || rest.remaining ? rest.remaining / total : 0;
-  const act = (fn: () => void) => { fn(); force(x => x + 1); };
-  return (
-    <div className="mx-3 mt-3 panel p-3">
-      <div className="flex items-center gap-3">
-        <button onClick={onOpen} className="relative size-14 shrink-0" aria-label="Abrir descanso em tela cheia">
-          <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90">
-            <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="5" />
-            <circle cx="28" cy="28" r="24" fill="none" stroke="#1ee8d6" strokeWidth="5" strokeLinecap="round" strokeDasharray={150.8} strokeDashoffset={150.8 * (1 - pct)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
-          </svg>
-          <Timer size={20} className="absolute inset-0 m-auto text-aqua" />
-        </button>
-        <div className="flex-1">
-          <p className="hud-label text-[10px] text-aqua">Descanso</p>
-          <p className="num text-2xl font-extrabold">{rest.running || rest.remaining ? clock(rest.remaining * 1000) : clock(total * 1000)}</p>
-        </div>
-        <div className="text-right" data-testid="since-last">
-          <p className="hud-label text-[10px] text-gold">Desde a última série</p>
-          <p className="num text-2xl font-extrabold text-gold">{since ? clock(Math.max(0, Date.now() - since)) : '--:--'}</p>
-        </div>
-      </div>
-      <div className="mt-2 flex items-center gap-1.5">
-        {rest.running ? (
-          <button onClick={() => act(() => restTimer.stop(sessionId))} className="chip text-sm rounded-lg bg-white/10 px-3 py-2 w-full">Pular descanso</button>
-        ) : [90, 120, 150, 180].map(s => (
-          <button key={s} onClick={() => act(() => { restTimer.configure(sessionId, s, restTimer.state(sessionId).auto); onPick(s); })} aria-label={`Descanso de ${s} segundos`}
-            className={`flex-1 num text-sm font-bold rounded-lg py-2 ${s === total ? 'bg-aqua text-night' : 'bg-white/10'}`}>{clock(s * 1000).replace(/^0/, '')}</button>
-        ))}
-      </div>
-      <label className="mt-2 flex items-center justify-between text-sm text-haze">
-        <span>Iniciar descanso automaticamente após cada série</span>
-        <input type="checkbox" checked={auto} onChange={e => onAuto(e.target.checked)} className="size-5 accent-[#1ee8d6]" />
-      </label>
-    </div>
-  );
-}
-
-function Summary({ session, entities, ids, sets }: any) {
-  const work = sets.filter((s: any) => ['effective', 'core', 'back_off'].includes(s.set_type)).length;
-  const warm = sets.filter((s: any) => s.set_type === 'warmup').length;
-  const pending = ids.map((id: string) => liveGuidance(session, id, entities)).filter((g: any) => g.target !== null && g.resolved < g.target).length;
-  return (
-    <div className="space-y-2 num text-lg">
-      <Row k="Séries de trabalho" v={work} />
-      <Row k="Aquecimentos" v={warm} />
-      <Row k="Alvos pendentes" v={pending} warn={pending > 0} />
-      {finisherProgress(session, sets).filter((g: any) => g.done > 0).map((g: any) => {
-        const last = finisherMarks(entities, g.key, session.id).last;
-        const fmt = (n: number) => g.timed ? clock(n * 1000) : `${n} reps`;
-        return <Row key={g.key} k={`Bloco final · ${g.name}`} v={`${fmt(g.done)}${last ? ` · última ${fmt(last.value)}` : ''}`} />;
-      })}
-    </div>
-  );
-}
-function Row({ k, v, warn }: any) { return <div className="flex items-baseline gap-2"><span className="text-haze font-hud">{k}</span><span className="flex-1 border-b border-dotted border-white/20" /><b className={warn ? 'text-gold' : ''}>{v}</b></div>; }
-
-/** Esforço da série: repetições que ainda daria para fazer (RIR). Opcional. */
-function RirPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
-  const opts: [number, string][] = [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5+']];
-  return (
-    <div className="mt-3">
-      <p className="text-[11px] text-haze">Esforço (opcional): quantas repetições <b className="text-cream">ainda sobravam</b>?</p>
-      <div className="grid grid-cols-6 gap-1.5 mt-1.5" role="radiogroup" aria-label="Repetições em reserva (RIR)">
-        {opts.map(([v, l]) => (
-          <button key={v} role="radio" aria-checked={value === v} aria-label={`RIR ${l}`} onClick={() => onChange(value === v ? null : v)}
-            className={`h-10 rounded-lg num font-bold ${value === v ? (v === 0 ? 'bg-pink text-night' : 'bg-aqua text-night') : 'bg-black/40 border border-white/10'}`}>{l}</button>
-        ))}
-      </div>
-      <p className="text-[10px] text-haze mt-1">0 = não dava mais nenhuma · 5+ = sobrou bastante</p>
-    </div>
-  );
-}
-
-/** Registro por tempo: cronômetro ou digitação dos segundos. */
-function TimedEntry({ dose, busy, onSave }: { dose: any; busy: boolean; onSave: (secs: number) => void }) {
-  const [start, setStart] = useState<number | null>(null);
-  const [now, setNow] = useState(Date.now());
-  const [manual, setManual] = useState('');
-  useEffect(() => { if (start === null) return; const t = setInterval(() => setNow(Date.now()), 100); return () => clearInterval(t); }, [start]);
-  const secs = start === null ? 0 : (now - start) / 1000;
-  const inRange = dose && secs >= dose.min && secs <= dose.max;
-  return (
-    <div>
-      <p className="text-sm text-haze">Meta: <b className="text-cream">{dose?.min}–{dose?.max} segundos</b>. Encerre antes se perder a posição.</p>
-      <div className="mt-3 rounded-2xl bg-black/40 border border-white/10 p-4 text-center">
-        <p className={`num font-extrabold text-6xl ${inRange ? 'text-cash' : 'text-cream'}`} role="timer" aria-label="Cronômetro">{secs.toFixed(1)}<span className="text-2xl text-haze"> s</span></p>
-        {start === null
-          ? <button onClick={() => { setStart(Date.now()); setNow(Date.now()); }} className="mt-3 w-full h-14 rounded-xl bg-aqua text-night font-display uppercase text-2xl">Iniciar cronômetro</button>
-          : <button onClick={() => { const v = Math.max(1, Math.round(((Date.now() - start) / 1000) * 100) / 100); setStart(null); onSave(v); }} className="mt-3 w-full h-14 rounded-xl btn-sunset text-2xl">Parar e salvar</button>}
-      </div>
-      <div className="mt-3 flex gap-2">
-        <input inputMode="decimal" value={manual} onChange={e => setManual(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="ou digite os segundos" aria-label="Segundos realizados" className="num flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2.5 text-lg" />
-        <button disabled={busy || !manual} onClick={() => { const v = Number(manual.replace(',', '.')); setManual(''); onSave(v); }} className="px-4 rounded-xl bg-white/10 chip text-sm disabled:opacity-40">Salvar tempo</button>
-      </div>
-      <p className="text-[11px] text-haze mt-2">Séries por tempo contam para a meta de séries, mas não somam XP (mesma regra da prancha do bloco final).</p>
-    </div>
-  );
-}
-
-/** Alarme do descanso: funciona com a tela cheia aberta ou minimizada (antes só tocava na tela cheia). */
-function RestAlarm({ sessionId, next, overlay }: { sessionId: string; next: string; overlay: boolean }) {
-  const [, tick] = useState(0);
-  const [flash, setFlash] = useState(false);
-  const was = useRef(false), lastBeep = useRef(-1);
-  useEffect(() => { const t = setInterval(() => tick(x => x + 1), 250); return () => clearInterval(t); }, []);
-  const st = restTimer.state(sessionId);
-  useEffect(() => {
-    if (st.running && st.remaining <= 3 && st.remaining > 0 && lastBeep.current !== st.remaining) { lastBeep.current = st.remaining; sfx.tick(); }
-    // Fim natural (o cronômetro chegou a zero). "Pular" zera sem alarme.
-    if (was.current && !st.running && st.endsAt !== null) {
-      sfx.restEnd(); notifyRestEnd(next);
-      if (!overlay) { setFlash(true); setTimeout(() => setFlash(false), 4000); }
-    }
-    if (st.remaining > 3) lastBeep.current = -1;
-    was.current = st.running;
-  });
-  return (
-    <AnimatePresence>
-      {flash && (
-        <motion.button data-testid="rest-flash" onClick={() => setFlash(false)} initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }}
-          className="fixed top-[max(env(safe-area-inset-top),10px)] inset-x-3 z-[80] rounded-2xl px-4 py-3 text-left bg-gradient-to-r from-pink via-flame to-gold text-night shadow-[0_0_40px_rgba(255,46,147,.6)]">
-          <motion.span className="block font-display uppercase text-2xl leading-tight" animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: .6 }}>Descanso acabou!</motion.span>
-          <span className="block font-hud font-bold text-sm">A seguir: {next}</span>
-        </motion.button>
-      )}
-    </AnimatePresence>
-  );
-}

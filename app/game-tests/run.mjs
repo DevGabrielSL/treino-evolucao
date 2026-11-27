@@ -278,6 +278,29 @@ await test('deck personalizado antes da atualização do deck padrão fica marca
   assert.equal(D.customOutdated({ deck_custom: { rpg_deck_04: { items: [], updated_at: '2026-01-01' } } }, 'rpg_deck_04'), false);
 });
 
+await test('academia: anilhas por lado, previsão de término e frase da voz', async () => {
+  const G = await server.ssrLoadModule('/src/engine/gym.ts');
+  assert.deepEqual(G.platesFor(21.25), { plates: [20, 1.25], rest: 0 });
+  assert.deepEqual(G.platesFor(47.5), { plates: [25, 20, 2.5], rest: 0 });
+  assert.equal(G.platesFor(1).rest, 1);
+  assert.equal(G.plateLine('kg', 'Barra livre', 100), 'Por lado (barra 20 kg): 25 + 15');
+  assert.equal(G.plateLine('kg', 'Barra livre', 20), 'Só a barra (20 kg)');
+  assert.equal(G.plateLine('kg/lado', 'Máquina com anilhas', 35), 'Anilhas: 25 + 10');
+  assert.equal(G.plateLine('kg', 'Máquina', 50), null);
+  assert.equal(G.plateLine('kg/halter', 'Halteres', 20), null);
+  const t0 = Date.parse('2026-11-26T20:00:00Z');
+  const at = [0, 3, 6, 9].map(m => new Date(t0 + m * 60000).toISOString());
+  assert.equal(G.finishEstimate(at, 5, t0 + 9 * 60000), t0 + 24 * 60000); // 3 min por série × 5
+  assert.equal(G.finishEstimate(at.slice(0, 2), 5), null);
+  assert.equal(G.finishEstimate(at, 0), null);
+  const at2 = [0, 3, 40, 43].map(m => new Date(t0 + m * 60000).toISOString()); // pausa de 37 min ignorada
+  assert.equal(G.finishEstimate(at2, 2, t0), t0 + 6 * 60000);
+  const V = await server.ssrLoadModule('/src/fx/voice.ts');
+  assert.equal(V.restEndPhrase({ name: 'Rosca Scott', set: 2, of: 3, load: 22.5, unit: 'kg' }), 'Rosca Scott. Série 2 de 3. 22,5 quilos.');
+  assert.equal(V.restEndPhrase({ name: 'Prancha', set: 4, of: 3, load: 0, unit: 'kg', seconds: true }), 'Prancha. Série extra.');
+  assert.equal(V.restEndPhrase({ name: 'Supino', set: 1, of: 3, load: 30, unit: 'kg/halter' }), 'Supino. Série 1 de 3. 30 quilos por halter.');
+});
+
 await test('bloco final: última execução e melhor marca, sem a sessão atual', () => {
   const e = { sessions: [
     { id: 'a', date: '2026-11-10', status: 'completed' }, { id: 'b', date: '2026-11-14', status: 'completed' }, { id: 'c', date: '2026-11-20', status: 'in_progress' }], sets: [
