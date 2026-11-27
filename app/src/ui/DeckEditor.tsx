@@ -8,6 +8,7 @@ import { getState } from '../engine/store';
 import { ExercisePicker, type PickOption } from './ExercisePicker';
 import { ExerciseVisual } from './ExerciseVisual';
 import { ask } from './Dialog';
+import { exName } from './format';
 import { sfx } from '../fx/sfx';
 
 export function DeckEditor({ deck, model, onClose, onError }: { deck: any; model: any; onClose: () => void; onError: (e: any) => void }) {
@@ -61,7 +62,7 @@ export function DeckEditor({ deck, model, onClose, onError }: { deck: any; model
                       <span className="num font-extrabold text-lg w-6 text-center text-white/30">{i + 1}</span>
                       <div className="duotone-wrap size-11 rounded-lg shrink-0 bg-plum"><ExerciseVisual name={item?.name} equipment={item?.equipment} size="sm" /></div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-hud font-bold leading-tight truncate">{item?.name || 'Exercício indisponível'}</p>
+                        <p className="font-hud font-bold leading-tight truncate">{item?.name ? exName(item.name, item.equipment) : 'Exercício indisponível'}</p>
                         <p className="text-[11px] text-haze truncate">{item?.equipment || 'Remova este item'}</p>
                       </div>
                       <button aria-label={`Subir ${item?.name}`} disabled={i === 0} onClick={() => move(i, -1)} className="size-8 grid place-items-center rounded-md bg-white/10 disabled:opacity-30"><ArrowUp size={14} /></button>

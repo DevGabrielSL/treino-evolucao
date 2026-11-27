@@ -9,7 +9,7 @@ import { sfx } from '../fx/sfx';
 import { asset } from './assets';
 import { CustomMission } from './CustomMission';
 import { Sparkles } from 'lucide-react';
-import { nf } from './format';
+import { nf, exName } from './format';
 import { cityLights, districtControl } from '../game/season';
 import { SeasonCard } from './SeasonPanel';
 import { isMission } from '../engine/home';
@@ -191,7 +191,7 @@ function Briefing({ deck, model, active, starting, onClose, onStart, onError }: 
                 <span className="num font-extrabold text-2xl w-8 text-center text-white/30">{String(i + 1).padStart(2, '0')}</span>
                 <div className="duotone-wrap size-14 rounded-lg shrink-0 bg-plum"><ExerciseVisual name={item.name} equipment={item.equipment} size="sm" /></div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-hud font-bold text-[17px] leading-tight">{item.name}</p>
+                  <p className="font-hud font-bold text-[17px] leading-tight">{exName(item.name, item.equipment)}</p>
                   <p className="text-xs text-haze truncate">{item.equipment}</p>
                 </div>
                 <div className="text-right">

@@ -10,7 +10,7 @@ import { activeSession } from '../engine/workout';
 import { ExerciseVisual } from './ExerciseVisual';
 import { Sheet } from './Sheet';
 import { ask } from './Dialog';
-import { clock, nf, hhmm } from './format';
+import { clock, nf, hhmm, exName } from './format';
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const STATUS: Record<string, [string, string]> = { completed: ['Concluída', 'text-cash bg-cash/15'], cancelled: ['Abandonada', 'text-pink bg-pink/15'], in_progress: ['Em andamento', 'text-gold bg-gold/15'], planned: ['Planejada', 'text-aqua bg-aqua/15'] };
@@ -165,7 +165,7 @@ function SessionSheet({ model, id, onClose, onError, onGoWorkout }: { model: any
               <div key={vid} className="rounded-xl bg-white/5 overflow-hidden">
                 <div className="flex items-center gap-3 p-2">
                   <div className="duotone-wrap size-11 rounded-lg shrink-0"><ExerciseVisual name={ex?.name} equipment={v?.equipment_or_variation} size="sm" /></div>
-                  <div className="min-w-0"><p className="font-hud font-bold leading-tight truncate">{ex?.name}</p><p className="text-[11px] text-haze truncate">{v?.equipment_or_variation}</p></div>
+                  <div className="min-w-0"><p className="font-hud font-bold leading-tight truncate">{exName(ex?.name, v?.equipment_or_variation)}</p><p className="text-[11px] text-haze truncate">{v?.equipment_or_variation}</p></div>
                 </div>
                 <ul className="px-2 pb-2 space-y-1">
                   {rows.map((r: any, i: number) => (
@@ -232,13 +232,13 @@ function Progress({ model }: { model: any }) {
         {options.slice(0, 24).map(o => (
           <button key={o.id} onClick={() => setSel(o.id)} className={`shrink-0 w-24 rounded-xl overflow-hidden border-2 text-left ${o.id === cur.id ? 'border-gold' : 'border-white/10'}`}>
             <div className="duotone-wrap h-14"><ExerciseVisual name={o.ex?.name} equipment={o.v?.equipment_or_variation} size="sm" /></div>
-            <p className="font-hud font-semibold text-[12px] leading-tight px-1.5 py-1 line-clamp-2 bg-black/60">{o.ex?.name}</p>
+            <p className="font-hud font-semibold text-[12px] leading-tight px-1.5 py-1 line-clamp-2 bg-black/60">{exName(o.ex?.name, o.v?.equipment_or_variation)}</p>
           </button>
         ))}
       </div>
       <section className="panel p-4">
         <p className="chip text-aqua text-xs">{cur.v.equipment_or_variation} · {cur.v.unit}</p>
-        <h2 className="font-display uppercase text-3xl leading-[1.1]">{cur.ex?.name}</h2>
+        <h2 className="font-display uppercase text-3xl leading-[1.1]">{exName(cur.ex?.name, cur.v?.equipment_or_variation)}</h2>
         <div className="grid grid-cols-3 gap-2 mt-3">
           {[['Recorde', nf(best)], ['Última', nf(last.top)], ['Evolução', `${last.top - first.top >= 0 ? '+' : ''}${nf(last.top - first.top)}`]].map(([k, v]) => (
             <div key={k} className="rounded-xl bg-black/40 p-2 text-center"><p className={`num text-xl font-extrabold ${k === 'Evolução' && last.top > first.top ? 'text-cash' : ''}`}>{v}</p><p className="hud-label text-[9px] text-haze">{k} ({cur.v.unit})</p></div>

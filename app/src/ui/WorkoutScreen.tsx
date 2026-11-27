@@ -10,7 +10,7 @@ import { sfx, soundOn, setSound } from '../fx/sfx';
 import { RestOverlay, autoRest, setAutoRest } from './RestOverlay';
 import { ask } from './Dialog';
 import { ExerciseOptions, DropRows, FinisherPanel, AddExercise, type Drop } from './WorkoutExtras';
-import { clock, nf } from './format';
+import { clock, nf, exName } from './format';
 import { Sheet } from './Sheet';
 import { progressionHint, progressionOn } from '../engine/progression';
 import { finisherMarks } from '../engine/finisherMarks';
@@ -112,7 +112,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
       if (repeat) { setLoad(String(l)); setReps(String(r)); }
       sfx.set();
       if (k === 'effective' && variant?.unit_confirmed && Number.isFinite(prevBest) && l > prevBest) {
-        setTimeout(() => { sfx.pr(); fx.stamp('Novo recorde', `${exercise?.name}: ${nf(prevBest)} → ${nf(l)} ${variant.unit}`); fx.confetti(); }, 350);
+        setTimeout(() => { sfx.pr(); fx.stamp('Novo recorde', `${exName(exercise?.name, variant?.equipment_or_variation)}: ${nf(prevBest)} → ${nf(l)} ${variant.unit}`); fx.confetti(); }, 350);
       } else if (k === 'effective' && combo + 1 >= 2) { sfx.combo(combo + 1); }
       // descanso também depois do aquecimento
       if (auto) { restTimer.start(session.id, restFor(doc.settings, current)); setRestOpen(true); }
@@ -187,7 +187,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
               <div className="flex justify-center gap-0.5 py-1 bg-black/70">
                 {Array.from({ length: g.target || 3 }, (_, k) => <span key={k} className={`h-1.5 w-3 rounded-sm ${k < g.resolved ? 'bg-gold' : 'bg-white/20'}`} />)}
               </div>
-              <span className="sr-only">{e?.name}</span>
+              <span className="sr-only">{exName(e?.name, v?.equipment_or_variation)}</span>
             </button>
           );
         })}
@@ -206,7 +206,7 @@ export function WorkoutScreen({ model, doc, session, onExit, onError, onFinished
             <ExerciseVisual name={exercise?.name} equipment={variant?.equipment_or_variation} />
             <div className="absolute inset-x-0 bottom-0 p-3 z-10">
               <p className="chip text-[12px] text-aqua">{variant?.equipment_or_variation}</p>
-              <h2 className="font-display uppercase text-[2rem] leading-[.95]">{exercise?.name}</h2>
+              <h2 className="font-display uppercase text-[2rem] leading-[.95]">{exName(exercise?.name, variant?.equipment_or_variation)}</h2>
             </div>
           </div>
 
